@@ -1,17 +1,24 @@
-import { useState } from 'react'
+import { Routes, Route } from "react-router-dom";
+import LandingPage from "./LandingPage.jsx";
+import LoginPage from "./Login.jsx";
+import SignupPage from "./Signup.jsx";
+import Home from "./Home.jsx";
+import PrivateRoute from "./PrivateRoute.jsx"; // import wrapper
 
-
-function App() {
-  const [count, setCount] = useState(0)
-
+export default function App() {
   return (
-
-    <div className='flex flex-col justify-center items-center text-center font-bold text-6xl h-screen '>
-      <div>
-        จงสรรเสริญพระเจ้า อย่างกู
-      </div>
-    </div>
-  )
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route
+        path="/home"
+        element={
+          <PrivateRoute>
+            <Home />
+          </PrivateRoute>
+        }
+      />
+    </Routes>
+  );
 }
-
-export default App
