@@ -25,7 +25,7 @@ export default function LoginPage() {
 
       if (response.ok && data.success) {
         setMessage("✅ Login successful!");
-        // redirect after short delay
+        localStorage.setItem("token", data.token);
         setTimeout(() => navigate("/home"), 1000);
       } else {
         setMessage("❌ " + data.message);

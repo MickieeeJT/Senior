@@ -1,5 +1,8 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import db from "../config/db.js";
+
+const SECRET_KEY = "your-secret-key"; // move this to .env later
 
 // Signup
 export const signup = async (req, res) => {
@@ -48,6 +51,19 @@ export const login = (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid email or password" });
         }
 
-        res.json({ success: true, message: "Login successful", user: { id: user.id, email: user.email } });
+        // ✅ SIGN A JWT THAT CONTAINS THE USER ID
+        const token = jwt.sign(
+            { id: user.id, email: user.email },
+            SECRET_KEY,
+            { expiresIn: "1h" }
+        );
+
+        // ✅ Send the token back
+        res.json({
+            success: true,
+            message: "Login successful",
+            token, // 👈 frontend should store this
+            user: { id: user.id, email: user.email }
+        });
     });
 };

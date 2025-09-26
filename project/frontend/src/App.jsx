@@ -3,7 +3,9 @@ import LandingPage from "./LandingPage.jsx";
 import LoginPage from "./Login.jsx";
 import SignupPage from "./Signup.jsx";
 import Home from "./Home.jsx";
-import PrivateRoute from "./PrivateRoute.jsx"; // import wrapper
+import PrivateRoute from "./PrivateRoute.jsx";
+import Play from "./Play.jsx";
+import Score from "./Score.jsx";
 
 export default function App() {
   return (
@@ -11,11 +13,28 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+
       <Route
         path="/home"
         element={
           <PrivateRoute>
             <Home />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/play"
+        element={
+          <PrivateRoute>
+            <Play />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/score-history"
+        element={
+          <PrivateRoute>
+            <Score />
           </PrivateRoute>
         }
       />
