@@ -7,21 +7,41 @@ const SECRET_KEY = "your-secret-key"; // move this to .env later
 // Signup
 export const signup = async (req, res) => {
     const { email, password } = req.body;
+
+    // Basic validation
     if (!email || !password) {
         return res.status(400).json({ success: false, message: "Missing fields" });
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const sql = "INSERT INTO users (email, password) VALUES (?, ?)";
-        db.query(sql, [email, hashedPassword], (err) => {
+        // Check if email already exists
+        const checkSql = "SELECT * FROM users WHERE email = ?";
+        db.query(checkSql, [email], async (err, results) => {
             if (err) {
                 console.error(err);
-                return res.status(500).json({ success: false, message: "Error inserting user" });
+                return res.status(500).json({ success: false, message: "Database error" });
             }
-            res.json({ success: true, message: "User registered successfully" });
+
+            if (results.length > 0) {
+                return res.status(400).json({ success: false, message: "Email already registered" });
+            }
+
+            // Hash password
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Insert new user
+            const insertSql = "INSERT INTO users (email, password) VALUES (?, ?)";
+            db.query(insertSql, [email, hashedPassword], (err) => {
+                if (err) {
+                    console.error(err);
+                    return res.status(500).json({ success: false, message: "Error inserting user" });
+                }
+
+                res.json({ success: true, message: "User registered successfully" });
+            });
         });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ success: false, message: "Server error" });
     }
 };
