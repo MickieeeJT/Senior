@@ -5,6 +5,7 @@ export default {
     extend: {
       fontFamily: {
         kameron: ['"Kameron"', "serif"],
+        jersey: ['"Jersey 10"', 'sans-serif'],
       },
     },
   },

@@ -4,7 +4,6 @@ import LoginPage from "./Login.jsx";
 import SignupPage from "./Signup.jsx";
 import Home from "./Home.jsx";
 import PrivateRoute from "./PrivateRoute.jsx";
-import Play from "./Play.jsx";
 import Score from "./Score.jsx";
 import Tutorial from "./Tutorial.jsx";
 import Invest from "./Invest.jsx";
@@ -21,14 +20,6 @@ export default function App() {
         element={
           <PrivateRoute>
             <Home />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/play"
-        element={
-          <PrivateRoute>
-            <Play />
           </PrivateRoute>
         }
       />

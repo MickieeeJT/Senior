@@ -16,15 +16,12 @@ export default function ScoreHistoryPage() {
       }
 
       try {
-        const response = await fetch(
-          "http://localhost:8080/api/score-history",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await fetch("http://localhost:8080/api/score-history", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         const data = await response.json();
         console.log("Score history response:", data);
@@ -46,37 +43,52 @@ export default function ScoreHistoryPage() {
   }, []);
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6 text-center">🎮 Score History</h1>
+    <div className="min-h-screen bg-[#0a1b0d] text-[#ADFF2F] font-mono flex flex-col items-center py-10">
+      {/* Title */}
+      <h1 className="text-5xl font-extrabold text-[#7CFC00] drop-shadow-[0_0_8px_#00FF00] mb-8 text-center">
+        SCORE HISTORY
+      </h1>
 
-      {loading && <p className="text-center text-gray-600">Loading...</p>}
-      {error && <p className="text-center text-red-600">{error}</p>}
+      {/* Loading / Error */}
+      {loading && (
+        <p className="text-center text-[#9ACD32] text-xl animate-pulse">
+          Loading...
+        </p>
+      )}
+      {error && (
+        <p className="text-center text-red-400 text-xl font-semibold">
+          {error}
+        </p>
+      )}
 
+      {/* Table */}
       {!loading && !error && (
-        <div className="overflow-x-auto bg-white rounded-2xl shadow-lg p-6">
+        <div className="w-11/12 md:w-3/4 bg-[#001a0a] border-4 border-[#00FF00] rounded-lg shadow-[0_0_15px_#00FF00] p-6">
           {scores.length === 0 ? (
-            <p className="text-center text-gray-600">No score history found.</p>
+            <p className="text-center text-[#ADFF2F] text-lg">
+              No score history found.
+            </p>
           ) : (
-            <table className="min-w-full border border-gray-200">
-              <thead className="bg-blue-600 text-white">
+            <table className="w-full border-collapse text-center text-[#ADFF2F]">
+              <thead className="border-b-2 border-[#00FF00] bg-[#003300]">
                 <tr>
-                  <th className="py-3 px-4 text-left">#</th>
-                  <th className="py-3 px-4 text-left">Score</th>
-                  <th className="py-3 px-4 text-left">Date</th>
+                  <th className="py-3 text-lg">#</th>
+                  <th className="py-3 text-lg">SCORE</th>
+                  <th className="py-3 text-lg">DATE</th>
                 </tr>
               </thead>
               <tbody>
                 {scores.map((entry, index) => (
                   <tr
                     key={entry.id}
-                    className="border-b hover:bg-gray-100 transition"
+                    className="hover:bg-[#002200] transition border-b border-[#003d1a]"
                   >
-                    <td className="py-3 px-4">{index + 1}</td>
-                    <td className="py-3 px-4 font-semibold">{entry.score}</td>
-                    <td className="py-3 px-4">
-                      <td className="py-3 px-4">
-                        {new Date(entry.played_at).toLocaleDateString()}
-                      </td>
+                    <td className="py-3">{index + 1}</td>
+                    <td className="py-3 font-bold text-[#7CFC00]">
+                      {entry.score}
+                    </td>
+                    <td className="py-3">
+                      {new Date(entry.played_at).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
@@ -85,6 +97,11 @@ export default function ScoreHistoryPage() {
           )}
         </div>
       )}
+
+      {/* Footer */}
+      <div className="mt-10 text-[#7CFC00] text-sm">
+        © 2025 INVESTMENT GAME ▪ Score History
+      </div>
     </div>
   );
 }
