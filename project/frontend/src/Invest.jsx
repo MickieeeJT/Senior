@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import index from "./assets/Index.png";
@@ -6,27 +6,160 @@ import gold from "./assets/Gold.png";
 
 export default function Invest() {
   const [balance, setBalance] = useState(1234567.8);
-  const [currentYear, setCurrentYear] = useState(10);
-  const [currentMonth, setCurrentMonth] = useState(8.5);
+  const [currentYear, setCurrentYear] = useState(1);
+  const [currentMonth, setCurrentMonth] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [isRunning, setIsRunning] = useState(true);
+
   const [showExitModal, setShowExitModal] = useState(false);
 
   const [activeInput, setActiveInput] = useState(null);
   const [amount, setAmount] = useState("");
   const [selectedBond, setSelectedBond] = useState("");
-  const [selected, setSelected] = useState(null);
+  const [selectedOption, setSelectedOption] = useState({});
+
+  // Dynamic stocks and currency data
+  const [stocks, setStocks] = useState([]);
+  const [currencies, setCurrencies] = useState([]);
 
   // Dynamic profit state
   const [profit, setProfit] = useState({
     savings: 0,
     bonds: 0,
     index: 0,
-    stocks: [0, 0, 0, 0],
+    stocks: {},
     gold: 0,
-    currency: { USD: 0, EUR: 0, JPY: 0, CAD: 0 },
+    currency: {},
+  });
+
+  // Holdings state
+  const [holdings, setHoldings] = useState({
+    stocks: {},
+    currency: {},
   });
 
   const navigate = useNavigate();
   const options = ["1", "10", "25", "MAX"];
+
+  // Fetch stocks data from backend
+  useEffect(() => {
+    fetchStocks();
+    fetchCurrencies();
+  }, []);
+
+  const fetchStocks = async () => {
+    try {
+      // Replace with your actual API endpoint
+      const response = await fetch("/api/stocks");
+      const data = await response.json();
+      setStocks(data);
+
+      // Initialize profit and holdings for stocks
+      const stockProfit = {};
+      const stockHoldings = {};
+      data.forEach((stock) => {
+        stockProfit[stock.id] = 0;
+        stockHoldings[stock.id] = { shares: 0, avgPrice: 0 };
+      });
+      setProfit((prev) => ({ ...prev, stocks: stockProfit }));
+      setHoldings((prev) => ({ ...prev, stocks: stockHoldings }));
+    } catch (error) {
+      console.error("Error fetching stocks:", error);
+      // Fallback dummy data if API fails
+      const dummyStocks = [
+        {
+          id: "STOCK1",
+          symbol: "AAPL",
+          price: 175.5,
+          change: 2.25,
+          changePercent: 1.3,
+        },
+        {
+          id: "STOCK2",
+          symbol: "GOOGL",
+          price: 142.3,
+          change: -1.5,
+          changePercent: -1.04,
+        },
+        {
+          id: "STOCK3",
+          symbol: "MSFT",
+          price: 378.9,
+          change: 5.75,
+          changePercent: 1.54,
+        },
+        {
+          id: "STOCK4",
+          symbol: "TSLA",
+          price: 242.15,
+          change: 8.4,
+          changePercent: 3.59,
+        },
+      ];
+      setStocks(dummyStocks);
+
+      const stockProfit = {};
+      const stockHoldings = {};
+      dummyStocks.forEach((stock) => {
+        stockProfit[stock.id] = 0;
+        stockHoldings[stock.id] = { shares: 0, avgPrice: 0 };
+      });
+      setProfit((prev) => ({ ...prev, stocks: stockProfit }));
+      setHoldings((prev) => ({ ...prev, stocks: stockHoldings }));
+    }
+  };
+
+  const fetchCurrencies = async () => {
+    try {
+      // Replace with your actual API endpoint
+      const response = await fetch("/api/currencies");
+      const data = await response.json();
+      setCurrencies(data);
+
+      // Initialize profit and holdings for currencies
+      const currencyProfit = {};
+      const currencyHoldings = {};
+      data.forEach((currency) => {
+        currencyProfit[currency.code] = 0;
+        currencyHoldings[currency.code] = { amount: 0, avgRate: 0 };
+      });
+      setProfit((prev) => ({ ...prev, currency: currencyProfit }));
+      setHoldings((prev) => ({ ...prev, currency: currencyHoldings }));
+    } catch (error) {
+      console.error("Error fetching currencies:", error);
+      // Fallback dummy data if API fails
+      const dummyCurrencies = [
+        {
+          code: "USD",
+          rate: 1.0,
+          change: 0.0,
+          changePercent: 0.0,
+        },
+        {
+          code: "EUR",
+          rate: 0.92,
+          change: -0.01,
+          changePercent: -1.08,
+        },
+        {
+          code: "JPY",
+          rate: 149.85,
+          change: 1.25,
+          changePercent: 0.84,
+        },
+      ];
+      setCurrencies(dummyCurrencies);
+
+      const currencyProfit = {};
+      const currencyHoldings = {};
+      dummyCurrencies.forEach((currency) => {
+        currencyProfit[currency.code] = 0;
+        currencyHoldings[currency.code] = { amount: 0, avgRate: 0 };
+      });
+      setProfit((prev) => ({ ...prev, currency: currencyProfit }));
+      setHoldings((prev) => ({ ...prev, currency: currencyHoldings }));
+    }
+  };
 
   const handleExitConfirm = () => {
     setShowExitModal(false);
@@ -36,6 +169,236 @@ export default function Invest() {
   const toggleInput = (type) => {
     setActiveInput((prev) => (prev === type ? null : type));
     setSelectedBond("");
+    setAmount("");
+  };
+
+  const calculateAmount = (optionType, price, itemId) => {
+    if (optionType === "MAX") {
+      return balance;
+    }
+    const percentage = parseInt(optionType);
+    return (balance * percentage) / 100;
+  };
+
+  const handleStockTransaction = async (stockId, action) => {
+    const stock = stocks.find((s) => s.id === stockId);
+    if (!stock) return;
+
+    const selectedOpt = selectedOption[stockId];
+    let transactionAmount = parseFloat(amount);
+
+    if (selectedOpt && selectedOpt !== "custom") {
+      transactionAmount = calculateAmount(selectedOpt, stock.price, stockId);
+    }
+
+    if (!transactionAmount || transactionAmount <= 0) return;
+
+    const shares = Math.floor(transactionAmount / stock.price);
+    const totalCost = shares * stock.price;
+
+    if (action === "buy") {
+      if (totalCost > balance) {
+        alert("Insufficient balance!");
+        return;
+      }
+
+      try {
+        // Send transaction to backend
+        await fetch("/api/stocks/buy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stockId: stock.id,
+            shares,
+            price: stock.price,
+            totalCost,
+          }),
+        });
+
+        setBalance((prev) => prev - totalCost);
+        setHoldings((prev) => ({
+          ...prev,
+          stocks: {
+            ...prev.stocks,
+            [stockId]: {
+              shares: prev.stocks[stockId].shares + shares,
+              avgPrice:
+                (prev.stocks[stockId].shares * prev.stocks[stockId].avgPrice +
+                  totalCost) /
+                (prev.stocks[stockId].shares + shares),
+            },
+          },
+        }));
+      } catch (error) {
+        console.error("Error buying stock:", error);
+      }
+    } else if (action === "sell") {
+      const ownedShares = holdings.stocks[stockId]?.shares || 0;
+      const sharesToSell = Math.min(shares, ownedShares);
+
+      if (sharesToSell <= 0) {
+        alert("You don't own any shares!");
+        return;
+      }
+
+      const saleAmount = sharesToSell * stock.price;
+
+      try {
+        // Send transaction to backend
+        await fetch("/api/stocks/sell", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            stockId: stock.id,
+            shares: sharesToSell,
+            price: stock.price,
+            saleAmount,
+          }),
+        });
+
+        setBalance((prev) => prev + saleAmount);
+        setHoldings((prev) => ({
+          ...prev,
+          stocks: {
+            ...prev.stocks,
+            [stockId]: {
+              ...prev.stocks[stockId],
+              shares: prev.stocks[stockId].shares - sharesToSell,
+            },
+          },
+        }));
+
+        // Calculate profit
+        const profitAmount =
+          saleAmount - sharesToSell * holdings.stocks[stockId].avgPrice;
+        setProfit((prev) => ({
+          ...prev,
+          stocks: {
+            ...prev.stocks,
+            [stockId]: prev.stocks[stockId] + profitAmount,
+          },
+        }));
+      } catch (error) {
+        console.error("Error selling stock:", error);
+      }
+    }
+
+    setAmount("");
+    setSelectedOption((prev) => ({ ...prev, [stockId]: null }));
+  };
+
+  const handleCurrencyTransaction = async (currencyCode, action) => {
+    const currency = currencies.find((c) => c.code === currencyCode);
+    if (!currency) return;
+
+    const selectedOpt = selectedOption[currencyCode];
+    let transactionAmount = parseFloat(amount);
+
+    if (selectedOpt && selectedOpt !== "custom") {
+      transactionAmount = calculateAmount(
+        selectedOpt,
+        currency.rate,
+        currencyCode
+      );
+    }
+
+    if (!transactionAmount || transactionAmount <= 0) return;
+
+    if (action === "buy") {
+      if (transactionAmount > balance) {
+        alert("Insufficient balance!");
+        return;
+      }
+
+      const currencyAmount = transactionAmount / currency.rate;
+
+      try {
+        // Send transaction to backend
+        await fetch("/api/currency/buy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currencyCode: currency.code,
+            amount: currencyAmount,
+            rate: currency.rate,
+            totalCost: transactionAmount,
+          }),
+        });
+
+        setBalance((prev) => prev - transactionAmount);
+        setHoldings((prev) => ({
+          ...prev,
+          currency: {
+            ...prev.currency,
+            [currencyCode]: {
+              amount: prev.currency[currencyCode].amount + currencyAmount,
+              avgRate:
+                (prev.currency[currencyCode].amount *
+                  prev.currency[currencyCode].avgRate +
+                  transactionAmount) /
+                (prev.currency[currencyCode].amount + currencyAmount),
+            },
+          },
+        }));
+      } catch (error) {
+        console.error("Error buying currency:", error);
+      }
+    } else if (action === "sell") {
+      const ownedAmount = holdings.currency[currencyCode]?.amount || 0;
+      const amountToSell = Math.min(
+        transactionAmount / currency.rate,
+        ownedAmount
+      );
+
+      if (amountToSell <= 0) {
+        alert("You don't own this currency!");
+        return;
+      }
+
+      const saleAmount = amountToSell * currency.rate;
+
+      try {
+        // Send transaction to backend
+        await fetch("/api/currency/sell", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currencyCode: currency.code,
+            amount: amountToSell,
+            rate: currency.rate,
+            saleAmount,
+          }),
+        });
+
+        setBalance((prev) => prev + saleAmount);
+        setHoldings((prev) => ({
+          ...prev,
+          currency: {
+            ...prev.currency,
+            [currencyCode]: {
+              ...prev.currency[currencyCode],
+              amount: prev.currency[currencyCode].amount - amountToSell,
+            },
+          },
+        }));
+
+        // Calculate profit
+        const profitAmount =
+          saleAmount - amountToSell * holdings.currency[currencyCode].avgRate;
+        setProfit((prev) => ({
+          ...prev,
+          currency: {
+            ...prev.currency,
+            [currencyCode]: prev.currency[currencyCode] + profitAmount,
+          },
+        }));
+      } catch (error) {
+        console.error("Error selling currency:", error);
+      }
+    }
+
+    setAmount("");
+    setSelectedOption((prev) => ({ ...prev, [currencyCode]: null }));
   };
 
   const handleSubmit = () => {
@@ -71,11 +434,55 @@ export default function Invest() {
     setSelectedBond("");
   };
 
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+  if (!isRunning) return;
+  if (timerRef.current) return; // prevent duplicate intervals
+
+  const duration = 60000; // 60 seconds per year
+  const steps = 100;
+  const interval = duration / steps;
+
+  timerRef.current = setInterval(() => {
+    setProgress((prev) => {
+      if (prev >= 100) {
+        setProgress(0);
+        setCurrentMonth(0);
+
+        setCurrentYear((y) => {
+          if (y >= 20) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+            setIsRunning(false);
+            return y;
+          }
+          return y + 1;
+        });
+
+        return 0;
+      }
+
+      const newProgress = prev + 1;
+      setCurrentMonth(newProgress / 8.33);
+      return newProgress;
+    });
+  }, interval);
+
+  // Cleanup
+  return () => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+  };
+}, [isRunning]);
+
+
+
   return (
     <div className="min-h-screen bg-[#011D10] text-[#494a48] font-mono flex flex-col p-6">
       {/* Header */}
-      <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-2">
-        <h1 className="text-6xl font-jersey text-[#B7FD5E] mx-8">
+      <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-1">
+        <h1 className="text-5xl font-jersey text-[#B7FD5E] mx-8">
           INVESTMENT GAME
         </h1>
         <nav className="flex gap-10 text-5xl font-jersey mr-3">
@@ -89,30 +496,27 @@ export default function Invest() {
       </header>
 
       {/* Portfolio Overview */}
-      <div className="flex mx-10 justify-between items-center">
-        <div className="text-center mb-3">
-          <h2 className="text-5xl font-jersey text-white mb-1">
-            PORTFOLIO OVERVIEW
+      <div className="flex mx-10 justify-between items-center mt-1">
+        <div className="flex text-center">
+          <h2 className="text-4xl font-jersey text-white mb-1">
+            PORTFOLIO OVERVIEW :
           </h2>
-          <p className="text-5xl font-jersey text-[#B7FD5E]">
+          <p className="text-4xl font-jersey text-[#B7FD5E] px-8">
             {balance.toLocaleString()} $
           </p>
         </div>
 
-        <div className="self-center mb-6 w-1/4">
-          <p className="text-4xl font-jersey text-white mb-1 text-center">
+        <div className="self-center mb-3 pt-1 w-1/4">
+          <p className="text-3xl font-jersey text-white mb-1 text-center">
             YEAR {currentYear} OF 20
           </p>
 
-          {/* Progress Bar Container */}
-          <div className="relative h-8 w-full bg-white border border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] overflow-hidden">
-            {/* Filled Progress */}
+          <div className="relative h-4 w-full bg-white border border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] overflow-hidden">
             <div
-              className="h-full bg-[#B7FD5E] transition-all duration-500"
-              style={{ width: `${(currentMonth / 12) * 100}%` }}
+              className="h-full bg-[#85ba3f] transition-all duration-500"
+              style={{ width: `${progress}%` }}
             ></div>
 
-            {/* Month Markers */}
             {[...Array(12)].map((_, i) => (
               <div
                 key={i}
@@ -144,13 +548,13 @@ export default function Invest() {
             <div className="flex justify-center gap-4 mt-1 transition-opacity duration-300">
               <button
                 onClick={() => toggleInput("savings-withdraw")}
-                className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
               >
                 WITHDRAW
               </button>
               <button
                 onClick={() => toggleInput("savings-deposit")}
-                className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
               >
                 DEPOSIT
               </button>
@@ -170,11 +574,11 @@ export default function Invest() {
                   placeholder="Enter amount"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="px-3 py-2 rounded border border-gray-400 text-black w-40"
+                  className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
                 />
                 <button
                   onClick={handleSubmit}
-                  className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                  className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
                 >
                   {activeInput === "savings-deposit" ? "DEPOSIT" : "WITHDRAW"}
                 </button>
@@ -195,7 +599,7 @@ export default function Invest() {
           {!activeInput?.includes("bond") && (
             <button
               onClick={() => toggleInput("bond-select")}
-              className="bg-[#11942F] text-white text-2xl font-jersey px-6 py-2 rounded hover:bg-[#B7FD5E]"
+              className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
             >
               BUY
             </button>
@@ -224,11 +628,11 @@ export default function Invest() {
                   placeholder="Enter amount"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="px-3 py-2 rounded border border-gray-400 text-black w-40 focus:ring-2 focus:ring-[#00FF00] focus:outline-none"
+                  className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
                 />
                 <button
                   onClick={handleSubmit}
-                  className="bg-[#00FF00] text-black font-bold px-5 py-2 rounded hover:bg-[#5CFF5C] transition-all"
+                  className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
                 >
                   BUY
                 </button>
@@ -251,13 +655,13 @@ export default function Invest() {
             <div className="flex justify-center gap-4 mt-4">
               <button
                 onClick={() => toggleInput("index-sell")}
-                className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
               >
                 SELL
               </button>
               <button
                 onClick={() => toggleInput("index-buy")}
-                className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
               >
                 BUY
               </button>
@@ -278,11 +682,11 @@ export default function Invest() {
                   placeholder="Enter amount"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="px-3 py-2 rounded border border-gray-400 text-black w-40"
+                  className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
                 />
                 <button
                   onClick={handleSubmit}
-                  className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                  className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
                 >
                   {activeInput === "index-buy" ? "BUY" : "SELL"}
                 </button>
@@ -293,27 +697,50 @@ export default function Invest() {
 
         {/* Stocks */}
         <div className="col-span-3 bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-center text-3xl font-jersey mb-2 text-white">
+          <h3 className="text-center text-3xl font-jersey mb-1 text-white">
             INDIVIDUAL STOCKS
           </h3>
           <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i, idx) => (
+            {stocks.map((stock) => (
               <div
-                key={i}
-                className="border-2 border-dashed border-white p-3 text-center rounded"
+                key={stock.id}
+                className="border-2 border-dashed border-white p-4 text-center rounded"
               >
-                <p className="text-white text-2xl font-jersey">xxxxx</p>
-                <p className="text-white text-2xl font-jersey">xx.xx $</p>
-                <p className="text-green-400 text-2xl font-jersey">▲ 2.25%</p>
                 <p className="text-white text-2xl font-jersey">
-                  Profit: {profit.stocks[idx].toLocaleString()} $
+                  {stock.symbol}
                 </p>
-                <p className="text-white text-2xl font-jersey">Shares: 0</p>
+                <div className="flex justify-between px-5">
+                  <p className="text-white text-xl font-jersey">
+                    {stock.price.toFixed(2)} $
+                  </p>
+                  <p
+                    className={`text-xl font-jersey ${
+                      stock.changePercent >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {stock.changePercent >= 0 ? "▲" : "▼"}{" "}
+                    {Math.abs(stock.changePercent).toFixed(2)}%
+                  </p>
+                </div>
+                <p className="text-white text-xl font-jersey">
+                  Profit: {(profit.stocks[stock.id] || 0).toLocaleString()} $
+                </p>
+                <p className="text-white text-xl font-jersey">
+                  Shares: {holdings.stocks[stock.id]?.shares || 0}
+                </p>
                 <div className="flex justify-center gap-4 mt-2">
-                  <button className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]">
+                  <button
+                    onClick={() => handleStockTransaction(stock.id, "sell")}
+                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                  >
                     SELL
                   </button>
-                  <button className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]">
+                  <button
+                    onClick={() => handleStockTransaction(stock.id, "buy")}
+                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                  >
                     BUY
                   </button>
                 </div>
@@ -321,9 +748,14 @@ export default function Invest() {
                   {options.map((option) => (
                     <button
                       key={option}
-                      onClick={() => setSelected(option)}
-                      className={`text-2xl font-jersey transition-all duration-200 ${
-                        selected === option
+                      onClick={() =>
+                        setSelectedOption((prev) => ({
+                          ...prev,
+                          [stock.id]: option,
+                        }))
+                      }
+                      className={`text-xl font-jersey transition-all duration-200 ${
+                        selectedOption[stock.id] === option
                           ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
                           : "text-white opacity-70 hover:opacity-100"
                       }`}
@@ -339,10 +771,10 @@ export default function Invest() {
 
         {/* Gold */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-3xl font-jersey mb-2 text-white">GOLD</h3>
+          <h3 className="text-3xl font-jersey mb-1 text-white">GOLD</h3>
           <div className="flex justify-center">
             <img src={gold} alt="gold icon" className="w-[90px] h-[90px]" />
-          </div>{" "}
+          </div>
           <p className="text-white text-2xl font-jersey">
             Profit: {profit.gold.toLocaleString()} $
           </p>
@@ -350,13 +782,13 @@ export default function Invest() {
             <div className="flex justify-center gap-4 mt-4">
               <button
                 onClick={() => toggleInput("gold-sell")}
-                className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
               >
                 SELL
               </button>
               <button
                 onClick={() => toggleInput("gold-buy")}
-                className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
               >
                 BUY
               </button>
@@ -376,11 +808,11 @@ export default function Invest() {
                   placeholder="Enter amount"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="px-3 py-2 rounded border border-gray-400 text-black w-40"
+                  className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
                 />
                 <button
                   onClick={handleSubmit}
-                  className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                  className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
                 >
                   {activeInput.includes("buy") ? "BUY" : "SELL"}
                 </button>
@@ -391,25 +823,56 @@ export default function Invest() {
 
         {/* Currency */}
         <div className="col-span-2 bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-3xl font-jersey mb-2 text-white">
+          <h3 className="text-3xl font-jersey mb-1 text-white">
             CURRENCY EXCHANGE
           </h3>
-          <div className="grid grid-cols-4 gap-4">
-            {["USD", "EUR", "JPY", "CAD"].map((c) => (
+          <div className="grid grid-cols-3 gap-3">
+            {currencies.map((currency) => (
               <div
-                key={c}
+                key={currency.code}
                 className="border-2 border-dashed border-white p-3 rounded"
               >
-                <p className="text-white text-2xl font-jersey">{c}</p>
-                <p className="text-green-400 text-2xl font-jersey">▲ 2.25%</p>
                 <p className="text-white text-2xl font-jersey">
-                  Profit: {profit.currency[c].toLocaleString()} $
+                  {currency.code}
+                </p>
+                <div className="flex justify-between px-5">
+                  <p className="text-white text-xl font-jersey">
+                    {currency.rate.toFixed(2)} $
+                  </p>
+                  <p
+                    className={`text-xl font-jersey ${
+                      currency.changePercent >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {currency.changePercent >= 0 ? "▲" : "▼"}{" "}
+                    {Math.abs(currency.changePercent).toFixed(2)}%
+                  </p>
+                </div>
+                <p className="text-white text-xl font-jersey">
+                  Profit:{" "}
+                  {(profit.currency[currency.code] || 0).toLocaleString()} $
+                </p>
+                <p className="text-white text-xl font-jersey">
+                  Amount:{" "}
+                  {(holdings.currency[currency.code]?.amount || 0).toFixed(2)}
                 </p>
                 <div className="flex justify-center gap-2 mt-2">
-                  <button className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]">
+                  <button
+                    onClick={() =>
+                      handleCurrencyTransaction(currency.code, "sell")
+                    }
+                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                  >
                     SELL
                   </button>
-                  <button className="bg-[#11942F] text-white text-2xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]">
+                  <button
+                    onClick={() =>
+                      handleCurrencyTransaction(currency.code, "buy")
+                    }
+                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                  >
                     BUY
                   </button>
                 </div>
@@ -417,9 +880,14 @@ export default function Invest() {
                   {options.map((option) => (
                     <button
                       key={option}
-                      onClick={() => setSelected(option)}
-                      className={`text-2xl font-jersey transition-all duration-200 ${
-                        selected === option
+                      onClick={() =>
+                        setSelectedOption((prev) => ({
+                          ...prev,
+                          [currency.code]: option,
+                        }))
+                      }
+                      className={`text-xl font-jersey transition-all duration-200 ${
+                        selectedOption[currency.code] === option
                           ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
                           : "text-white opacity-70 hover:opacity-100"
                       }`}
