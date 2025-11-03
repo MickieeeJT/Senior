@@ -5,7 +5,8 @@ import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
 
 export default function Invest() {
-  const [balance, setBalance] = useState(1234567.8);
+  const [pocket, setPocket] = useState(4000); // Money available to invest
+  const [savingsBalance, setSavingsBalance] = useState(0); // Money in savings account
   const [currentYear, setCurrentYear] = useState(1);
   const [currentMonth, setCurrentMonth] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -34,6 +35,9 @@ export default function Invest() {
 
   // Holdings state
   const [holdings, setHoldings] = useState({
+    bonds: 0,
+    index: 0,
+    gold: 0,
     stocks: {},
     currency: {},
   });
@@ -49,12 +53,10 @@ export default function Invest() {
 
   const fetchStocks = async () => {
     try {
-      // Replace with your actual API endpoint
       const response = await fetch("/api/stocks");
       const data = await response.json();
       setStocks(data);
 
-      // Initialize profit and holdings for stocks
       const stockProfit = {};
       const stockHoldings = {};
       data.forEach((stock) => {
@@ -65,7 +67,6 @@ export default function Invest() {
       setHoldings((prev) => ({ ...prev, stocks: stockHoldings }));
     } catch (error) {
       console.error("Error fetching stocks:", error);
-      // Fallback dummy data if API fails
       const dummyStocks = [
         {
           id: "STOCK1",
@@ -111,12 +112,10 @@ export default function Invest() {
 
   const fetchCurrencies = async () => {
     try {
-      // Replace with your actual API endpoint
       const response = await fetch("/api/currencies");
       const data = await response.json();
       setCurrencies(data);
 
-      // Initialize profit and holdings for currencies
       const currencyProfit = {};
       const currencyHoldings = {};
       data.forEach((currency) => {
@@ -127,7 +126,6 @@ export default function Invest() {
       setHoldings((prev) => ({ ...prev, currency: currencyHoldings }));
     } catch (error) {
       console.error("Error fetching currencies:", error);
-      // Fallback dummy data if API fails
       const dummyCurrencies = [
         {
           code: "USD",
@@ -172,12 +170,12 @@ export default function Invest() {
     setAmount("");
   };
 
-  const calculateAmount = (optionType, price, itemId) => {
+  const calculateAmount = (optionType) => {
     if (optionType === "MAX") {
-      return balance;
+      return pocket;
     }
     const percentage = parseInt(optionType);
-    return (balance * percentage) / 100;
+    return (pocket * percentage) / 100;
   };
 
   const handleStockTransaction = async (stockId, action) => {
@@ -188,7 +186,7 @@ export default function Invest() {
     let transactionAmount = parseFloat(amount);
 
     if (selectedOpt && selectedOpt !== "custom") {
-      transactionAmount = calculateAmount(selectedOpt, stock.price, stockId);
+      transactionAmount = calculateAmount(selectedOpt);
     }
 
     if (!transactionAmount || transactionAmount <= 0) return;
@@ -197,13 +195,12 @@ export default function Invest() {
     const totalCost = shares * stock.price;
 
     if (action === "buy") {
-      if (totalCost > balance) {
-        alert("Insufficient balance!");
+      if (totalCost > pocket) {
+        alert("Insufficient pocket money!");
         return;
       }
 
       try {
-        // Send transaction to backend
         await fetch("/api/stocks/buy", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -215,7 +212,7 @@ export default function Invest() {
           }),
         });
 
-        setBalance((prev) => prev - totalCost);
+        setPocket((prev) => prev - totalCost);
         setHoldings((prev) => ({
           ...prev,
           stocks: {
@@ -244,7 +241,6 @@ export default function Invest() {
       const saleAmount = sharesToSell * stock.price;
 
       try {
-        // Send transaction to backend
         await fetch("/api/stocks/sell", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -256,7 +252,7 @@ export default function Invest() {
           }),
         });
 
-        setBalance((prev) => prev + saleAmount);
+        setPocket((prev) => prev + saleAmount);
         setHoldings((prev) => ({
           ...prev,
           stocks: {
@@ -268,7 +264,6 @@ export default function Invest() {
           },
         }));
 
-        // Calculate profit
         const profitAmount =
           saleAmount - sharesToSell * holdings.stocks[stockId].avgPrice;
         setProfit((prev) => ({
@@ -295,25 +290,20 @@ export default function Invest() {
     let transactionAmount = parseFloat(amount);
 
     if (selectedOpt && selectedOpt !== "custom") {
-      transactionAmount = calculateAmount(
-        selectedOpt,
-        currency.rate,
-        currencyCode
-      );
+      transactionAmount = calculateAmount(selectedOpt);
     }
 
     if (!transactionAmount || transactionAmount <= 0) return;
 
     if (action === "buy") {
-      if (transactionAmount > balance) {
-        alert("Insufficient balance!");
+      if (transactionAmount > pocket) {
+        alert("Insufficient pocket money!");
         return;
       }
 
       const currencyAmount = transactionAmount / currency.rate;
 
       try {
-        // Send transaction to backend
         await fetch("/api/currency/buy", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -325,7 +315,7 @@ export default function Invest() {
           }),
         });
 
-        setBalance((prev) => prev - transactionAmount);
+        setPocket((prev) => prev - transactionAmount);
         setHoldings((prev) => ({
           ...prev,
           currency: {
@@ -358,7 +348,6 @@ export default function Invest() {
       const saleAmount = amountToSell * currency.rate;
 
       try {
-        // Send transaction to backend
         await fetch("/api/currency/sell", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -370,7 +359,7 @@ export default function Invest() {
           }),
         });
 
-        setBalance((prev) => prev + saleAmount);
+        setPocket((prev) => prev + saleAmount);
         setHoldings((prev) => ({
           ...prev,
           currency: {
@@ -382,7 +371,6 @@ export default function Invest() {
           },
         }));
 
-        // Calculate profit
         const profitAmount =
           saleAmount - amountToSell * holdings.currency[currencyCode].avgRate;
         setProfit((prev) => ({
@@ -401,86 +389,149 @@ export default function Invest() {
     setSelectedOption((prev) => ({ ...prev, [currencyCode]: null }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const value = parseFloat(amount);
-    if (!isNaN(value)) {
-      if (activeInput === "savings-deposit") setBalance((prev) => prev + value);
-      else if (activeInput === "savings-withdraw")
-        setBalance((prev) => prev - value);
-      else if (activeInput === "index-buy") setBalance((prev) => prev - value);
-      else if (activeInput === "index-sell") setBalance((prev) => prev + value);
-      else if (activeInput?.includes("bond"))
-        setBalance((prev) => prev - value);
-      else if (activeInput?.includes("gold")) {
-        if (activeInput.includes("buy")) setBalance((prev) => prev - value);
-        else setBalance((prev) => prev + value);
+    if (isNaN(value) || value <= 0) {
+      alert("Please enter a valid amount!");
+      return;
+    }
+
+    // Check if sufficient funds for buying/depositing
+    if (activeInput?.includes("deposit") || activeInput?.includes("buy")) {
+      if (value > pocket) {
+        alert("Insufficient pocket money!");
+        return;
+      }
+    }
+
+    // Check if sufficient savings for withdrawal
+    if (activeInput === "savings-withdraw" && value > savingsBalance) {
+      alert("Insufficient savings balance!");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/invest/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: activeInput,
+          amount: value,
+          currentPocket: pocket,
+          currentSavingsBalance: savingsBalance,
+          currentProfit: profit,
+          currentHoldings: holdings,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process transaction");
       }
 
-      // Example profit updates (replace with backend API data)
-      if (activeInput?.includes("savings"))
-        setProfit((prev) => ({
-          ...prev,
-          savings: prev.savings + value * 0.01,
-        }));
-      else if (activeInput?.includes("bond"))
-        setProfit((prev) => ({ ...prev, bonds: prev.bonds + value * 0.02 }));
-      else if (activeInput?.includes("index"))
-        setProfit((prev) => ({ ...prev, index: prev.index + value * 0.03 }));
-      else if (activeInput?.includes("gold"))
-        setProfit((prev) => ({ ...prev, gold: prev.gold + value * 0.015 }));
+      const { newPocket, newSavingsBalance, newProfit, newHoldings } = await response.json();
+
+      setPocket(newPocket);
+      setSavingsBalance(newSavingsBalance);
+      setProfit(newProfit);
+      if (newHoldings) setHoldings(newHoldings);
+
+      setAmount("");
+      setActiveInput(null);
+      setSelectedBond("");
+    } catch (error) {
+      console.error("Error processing transaction:", error);
+      alert("Failed to process transaction. Please try again.");
     }
-    setAmount("");
-    setActiveInput(null);
-    setSelectedBond("");
   };
 
   const timerRef = useRef(null);
 
   useEffect(() => {
-  if (!isRunning) return;
-  if (timerRef.current) return; // prevent duplicate intervals
+    if (!isRunning) return;
+    if (timerRef.current) return;
 
-  const duration = 60000; // 60 seconds per year
-  const steps = 100;
-  const interval = duration / steps;
+    const duration = 60000;
+    const steps = 100;
+    const interval = duration / steps;
 
-  timerRef.current = setInterval(() => {
-    setProgress((prev) => {
-      if (prev >= 100) {
-        setProgress(0);
-        setCurrentMonth(0);
+    timerRef.current = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          setProgress(0);
+          setCurrentMonth(0);
 
-        setCurrentYear((y) => {
-          if (y >= 20) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-            setIsRunning(false);
-            return y;
-          }
-          return y + 1;
-        });
+          setCurrentYear((y) => {
+            if (y >= 20) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+              setIsRunning(false);
+              return y;
+            }
+            return y + 1;
+          });
 
-        return 0;
+          return 0;
+        }
+
+        const newProgress = prev + 1;
+        setCurrentMonth(newProgress / 8.33);
+        return newProgress;
+      });
+    }, interval);
+
+    return () => {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [isRunning]);
+
+  useEffect(() => {
+    const month = Math.floor(currentMonth);
+
+    if (month >= 1 && month <= 12) {
+      const lastMonth = parseInt(
+        sessionStorage.getItem("lastProcessedMonth") || "0"
+      );
+
+      if (month > lastMonth) {
+        console.log(`Month ${month} passed → updating interest`);
+        sessionStorage.setItem("lastProcessedMonth", month.toString());
+
+        // Update savings interest
+        fetch("http://localhost:8080/api/invest/updateInterest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentSavingsBalance: savingsBalance,
+            currentProfit: profit,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            setSavingsBalance(data.newSavingsBalance);
+            setProfit(data.newProfit);
+          })
+          .catch((err) => console.error("Error updating interest:", err));
+
+        // Add $4,000 every 6 months (month 6 and month 12)
+        if (month === 6 || month === 12) {
+          const incomeAmount = 4000;
+          console.log(`Half-year income: +${incomeAmount}`);
+          setPocket((prev) => prev + incomeAmount);
+        }
       }
+    }
+  }, [currentMonth, savingsBalance, profit]);
 
-      const newProgress = prev + 1;
-      setCurrentMonth(newProgress / 8.33);
-      return newProgress;
-    });
-  }, interval);
+  useEffect(() => {
+    sessionStorage.setItem("lastProcessedMonth", "0");
+  }, [currentYear]);
 
-  // Cleanup
-  return () => {
-    clearInterval(timerRef.current);
-    timerRef.current = null;
-  };
-}, [isRunning]);
-
-
+  // Calculate total portfolio value
+  const totalPortfolio = pocket + savingsBalance + holdings.bonds + holdings.index + holdings.gold;
 
   return (
     <div className="min-h-screen bg-[#011D10] text-[#494a48] font-mono flex flex-col p-6">
-      {/* Header */}
       <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-1">
         <h1 className="text-5xl font-jersey text-[#B7FD5E] mx-8">
           INVESTMENT GAME
@@ -495,14 +546,13 @@ export default function Invest() {
         </nav>
       </header>
 
-      {/* Portfolio Overview */}
       <div className="flex mx-10 justify-between items-center mt-1">
         <div className="flex text-center">
           <h2 className="text-4xl font-jersey text-white mb-1">
-            PORTFOLIO OVERVIEW :
+            POCKET MONEY :
           </h2>
           <p className="text-4xl font-jersey text-[#B7FD5E] px-8">
-            {balance.toLocaleString()} $
+            {pocket.toLocaleString()} $
           </p>
         </div>
 
@@ -514,7 +564,7 @@ export default function Invest() {
           <div className="relative h-4 w-full bg-white border border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] overflow-hidden">
             <div
               className="h-full bg-[#85ba3f] transition-all duration-500"
-              style={{ width: `${progress}%` }}
+              style={{ width: `${progress + 1}%` }}
             ></div>
 
             {[...Array(12)].map((_, i) => (
@@ -528,9 +578,7 @@ export default function Invest() {
         </div>
       </div>
 
-      {/* Main investment panels */}
       <div className="grid grid-cols-3 gap-3">
-        {/* Savings */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-2 text-white">
             SAVING ACCOUNT
@@ -539,7 +587,7 @@ export default function Invest() {
             <img src={saving} alt="saving icon" className="w-[90px] h-[90px]" />
           </div>
           <p className="text-white text-2xl font-jersey">
-            Balance: {balance.toLocaleString()} $
+            Balance: {savingsBalance.toLocaleString()} $
           </p>
           <p className="text-white text-2xl font-jersey">
             Profit: {profit.savings.toLocaleString()} $
@@ -587,7 +635,6 @@ export default function Invest() {
           </div>
         </div>
 
-        {/* Government Bonds */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-2 text-white">
             GOVERNMENT BONDS
@@ -641,7 +688,6 @@ export default function Invest() {
           )}
         </div>
 
-        {/* Index Fund */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-2 text-white">INDEX FUND</h3>
           <div className="flex justify-center">
@@ -695,7 +741,6 @@ export default function Invest() {
           </div>
         </div>
 
-        {/* Stocks */}
         <div className="col-span-3 bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-center text-3xl font-jersey mb-1 text-white">
             INDIVIDUAL STOCKS
@@ -769,7 +814,6 @@ export default function Invest() {
           </div>
         </div>
 
-        {/* Gold */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-1 text-white">GOLD</h3>
           <div className="flex justify-center">
@@ -821,7 +865,6 @@ export default function Invest() {
           </div>
         </div>
 
-        {/* Currency */}
         <div className="col-span-2 bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-1 text-white">
             CURRENCY EXCHANGE
@@ -902,7 +945,6 @@ export default function Invest() {
         </div>
       </div>
 
-      {/* Exit Modal */}
       {showExitModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-10 text-center">
