@@ -3,165 +3,115 @@ import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
+import indexData from "./data/indexData.json";
+
+const API_BASE_URL = "http://localhost:8080/api/invest";
 
 export default function Invest() {
-  const [pocket, setPocket] = useState(4000); // Money available to invest
-  const [savingsBalance, setSavingsBalance] = useState(0); // Money in savings account
-  const [currentYear, setCurrentYear] = useState(1);
-  const [currentMonth, setCurrentMonth] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [isRunning, setIsRunning] = useState(true);
+  const navigate = useNavigate();
+  const [sessionId, setSessionId] = useState(null);
+  const [gameState, setGameState] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  const [progress, setProgress] = useState(0);
+  const [currentMonth, setCurrentMonth] = useState(0);
+  const [isRunning, setIsRunning] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
 
   const [activeInput, setActiveInput] = useState(null);
   const [amount, setAmount] = useState("");
   const [selectedBond, setSelectedBond] = useState("");
-  const [selectedOption, setSelectedOption] = useState({});
+  const [indexValue, setIndexValue] = useState(indexData[0].close);
 
-  // Dynamic stocks and currency data
-  const [stocks, setStocks] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
+  const timerRef = useRef(null);
 
-  // Dynamic profit state
-  const [profit, setProfit] = useState({
-    savings: 0,
-    bonds: 0,
-    index: 0,
-    stocks: {},
-    gold: 0,
-    currency: {},
-  });
-
-  // Holdings state
-  const [holdings, setHoldings] = useState({
-    bonds: 0,
-    index: 0,
-    gold: 0,
-    stocks: {},
-    currency: {},
-  });
-
-  const navigate = useNavigate();
-  const options = ["1", "10", "25", "MAX"];
-
-  // Fetch stocks data from backend
+  // Initialize game session
   useEffect(() => {
-    fetchStocks();
-    fetchCurrencies();
+    const initGame = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/init`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        const data = await response.json();
+        setSessionId(data.sessionId);
+        setGameState(data.gameState);
+        setLoading(false);
+      } catch (error) {
+        console.error("Failed to initialize game:", error);
+        alert("Failed to start game");
+      }
+    };
+
+    initGame();
   }, []);
 
-  const fetchStocks = async () => {
+  // Sync game state periodically
+  const syncGameState = async () => {
+    if (!sessionId) return;
     try {
-      const response = await fetch("/api/stocks");
+      const response = await fetch(`${API_BASE_URL}/state/${sessionId}`);
       const data = await response.json();
-      setStocks(data);
-
-      const stockProfit = {};
-      const stockHoldings = {};
-      data.forEach((stock) => {
-        stockProfit[stock.id] = 0;
-        stockHoldings[stock.id] = { shares: 0, avgPrice: 0 };
-      });
-      setProfit((prev) => ({ ...prev, stocks: stockProfit }));
-      setHoldings((prev) => ({ ...prev, stocks: stockHoldings }));
+      setGameState(data);
     } catch (error) {
-      console.error("Error fetching stocks:", error);
-      const dummyStocks = [
-        {
-          id: "STOCK1",
-          symbol: "AAPL",
-          price: 175.5,
-          change: 2.25,
-          changePercent: 1.3,
-        },
-        {
-          id: "STOCK2",
-          symbol: "GOOGL",
-          price: 142.3,
-          change: -1.5,
-          changePercent: -1.04,
-        },
-        {
-          id: "STOCK3",
-          symbol: "MSFT",
-          price: 378.9,
-          change: 5.75,
-          changePercent: 1.54,
-        },
-        {
-          id: "STOCK4",
-          symbol: "TSLA",
-          price: 242.15,
-          change: 8.4,
-          changePercent: 3.59,
-        },
-      ];
-      setStocks(dummyStocks);
-
-      const stockProfit = {};
-      const stockHoldings = {};
-      dummyStocks.forEach((stock) => {
-        stockProfit[stock.id] = 0;
-        stockHoldings[stock.id] = { shares: 0, avgPrice: 0 };
-      });
-      setProfit((prev) => ({ ...prev, stocks: stockProfit }));
-      setHoldings((prev) => ({ ...prev, stocks: stockHoldings }));
+      console.error("Failed to sync game state:", error);
     }
   };
 
-  const fetchCurrencies = async () => {
+  // Handle transactions
+  const handleTransaction = async (
+    action,
+    transactionAmount,
+    bondType = null
+  ) => {
+    if (!sessionId) return;
+
     try {
-      const response = await fetch("/api/currencies");
+      const response = await fetch(`${API_BASE_URL}/transaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          action,
+          amount: transactionAmount,
+          bondType,
+          indexValue,
+        }),
+      });
+
       const data = await response.json();
-      setCurrencies(data);
 
-      const currencyProfit = {};
-      const currencyHoldings = {};
-      data.forEach((currency) => {
-        currencyProfit[currency.code] = 0;
-        currencyHoldings[currency.code] = { amount: 0, avgRate: 0 };
-      });
-      setProfit((prev) => ({ ...prev, currency: currencyProfit }));
-      setHoldings((prev) => ({ ...prev, currency: currencyHoldings }));
+      if (!response.ok) {
+        alert(data.error);
+        return;
+      }
+
+      setGameState(data.gameState);
+      setAmount("");
+      setActiveInput(null);
+      setSelectedBond("");
     } catch (error) {
-      console.error("Error fetching currencies:", error);
-      const dummyCurrencies = [
-        {
-          code: "USD",
-          rate: 1.0,
-          change: 0.0,
-          changePercent: 0.0,
-        },
-        {
-          code: "EUR",
-          rate: 0.92,
-          change: -0.01,
-          changePercent: -1.08,
-        },
-        {
-          code: "JPY",
-          rate: 149.85,
-          change: 1.25,
-          changePercent: 0.84,
-        },
-      ];
-      setCurrencies(dummyCurrencies);
-
-      const currencyProfit = {};
-      const currencyHoldings = {};
-      dummyCurrencies.forEach((currency) => {
-        currencyProfit[currency.code] = 0;
-        currencyHoldings[currency.code] = { amount: 0, avgRate: 0 };
-      });
-      setProfit((prev) => ({ ...prev, currency: currencyProfit }));
-      setHoldings((prev) => ({ ...prev, currency: currencyHoldings }));
+      console.error("Transaction failed:", error);
+      alert("Transaction failed");
     }
   };
 
-  const handleExitConfirm = () => {
-    setShowExitModal(false);
-    navigate(-1);
+  const handleSubmit = () => {
+    const value = parseFloat(amount);
+    if (isNaN(value) || value <= 0) {
+      alert("Please enter a valid amount!");
+      return;
+    }
+
+    if (activeInput === "bond-select") {
+      if (!selectedBond) {
+        alert("Please select a bond duration!");
+        return;
+      }
+      handleTransaction("bond-buy", value, selectedBond);
+    } else if (activeInput) {
+      handleTransaction(activeInput, value);
+    }
   };
 
   const toggleInput = (type) => {
@@ -170,284 +120,9 @@ export default function Invest() {
     setAmount("");
   };
 
-  const calculateAmount = (optionType) => {
-    if (optionType === "MAX") {
-      return pocket;
-    }
-    const percentage = parseInt(optionType);
-    return (pocket * percentage) / 100;
-  };
-
-  const handleStockTransaction = async (stockId, action) => {
-    const stock = stocks.find((s) => s.id === stockId);
-    if (!stock) return;
-
-    const selectedOpt = selectedOption[stockId];
-    let transactionAmount = parseFloat(amount);
-
-    if (selectedOpt && selectedOpt !== "custom") {
-      transactionAmount = calculateAmount(selectedOpt);
-    }
-
-    if (!transactionAmount || transactionAmount <= 0) return;
-
-    const shares = Math.floor(transactionAmount / stock.price);
-    const totalCost = shares * stock.price;
-
-    if (action === "buy") {
-      if (totalCost > pocket) {
-        alert("Insufficient pocket money!");
-        return;
-      }
-
-      try {
-        await fetch("/api/stocks/buy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            stockId: stock.id,
-            shares,
-            price: stock.price,
-            totalCost,
-          }),
-        });
-
-        setPocket((prev) => prev - totalCost);
-        setHoldings((prev) => ({
-          ...prev,
-          stocks: {
-            ...prev.stocks,
-            [stockId]: {
-              shares: prev.stocks[stockId].shares + shares,
-              avgPrice:
-                (prev.stocks[stockId].shares * prev.stocks[stockId].avgPrice +
-                  totalCost) /
-                (prev.stocks[stockId].shares + shares),
-            },
-          },
-        }));
-      } catch (error) {
-        console.error("Error buying stock:", error);
-      }
-    } else if (action === "sell") {
-      const ownedShares = holdings.stocks[stockId]?.shares || 0;
-      const sharesToSell = Math.min(shares, ownedShares);
-
-      if (sharesToSell <= 0) {
-        alert("You don't own any shares!");
-        return;
-      }
-
-      const saleAmount = sharesToSell * stock.price;
-
-      try {
-        await fetch("/api/stocks/sell", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            stockId: stock.id,
-            shares: sharesToSell,
-            price: stock.price,
-            saleAmount,
-          }),
-        });
-
-        setPocket((prev) => prev + saleAmount);
-        setHoldings((prev) => ({
-          ...prev,
-          stocks: {
-            ...prev.stocks,
-            [stockId]: {
-              ...prev.stocks[stockId],
-              shares: prev.stocks[stockId].shares - sharesToSell,
-            },
-          },
-        }));
-
-        const profitAmount =
-          saleAmount - sharesToSell * holdings.stocks[stockId].avgPrice;
-        setProfit((prev) => ({
-          ...prev,
-          stocks: {
-            ...prev.stocks,
-            [stockId]: prev.stocks[stockId] + profitAmount,
-          },
-        }));
-      } catch (error) {
-        console.error("Error selling stock:", error);
-      }
-    }
-
-    setAmount("");
-    setSelectedOption((prev) => ({ ...prev, [stockId]: null }));
-  };
-
-  const handleCurrencyTransaction = async (currencyCode, action) => {
-    const currency = currencies.find((c) => c.code === currencyCode);
-    if (!currency) return;
-
-    const selectedOpt = selectedOption[currencyCode];
-    let transactionAmount = parseFloat(amount);
-
-    if (selectedOpt && selectedOpt !== "custom") {
-      transactionAmount = calculateAmount(selectedOpt);
-    }
-
-    if (!transactionAmount || transactionAmount <= 0) return;
-
-    if (action === "buy") {
-      if (transactionAmount > pocket) {
-        alert("Insufficient pocket money!");
-        return;
-      }
-
-      const currencyAmount = transactionAmount / currency.rate;
-
-      try {
-        await fetch("/api/currency/buy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            currencyCode: currency.code,
-            amount: currencyAmount,
-            rate: currency.rate,
-            totalCost: transactionAmount,
-          }),
-        });
-
-        setPocket((prev) => prev - transactionAmount);
-        setHoldings((prev) => ({
-          ...prev,
-          currency: {
-            ...prev.currency,
-            [currencyCode]: {
-              amount: prev.currency[currencyCode].amount + currencyAmount,
-              avgRate:
-                (prev.currency[currencyCode].amount *
-                  prev.currency[currencyCode].avgRate +
-                  transactionAmount) /
-                (prev.currency[currencyCode].amount + currencyAmount),
-            },
-          },
-        }));
-      } catch (error) {
-        console.error("Error buying currency:", error);
-      }
-    } else if (action === "sell") {
-      const ownedAmount = holdings.currency[currencyCode]?.amount || 0;
-      const amountToSell = Math.min(
-        transactionAmount / currency.rate,
-        ownedAmount
-      );
-
-      if (amountToSell <= 0) {
-        alert("You don't own this currency!");
-        return;
-      }
-
-      const saleAmount = amountToSell * currency.rate;
-
-      try {
-        await fetch("/api/currency/sell", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            currencyCode: currency.code,
-            amount: amountToSell,
-            rate: currency.rate,
-            saleAmount,
-          }),
-        });
-
-        setPocket((prev) => prev + saleAmount);
-        setHoldings((prev) => ({
-          ...prev,
-          currency: {
-            ...prev.currency,
-            [currencyCode]: {
-              ...prev.currency[currencyCode],
-              amount: prev.currency[currencyCode].amount - amountToSell,
-            },
-          },
-        }));
-
-        const profitAmount =
-          saleAmount - amountToSell * holdings.currency[currencyCode].avgRate;
-        setProfit((prev) => ({
-          ...prev,
-          currency: {
-            ...prev.currency,
-            [currencyCode]: prev.currency[currencyCode] + profitAmount,
-          },
-        }));
-      } catch (error) {
-        console.error("Error selling currency:", error);
-      }
-    }
-
-    setAmount("");
-    setSelectedOption((prev) => ({ ...prev, [currencyCode]: null }));
-  };
-
-  const handleSubmit = async () => {
-    const value = parseFloat(amount);
-    if (isNaN(value) || value <= 0) {
-      alert("Please enter a valid amount!");
-      return;
-    }
-
-    // Check if sufficient funds for buying/depositing
-    if (activeInput?.includes("deposit") || activeInput?.includes("buy")) {
-      if (value > pocket) {
-        alert("Insufficient pocket money!");
-        return;
-      }
-    }
-
-    // Check if sufficient savings for withdrawal
-    if (activeInput === "savings-withdraw" && value > savingsBalance) {
-      alert("Insufficient savings balance!");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/invest/calculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: activeInput,
-          amount: value,
-          currentPocket: pocket,
-          currentSavingsBalance: savingsBalance,
-          currentProfit: profit,
-          currentHoldings: holdings,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to process transaction");
-      }
-
-      const { newPocket, newSavingsBalance, newProfit, newHoldings } = await response.json();
-
-      setPocket(newPocket);
-      setSavingsBalance(newSavingsBalance);
-      setProfit(newProfit);
-      if (newHoldings) setHoldings(newHoldings);
-
-      setAmount("");
-      setActiveInput(null);
-      setSelectedBond("");
-    } catch (error) {
-      console.error("Error processing transaction:", error);
-      alert("Failed to process transaction. Please try again.");
-    }
-  };
-
-  const timerRef = useRef(null);
-
+  // Main year timer
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || !gameState) return;
     if (timerRef.current) return;
 
     const duration = 60000;
@@ -457,19 +132,22 @@ export default function Invest() {
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
+          // Year complete
+          fetch(`${API_BASE_URL}/year-increment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.gameComplete) {
+                setIsRunning(false);
+              }
+              setGameState(data.gameState);
+            });
+
           setProgress(0);
           setCurrentMonth(0);
-
-          setCurrentYear((y) => {
-            if (y >= 20) {
-              clearInterval(timerRef.current);
-              timerRef.current = null;
-              setIsRunning(false);
-              return y;
-            }
-            return y + 1;
-          });
-
           return 0;
         }
 
@@ -483,52 +161,86 @@ export default function Invest() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     };
-  }, [isRunning]);
+  }, [isRunning, sessionId, gameState]);
 
+  // Monthly updates (stocks, index, AND bond)
   useEffect(() => {
+    if (!sessionId || !gameState) return;
+
     const month = Math.floor(currentMonth);
 
-    if (month >= 1 && month <= 12) {
-      const lastMonth = parseInt(
-        sessionStorage.getItem("lastProcessedMonth") || "0"
-      );
+    // Only trigger when the next month starts and hasn't been processed yet
+    if (month >= 1 && month <= 12 && month > gameState.lastProcessedMonth) {
+      const monthIndex = (month - 1) % indexData.length;
+      const currentIndexData = indexData[monthIndex];
+      setIndexValue(currentIndexData.close);
 
-      if (month > lastMonth) {
-        console.log(`Month ${month} passed → updating interest`);
-        sessionStorage.setItem("lastProcessedMonth", month.toString());
+      fetch(`${API_BASE_URL}/monthly-update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          month,
+          indexData: currentIndexData,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setGameState(data.gameState);
 
-        // Update savings interest
-        fetch("http://localhost:8080/api/invest/updateInterest", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            currentSavingsBalance: savingsBalance,
-            currentProfit: profit,
-          }),
+          //  Bond Update (trigger once per month, after monthly-update success) ---
+          return fetch(`${API_BASE_URL}/bond-update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
         })
-          .then((res) => res.json())
-          .then((data) => {
-            setSavingsBalance(data.newSavingsBalance);
-            setProfit(data.newProfit);
-          })
-          .catch((err) => console.error("Error updating interest:", err));
-
-        // Add $4,000 every 6 months (month 6 and month 12)
-        if (month === 6 || month === 12) {
-          const incomeAmount = 4000;
-          console.log(`Half-year income: +${incomeAmount}`);
-          setPocket((prev) => prev + incomeAmount);
-        }
-      }
+        .then((res) => (res ? res.json() : null))
+        .then((data) => {
+          if (data?.gameState) setGameState(data.gameState);
+        })
+        .catch((error) =>
+          console.error("Monthly or bond update failed:", error)
+        );
     }
-  }, [currentMonth, savingsBalance, profit]);
+  }, [currentMonth, sessionId, gameState]);
 
-  useEffect(() => {
-    sessionStorage.setItem("lastProcessedMonth", "0");
-  }, [currentYear]);
+  if (loading || !gameState) {
+    return (
+      <div className="min-h-screen bg-[#011D10] flex items-center justify-center">
+        <p className="text-white text-4xl font-jersey">Loading...</p>
+      </div>
+    );
+  }
 
-  // Calculate total portfolio value
-  const totalPortfolio = pocket + savingsBalance + holdings.bonds + holdings.index + holdings.gold;
+  const handleBondSell = async (inv) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/bond-sell`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          bondId: inv.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data?.gameState) {
+        setGameState(data.gameState);
+        console.log(`Bond ${inv.id} sold successfully!`);
+      } else {
+        console.warn("Bond sell response missing gameState:", data);
+      }
+    } catch (error) {
+      console.error("Error selling bond:", error);
+    }
+  };
+
+  // Calculate unrealized profit/loss
+  const currentIndexValue = gameState.indexShares * indexValue;
+  const indexUnrealizedProfit =
+    gameState.fundBalance - gameState.holdings.index;
 
   return (
     <div className="min-h-screen bg-[#011D10] text-[#494a48] font-mono flex flex-col p-6">
@@ -552,13 +264,13 @@ export default function Invest() {
             POCKET MONEY :
           </h2>
           <p className="text-4xl font-jersey text-[#B7FD5E] px-8">
-            {pocket.toLocaleString()} $
+            {gameState.pocket.toLocaleString()} $
           </p>
         </div>
 
         <div className="self-center mb-3 pt-1 w-1/4">
           <p className="text-3xl font-jersey text-white mb-1 text-center">
-            YEAR {currentYear} OF 20
+            YEAR {gameState.currentYear} OF 20
           </p>
 
           <div className="relative h-4 w-full bg-white border border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] overflow-hidden">
@@ -579,6 +291,7 @@ export default function Invest() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
+        {/* Savings Account */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-2 text-white">
             SAVING ACCOUNT
@@ -587,10 +300,10 @@ export default function Invest() {
             <img src={saving} alt="saving icon" className="w-[90px] h-[90px]" />
           </div>
           <p className="text-white text-2xl font-jersey">
-            Balance: {savingsBalance.toLocaleString()} $
+            Balance: {gameState.savingsBalance.toFixed(2)} $
           </p>
           <p className="text-white text-2xl font-jersey">
-            Profit: {profit.savings.toLocaleString()} $
+            Profit: {gameState.profit.savings.toFixed(2)} $
           </p>
           {!activeInput?.includes("savings") && (
             <div className="flex justify-center gap-4 mt-1 transition-opacity duration-300">
@@ -635,12 +348,13 @@ export default function Invest() {
           </div>
         </div>
 
+        {/* Government Bonds */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-2 text-white">
             GOVERNMENT BONDS
           </h3>
-          <p className="text-white text-2xl font-jersey mb-4">
-            Profit: {profit.bonds.toLocaleString()} $
+          <p className="text-white text-2xl font-jersey mb-2">
+            Profit: {gameState.profit.bonds.toFixed(2)} $
           </p>
 
           {!activeInput?.includes("bond") && (
@@ -653,21 +367,33 @@ export default function Invest() {
           )}
 
           {activeInput === "bond-select" && (
-            <div className="mt-4 flex flex-col items-center space-y-5">
-              <div className="flex justify-center gap-6">
-                {["1 year", "5 years", "10 years"].map((t) => (
-                  <div
-                    key={t}
-                    onClick={() => setSelectedBond(t)}
-                    className={`font-bold rounded-full w-16 h-16 flex items-center justify-center cursor-pointer transition-all ${
-                      selectedBond === t
-                        ? "bg-[#B7FD5E] text-black scale-105 shadow-[0_0_10px_#00FF00]"
-                        : "bg-gray-100 text-black hover:bg-gray-300"
-                    }`}
-                  >
-                    {t.split(" ")[0]}
-                  </div>
-                ))}
+            <div className="mt-2 flex flex-col items-center space-y-3">
+              <div className="flex justify-center gap-4">
+                {["1 year", "5 years", "10 years"].map((t) => {
+                  const rate = gameState.bondInterestRates[t];
+                  const ratePercent = (rate * 100).toFixed(1);
+
+                  return (
+                    <div
+                      key={t}
+                      onClick={() => setSelectedBond(t)}
+                      className="flex flex-col items-center cursor-pointer"
+                    >
+                      <div
+                        className={`font-bold rounded-full w-14 h-14 flex items-center justify-center transition-all ${
+                          selectedBond === t
+                            ? "bg-[#B7FD5E] text-black scale-105 shadow-[0_0_10px_#00FF00]"
+                            : "bg-gray-100 text-black hover:bg-gray-300"
+                        }`}
+                      >
+                        {t.split(" ")[0]}
+                      </div>
+                      <div className="text-l font-jersey text-[#B7FD5E] mt-1">
+                        {ratePercent}%
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex items-center gap-3">
                 <input
@@ -686,19 +412,98 @@ export default function Invest() {
               </div>
             </div>
           )}
+
+          {/* Bond Investments Progress */}
+          {gameState.bondInvestments.length > 0 && (
+            <div className="mt-3 flex justify-center gap-4 flex-wrap">
+              {gameState.bondInvestments.map((inv) => {
+                const progress =
+                  ((inv.duration - inv.remaining) / inv.duration) * 100;
+
+                return (
+                  <div key={inv.id} className="flex flex-col items-center mb-2">
+                    <div className="relative w-16 h-16">
+                      <svg
+                        viewBox="0 0 36 36"
+                        className="w-full h-full rounded-full transform -rotate-90"
+                      >
+                        <path
+                          className="text-gray-700"
+                          strokeWidth="30"
+                          fill="none"
+                          stroke="currentColor"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                          className="text-[#B7FD5E]"
+                          strokeWidth="30"
+                          strokeDasharray={`${progress}, 100`}
+                          fill="none"
+                          stroke="currentColor"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-xs font-jersey text-white">
+                        <div className="text-xl font-jersey text-white">
+                          ${inv.amount.toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleBondSell(inv)}
+                      className="mt-1 text-white text-l font-jersey hover:underline"
+                    >
+                      Collect
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
+        {/* Index Fund */}
         <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-3xl font-jersey mb-2 text-white">INDEX FUND</h3>
+          <h3 className="text-3xl font-jersey mb-1 text-white">INDEX FUND</h3>
           <div className="flex justify-center">
             <img src={index} alt="index icon" className="w-[90px] h-[90px]" />
           </div>
-          <p className="text-white text-2xl font-jersey">
-            Profit: {profit.index.toLocaleString()} $
+          <div className="flex justify-center gap-3">
+            <p className="text-white text-xl font-jersey">
+              Price: {indexValue.toFixed(2)}
+            </p>
+            <p
+              className={`text-lg font-jersey ${
+                indexData[Math.floor(currentMonth) % indexData.length]
+                  ?.change >= 0
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
+            >
+              {indexData[Math.floor(currentMonth) % indexData.length]?.change >=
+              0
+                ? "▲"
+                : "▼"}{" "}
+              {Math.abs(
+                indexData[Math.floor(currentMonth) % indexData.length]
+                  ?.change || 0
+              ).toFixed(2)}
+              %
+            </p>
+          </div>
+          <p className="text-white text-xl font-jersey">
+            Fund Balance: {gameState.fundBalance.toFixed(2)} $
+          </p>
+          <p
+            className={`text-lg font-jersey ${
+              indexUnrealizedProfit >= 0 ? "text-green-400" : "text-red-400"
+            }`}
+          >
+            Unrealized: {indexUnrealizedProfit.toFixed(2)} $
           </p>
 
           {!activeInput?.includes("index") && (
-            <div className="flex justify-center gap-4 mt-4">
+            <div className="flex justify-center gap-4 mt-2">
               <button
                 onClick={() => toggleInput("index-sell")}
                 className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
@@ -715,7 +520,7 @@ export default function Invest() {
           )}
 
           <div
-            className={`mt-2 overflow-hidden transition-all duration-500 flex justify-center items-center gap-4 ${
+            className={`mt-2 overflow-hidden transition-all duration-500 flex justify-center items-center gap-4 mb-2 ${
               activeInput?.includes("index")
                 ? "max-h-40 opacity-100"
                 : "max-h-0 opacity-0"
@@ -725,7 +530,7 @@ export default function Invest() {
               <>
                 <input
                   type="number"
-                  placeholder="Enter amount"
+                  placeholder="Amount in $"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
@@ -738,209 +543,6 @@ export default function Invest() {
                 </button>
               </>
             )}
-          </div>
-        </div>
-
-        <div className="col-span-3 bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-center text-3xl font-jersey mb-1 text-white">
-            INDIVIDUAL STOCKS
-          </h3>
-          <div className="grid grid-cols-4 gap-4">
-            {stocks.map((stock) => (
-              <div
-                key={stock.id}
-                className="border-2 border-dashed border-white p-4 text-center rounded"
-              >
-                <p className="text-white text-2xl font-jersey">
-                  {stock.symbol}
-                </p>
-                <div className="flex justify-between px-5">
-                  <p className="text-white text-xl font-jersey">
-                    {stock.price.toFixed(2)} $
-                  </p>
-                  <p
-                    className={`text-xl font-jersey ${
-                      stock.changePercent >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {stock.changePercent >= 0 ? "▲" : "▼"}{" "}
-                    {Math.abs(stock.changePercent).toFixed(2)}%
-                  </p>
-                </div>
-                <p className="text-white text-xl font-jersey">
-                  Profit: {(profit.stocks[stock.id] || 0).toLocaleString()} $
-                </p>
-                <p className="text-white text-xl font-jersey">
-                  Shares: {holdings.stocks[stock.id]?.shares || 0}
-                </p>
-                <div className="flex justify-center gap-4 mt-2">
-                  <button
-                    onClick={() => handleStockTransaction(stock.id, "sell")}
-                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
-                  >
-                    SELL
-                  </button>
-                  <button
-                    onClick={() => handleStockTransaction(stock.id, "buy")}
-                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
-                  >
-                    BUY
-                  </button>
-                </div>
-                <div className="px-8 mt-1 flex justify-between">
-                  {options.map((option) => (
-                    <button
-                      key={option}
-                      onClick={() =>
-                        setSelectedOption((prev) => ({
-                          ...prev,
-                          [stock.id]: option,
-                        }))
-                      }
-                      className={`text-xl font-jersey transition-all duration-200 ${
-                        selectedOption[stock.id] === option
-                          ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
-                          : "text-white opacity-70 hover:opacity-100"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-3xl font-jersey mb-1 text-white">GOLD</h3>
-          <div className="flex justify-center">
-            <img src={gold} alt="gold icon" className="w-[90px] h-[90px]" />
-          </div>
-          <p className="text-white text-2xl font-jersey">
-            Profit: {profit.gold.toLocaleString()} $
-          </p>
-          {!activeInput?.includes("gold") && (
-            <div className="flex justify-center gap-4 mt-4">
-              <button
-                onClick={() => toggleInput("gold-sell")}
-                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
-              >
-                SELL
-              </button>
-              <button
-                onClick={() => toggleInput("gold-buy")}
-                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
-              >
-                BUY
-              </button>
-            </div>
-          )}
-          <div
-            className={`mt-2 overflow-hidden transition-all duration-500 flex justify-center items-center gap-4 ${
-              activeInput?.includes("gold")
-                ? "max-h-40 opacity-100"
-                : "max-h-0 opacity-0"
-            }`}
-          >
-            {activeInput?.includes("gold") && (
-              <>
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
-                />
-                <button
-                  onClick={handleSubmit}
-                  className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
-                >
-                  {activeInput.includes("buy") ? "BUY" : "SELL"}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="col-span-2 bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-3xl font-jersey mb-1 text-white">
-            CURRENCY EXCHANGE
-          </h3>
-          <div className="grid grid-cols-3 gap-3">
-            {currencies.map((currency) => (
-              <div
-                key={currency.code}
-                className="border-2 border-dashed border-white p-3 rounded"
-              >
-                <p className="text-white text-2xl font-jersey">
-                  {currency.code}
-                </p>
-                <div className="flex justify-between px-5">
-                  <p className="text-white text-xl font-jersey">
-                    {currency.rate.toFixed(2)} $
-                  </p>
-                  <p
-                    className={`text-xl font-jersey ${
-                      currency.changePercent >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {currency.changePercent >= 0 ? "▲" : "▼"}{" "}
-                    {Math.abs(currency.changePercent).toFixed(2)}%
-                  </p>
-                </div>
-                <p className="text-white text-xl font-jersey">
-                  Profit:{" "}
-                  {(profit.currency[currency.code] || 0).toLocaleString()} $
-                </p>
-                <p className="text-white text-xl font-jersey">
-                  Amount:{" "}
-                  {(holdings.currency[currency.code]?.amount || 0).toFixed(2)}
-                </p>
-                <div className="flex justify-center gap-2 mt-2">
-                  <button
-                    onClick={() =>
-                      handleCurrencyTransaction(currency.code, "sell")
-                    }
-                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
-                  >
-                    SELL
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleCurrencyTransaction(currency.code, "buy")
-                    }
-                    className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
-                  >
-                    BUY
-                  </button>
-                </div>
-                <div className="px-8 mt-1 flex justify-between">
-                  {options.map((option) => (
-                    <button
-                      key={option}
-                      onClick={() =>
-                        setSelectedOption((prev) => ({
-                          ...prev,
-                          [currency.code]: option,
-                        }))
-                      }
-                      className={`text-xl font-jersey transition-all duration-200 ${
-                        selectedOption[currency.code] === option
-                          ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
-                          : "text-white opacity-70 hover:opacity-100"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
