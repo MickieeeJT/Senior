@@ -7,7 +7,7 @@ const gameSessions = new Map();
 // Initialize a new game session
 router.post("/init", (req, res) => {
   const sessionId = Date.now().toString();
-  
+
   // Generate random bond interest rates
   const bondInterestRates = {
     "1 year": 0.05 + Math.random() * 0.05,
@@ -232,100 +232,217 @@ router.post("/monthly-update", (req, res) => {
 
 // Bond monthly update (triggered once per in-game month)
 router.post("/bond-update", (req, res) => {
-	const { sessionId } = req.body;
-	const gameState = gameSessions.get(sessionId);
+  const { sessionId } = req.body;
+  const gameState = gameSessions.get(sessionId);
 
-	if (!gameState) {
-		return res.status(404).json({ error: "Session not found" });
-	}
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
 
-	const maturedBonds = [];
+  const maturedBonds = [];
 
-	gameState.bondInvestments = gameState.bondInvestments
-		.map((inv) => {
-			if (inv.remaining > 0) {
-				const interestRate = gameState.bondInterestRates[inv.bondType];
+  gameState.bondInvestments = gameState.bondInvestments
+    .map((inv) => {
+      if (inv.remaining > 0) {
+        const interestRate = gameState.bondInterestRates[inv.bondType];
 
-				// 1 year = 12 months → convert yearly rate to monthly
-				const monthlyRate = interestRate / 12;
+        // 1 year = 12 months → convert yearly rate to monthly
+        const monthlyRate = interestRate / 12;
 
-				// Apply compound interest for one month
-				const interest = inv.amount * monthlyRate;
-				inv.amount += interest;
-				gameState.profit.bonds += interest;
+        // Apply compound interest for one month
+        const interest = inv.amount * monthlyRate;
+        inv.amount += interest;
+        gameState.profit.bonds += interest;
 
-				// Decrease remaining time by 1 month (1/12 year)
-				inv.remaining = Math.max(0, inv.remaining - 1 / 12);
-			}
+        // Decrease remaining time by 1 month (1/12 year)
+        inv.remaining = Math.max(0, inv.remaining - 1 / 12);
+      }
 
-			// If bond matured → return to pocket
-			if (inv.remaining <= 0) {
-				const totalReturn = inv.amount;
-				gameState.pocket += totalReturn;
-				gameState.holdings.bonds = Math.max(
-					0,
-					gameState.holdings.bonds - inv.amount
-				);
+      // If bond matured → return to pocket
+      if (inv.remaining <= 0) {
+        const totalReturn = inv.amount;
+        gameState.pocket += totalReturn;
+        gameState.holdings.bonds = Math.max(
+          0,
+          gameState.holdings.bonds - inv.amount
+        );
 
-				maturedBonds.push({
-					amount: totalReturn,
-					duration: inv.duration,
-					bondType: inv.bondType,
-				});
+        maturedBonds.push({
+          amount: totalReturn,
+          duration: inv.duration,
+          bondType: inv.bondType,
+        });
 
-				return null; // remove matured bond
-			}
+        return null; // remove matured bond
+      }
 
-			return inv;
-		})
-		.filter(Boolean);
+      return inv;
+    })
+    .filter(Boolean);
 
-	gameSessions.set(sessionId, gameState);
+  gameSessions.set(sessionId, gameState);
 
-	res.json({
-		success: true,
-		gameState,
-		maturedBonds,
-	});
+  res.json({
+    success: true,
+    gameState,
+    maturedBonds,
+  });
 });
 
 // Bond early sell (manual collect with 10% penalty)
 router.post("/bond-sell", (req, res) => {
-	const { sessionId, bondId } = req.body;
-	const gameState = gameSessions.get(sessionId);
+  const { sessionId, bondId } = req.body;
+  const gameState = gameSessions.get(sessionId);
 
-	if (!gameState) {
-		return res.status(404).json({ error: "Session not found" });
-	}
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
 
-	const bondIndex = gameState.bondInvestments.findIndex((b) => b.id === bondId);
-	if (bondIndex === -1) {
-		return res.status(404).json({ error: "Bond not found" });
-	}
+  const bondIndex = gameState.bondInvestments.findIndex((b) => b.id === bondId);
+  if (bondIndex === -1) {
+    return res.status(404).json({ error: "Bond not found" });
+  }
 
-	const bond = gameState.bondInvestments[bondIndex];
+  const bond = gameState.bondInvestments[bondIndex];
 
-	// 💸 Apply 10% penalty
-	const sellAmount = bond.amount * 0.9;
+  // 💸 Apply 10% penalty
+  const sellAmount = bond.amount * 0.9;
 
-	// Add money to pocket
-	gameState.pocket += sellAmount;
+  // Add money to pocket
+  gameState.pocket += sellAmount;
 
-	// Adjust holdings
-	gameState.holdings.bonds = Math.max(0, gameState.holdings.bonds - bond.amount);
+  // Adjust holdings
+  gameState.holdings.bonds = Math.max(0, gameState.holdings.bonds - bond.amount);
 
-	// Remove bond from active investments
-	gameState.bondInvestments.splice(bondIndex, 1);
+  // Remove bond from active investments
+  gameState.bondInvestments.splice(bondIndex, 1);
 
-	gameSessions.set(sessionId, gameState);
+  gameSessions.set(sessionId, gameState);
 
-	res.json({
-		success: true,
-		sellAmount,
-		gameState,
-		message: `Bond sold early for ${sellAmount.toFixed(2)}$ (10% penalty applied)`,
-	});
+  res.json({
+    success: true,
+    sellAmount,
+    gameState,
+    message: `Bond sold early for ${sellAmount.toFixed(2)}$ (10% penalty applied)`,
+  });
 });
+
+// STOCK BUY
+router.post("/stock-buy", (req, res) => {
+  const { sessionId, symbol, amount, price } = req.body;
+  const gameState = gameSessions.get(sessionId);
+
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  const shares = parseInt(amount);
+  const stockPrice = parseFloat(price);
+
+  if (isNaN(shares) || shares <= 0) {
+    return res.status(400).json({ error: "Invalid share amount" });
+  }
+  if (isNaN(stockPrice) || stockPrice <= 0) {
+    return res.status(400).json({ error: "Invalid stock price" });
+  }
+
+  const totalCost = shares * stockPrice;
+  if (totalCost > gameState.pocket) {
+    return res.status(400).json({ error: "Insufficient pocket balance" });
+  }
+
+  // Deduct from pocket
+  gameState.pocket -= totalCost;
+
+  // Initialize holdings if not exist
+  if (!gameState.holdings.stocks) gameState.holdings.stocks = {};
+  if (!gameState.holdings.stocks[symbol]) {
+    gameState.holdings.stocks[symbol] = {
+      shares: 0,
+      avgCost: 0,
+    };
+  }
+
+  const holding = gameState.holdings.stocks[symbol];
+
+  // Update average cost
+  const totalShares = holding.shares + shares;
+  holding.avgCost =
+    totalShares === 0
+      ? 0
+      : (holding.shares * holding.avgCost + shares * stockPrice) / totalShares;
+
+  holding.shares = totalShares;
+
+  // Save updated game state
+  gameSessions.set(sessionId, gameState);
+
+  res.json({
+    success: true,
+    message: `Bought ${shares} shares of ${symbol} at ${stockPrice.toFixed(2)}$`,
+    updatedGameState: gameState,
+  });
+});
+
+
+// STOCK SELL
+router.post("/stock-sell", (req, res) => {
+  const { sessionId, symbol, amount, price } = req.body;
+  const gameState = gameSessions.get(sessionId);
+
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  const shares = parseInt(amount);
+  const stockPrice = parseFloat(price);
+
+  if (isNaN(shares) || shares <= 0) {
+    return res.status(400).json({ error: "Invalid share amount" });
+  }
+  if (isNaN(stockPrice) || stockPrice <= 0) {
+    return res.status(400).json({ error: "Invalid stock price" });
+  }
+
+  if (!gameState.holdings.stocks || !gameState.holdings.stocks[symbol]) {
+    return res.status(400).json({ error: "You don’t own this stock" });
+  }
+
+  const holding = gameState.holdings.stocks[symbol];
+
+  if (shares > holding.shares) {
+    return res.status(400).json({ error: "Not enough shares to sell" });
+  }
+
+  const totalSellValue = shares * stockPrice;
+  const costBasis = shares * holding.avgCost;
+  const profitAmount = totalSellValue - costBasis;
+
+  // Update profit
+  if (!gameState.profit.stocks) gameState.profit.stocks = {};
+  if (!gameState.profit.stocks[symbol]) gameState.profit.stocks[symbol] = 0;
+  gameState.profit.stocks[symbol] += profitAmount;
+
+  // Add cash to pocket
+  gameState.pocket += totalSellValue;
+
+  // Reduce holdings
+  holding.shares -= shares;
+
+  // Remove stock if no shares left
+  if (holding.shares <= 0) {
+    delete gameState.holdings.stocks[symbol];
+  }
+
+  gameSessions.set(sessionId, gameState);
+
+  res.json({
+    success: true,
+    message: `Sold ${shares} shares of ${symbol} at ${stockPrice.toFixed(2)}$ (Profit: ${profitAmount.toFixed(2)}$)`,
+    updatedGameState: gameState,
+  });
+});
+
 
 // Year increment
 router.post("/year-increment", (req, res) => {

@@ -3,9 +3,24 @@ import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
-import indexData from "./data/indexData.json";
+import indexData from "./data/IndexFund/indexData.json";
 
 const API_BASE_URL = "http://localhost:8080/api/invest";
+
+// Import all stock data files
+const stockFiles = import.meta.glob("./data/Stocks/*.json", { eager: true });
+
+// Function to randomly select 4 stocks
+const getRandomStocks = () => {
+  const allStocks = Object.entries(stockFiles).map(([path, module]) => ({
+    symbol: path.split("/").pop().replace(".json", ""),
+    data: module.default || module,
+  }));
+
+  // Shuffle and pick 4
+  const shuffled = allStocks.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 4);
+};
 
 export default function Invest() {
   const navigate = useNavigate();
@@ -23,7 +38,18 @@ export default function Invest() {
   const [selectedBond, setSelectedBond] = useState("");
   const [indexValue, setIndexValue] = useState(indexData[0].close);
 
+  // Stock-related state
+  const [selectedStocks, setSelectedStocks] = useState([]);
+  const [stockAmounts, setStockAmounts] = useState({});
+  const [activeStockInput, setActiveStockInput] = useState(null);
+
   const timerRef = useRef(null);
+
+  // Initialize random stocks on mount
+  useEffect(() => {
+    const randomStocks = getRandomStocks();
+    setSelectedStocks(randomStocks);
+  }, []);
 
   // Initialize game session
   useEffect(() => {
@@ -118,6 +144,64 @@ export default function Invest() {
     setActiveInput((prev) => (prev === type ? null : type));
     setSelectedBond("");
     setAmount("");
+  };
+
+  const handleStockTransaction = async (symbol, action, price) => {
+    const amountStr = stockAmounts[symbol] || "1";
+    let amount = 0;
+
+    // Determine number of shares to buy or sell
+    const holding = gameState.holdings?.stocks?.[symbol];
+
+    if (amountStr === "MAX") {
+      amount =
+        action === "buy"
+          ? Math.floor(gameState.pocket / price) // buy as many as possible
+          : holding?.shares || 0; // sell all owned shares
+    } else {
+      amount = parseInt(amountStr);
+    }
+
+    if (amount <= 0 || isNaN(amount)) {
+      alert("Please enter a valid share amount.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/stock-${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId, // 🧠 include session ID (required by backend)
+          symbol,
+          amount,
+          price,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Transaction failed");
+        return;
+      }
+
+      console.log(`${action.toUpperCase()} Success:`, data.message);
+
+      // Update frontend game state
+      if (data.updatedGameState) {
+        setGameState(data.updatedGameState);
+      } else if (data.gameState) {
+        setGameState(data.gameState);
+      }
+
+      // Reset input for that stock
+      setStockAmounts((prev) => ({ ...prev, [symbol]: "" }));
+      setActiveStockInput(null);
+    } catch (error) {
+      console.error("Stock transaction error:", error);
+      alert("Failed to process stock transaction.");
+    }
   };
 
   // Main year timer
@@ -237,6 +321,10 @@ export default function Invest() {
     }
   };
 
+  const handleExitConfirm = () => {
+    navigate("/");
+  };
+
   // Calculate unrealized profit/loss
   const currentIndexValue = gameState.indexShares * indexValue;
   const indexUnrealizedProfit =
@@ -292,7 +380,7 @@ export default function Invest() {
 
       <div className="grid grid-cols-3 gap-3">
         {/* Savings Account */}
-        <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
+        <div className="p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-2 text-white">
             SAVING ACCOUNT
           </h3>
@@ -349,7 +437,7 @@ export default function Invest() {
         </div>
 
         {/* Government Bonds */}
-        <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
+        <div className="p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-2 text-white">
             GOVERNMENT BONDS
           </h3>
@@ -463,7 +551,7 @@ export default function Invest() {
         </div>
 
         {/* Index Fund */}
-        <div className="bg-[#001a0a] p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
+        <div className="p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
           <h3 className="text-3xl font-jersey mb-1 text-white">INDEX FUND</h3>
           <div className="flex justify-center">
             <img src={index} alt="index icon" className="w-[90px] h-[90px]" />
@@ -530,7 +618,7 @@ export default function Invest() {
               <>
                 <input
                   type="number"
-                  placeholder="Amount in $"
+                  placeholder="Enter amount"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
@@ -543,6 +631,115 @@ export default function Invest() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Individual Stocks */}
+        <div className="col-span-3 p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
+          <h3 className="text-center text-3xl font-jersey text-white">
+            INDIVIDUAL STOCKS
+          </h3>
+
+          <div className="lg:col-span-3 p-2 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {selectedStocks.map((stock) => {
+                const monthIndex = Math.floor(currentMonth) % stock.data.length;
+                const currentStockData = stock.data[monthIndex];
+                const stockId = stock.symbol;
+                const holding = gameState.holdings?.stocks?.[stockId];
+                const unrealizedStockProfit = holding
+                  ? currentStockData.close * holding.shares -
+                    holding.avgCost * holding.shares
+                  : 0;
+
+                return (
+                  <div
+                    key={stockId}
+                    className="border border-dashed border-white p-3 rounded"
+                  >
+                    <p className="text-white text-2xl font-jersey">
+                      {stock.symbol}
+                    </p>
+
+                    <div className="flex justify-between px-8">
+                      <p className="text-white text-lg font-jersey">
+                        {currentStockData.close.toFixed(2)} $
+                      </p>
+                      <p
+                        className={`text-lg font-jersey ${
+                          currentStockData.change >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {currentStockData.change >= 0 ? "▲" : "▼"}{" "}
+                        {Math.abs(currentStockData.change).toFixed(2)}%
+                      </p>
+                    </div>
+
+                    <p
+                      className={`text-sm font-jersey ${
+                        unrealizedStockProfit >= 0
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      Unrealized: {unrealizedStockProfit.toFixed(2)} $
+                    </p>
+                    <p className="text-white text-md font-jersey">
+                      Shares: {holding?.shares || 0}
+                    </p>
+
+                    {/* Amount buttons */}
+                    <div className="flex justify-between px-16 mt-2 text-sm">
+                      {["1", "10", "25", "MAX"].map((amt) => (
+                        <button
+                          key={amt}
+                          onClick={() =>
+                            setStockAmounts({ ...stockAmounts, [stockId]: amt })
+                          }
+                          className={`text-xl font-jersey transition-all duration-200 ${
+                            stockAmounts[stockId] === amt
+                              ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
+                              : "text-white opacity-70 hover:opacity-100"
+                          }`}
+                        >
+                          {amt}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex justify-center gap-4 mt-3">
+                      <button
+                        onClick={() =>
+                          handleStockTransaction(
+                            stockId,
+                            "sell",
+                            currentStockData.close
+                          )
+                        }
+                        className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                      >
+                        SELL
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleStockTransaction(
+                            stockId,
+                            "buy",
+                            currentStockData.close
+                          )
+                        }
+                        className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                      >
+                        BUY
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

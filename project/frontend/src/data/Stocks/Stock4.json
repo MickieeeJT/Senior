@@ -1,0 +1,14 @@
+[
+  { "month": "Jan", "close": 850.12, "change": 1.2 },
+  { "month": "Feb", "close": 862.45, "change": 1.45 },
+  { "month": "Mar", "close": 874.33, "change": 1.38 },
+  { "month": "Apr", "close": 860.27, "change": -1.61 },
+  { "month": "May", "close": 878.56, "change": 2.13 },
+  { "month": "Jun", "close": 892.11, "change": 1.54 },
+  { "month": "Jul", "close": 905.98, "change": 1.56 },
+  { "month": "Aug", "close": 893.45, "change": -1.38 },
+  { "month": "Sep", "close": 918.22, "change": 2.77 },
+  { "month": "Oct", "close": 927.89, "change": 1.05 },
+  { "month": "Nov", "close": 935.76, "change": 0.85 },
+  { "month": "Dec", "close": 948.34, "change": 1.34 }
+]
