@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
-import indexData from "./data/IndexFund/indexData.json";
 
 const API_BASE_URL = "http://localhost:8080/api/invest";
+
+//Import all index fund data files
+const indexFiles = import.meta.glob("./data/IndexFund/*.json", { eager: true });
 
 // Import all stock data files
 const stockFiles = import.meta.glob("./data/Stocks/*.json", { eager: true });
@@ -22,6 +24,18 @@ const getRandomStocks = () => {
   return shuffled.slice(0, 4);
 };
 
+// Function to randomly select 1 index fund
+const getRandomIndex = () => {
+  const allIndexes = Object.entries(indexFiles).map(([path, module]) => ({
+    symbol: path.split("/").pop().replace(".json", ""),
+    data: module.default || module,
+  }));
+
+  // Pick a random one
+  const randomIndex = Math.floor(Math.random() * allIndexes.length);
+  return allIndexes[randomIndex];
+};
+
 export default function Invest() {
   const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(null);
@@ -36,7 +50,10 @@ export default function Invest() {
   const [activeInput, setActiveInput] = useState(null);
   const [amount, setAmount] = useState("");
   const [selectedBond, setSelectedBond] = useState("");
-  const [indexValue, setIndexValue] = useState(indexData[0].close);
+
+  // Index fund state
+  const [selectedIndex, setSelectedIndex] = useState(null);
+  const [indexValue, setIndexValue] = useState(0);
 
   // Stock-related state
   const [selectedStocks, setSelectedStocks] = useState([]);
@@ -45,10 +62,13 @@ export default function Invest() {
 
   const timerRef = useRef(null);
 
-  // Initialize random stocks on mount
+  // Initialize random stocks and index on mount
   useEffect(() => {
     const randomStocks = getRandomStocks();
+    const randomIndex = getRandomIndex();
     setSelectedStocks(randomStocks);
+    setSelectedIndex(randomIndex);
+    setIndexValue(randomIndex.data[0].close);
   }, []);
 
   // Initialize game session
@@ -71,18 +91,6 @@ export default function Invest() {
 
     initGame();
   }, []);
-
-  // Sync game state periodically
-  const syncGameState = async () => {
-    if (!sessionId) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/state/${sessionId}`);
-      const data = await response.json();
-      setGameState(data);
-    } catch (error) {
-      console.error("Failed to sync game state:", error);
-    }
-  };
 
   // Handle transactions
   const handleTransaction = async (
@@ -195,8 +203,6 @@ export default function Invest() {
         setGameState(data.gameState);
       }
 
-      // Reset input for that stock
-      setStockAmounts((prev) => ({ ...prev, [symbol]: "" }));
       setActiveStockInput(null);
     } catch (error) {
       console.error("Stock transaction error:", error);
@@ -249,14 +255,14 @@ export default function Invest() {
 
   // Monthly updates (stocks, index, AND bond)
   useEffect(() => {
-    if (!sessionId || !gameState) return;
+    if (!sessionId || !gameState || !selectedIndex) return;
 
     const month = Math.floor(currentMonth);
 
     // Only trigger when the next month starts and hasn't been processed yet
     if (month >= 1 && month <= 12 && month > gameState.lastProcessedMonth) {
-      const monthIndex = (month - 1) % indexData.length;
-      const currentIndexData = indexData[monthIndex];
+      const monthIndex = (month - 1) % selectedIndex.data.length;
+      const currentIndexData = selectedIndex.data[monthIndex];
       setIndexValue(currentIndexData.close);
 
       fetch(`${API_BASE_URL}/monthly-update`, {
@@ -287,7 +293,7 @@ export default function Invest() {
           console.error("Monthly or bond update failed:", error)
         );
     }
-  }, [currentMonth, sessionId, gameState]);
+  }, [currentMonth, sessionId, gameState, selectedIndex]);
 
   if (loading || !gameState) {
     return (
@@ -552,7 +558,9 @@ export default function Invest() {
 
         {/* Index Fund */}
         <div className="p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
-          <h3 className="text-3xl font-jersey mb-1 text-white">INDEX FUND</h3>
+          <h3 className="text-3xl font-jersey mb-1 text-white">
+            INDEX FUND - {selectedIndex?.symbol || "Loading..."}
+          </h3>
           <div className="flex justify-center">
             <img src={index} alt="index icon" className="w-[90px] h-[90px]" />
           </div>
@@ -562,19 +570,22 @@ export default function Invest() {
             </p>
             <p
               className={`text-lg font-jersey ${
-                indexData[Math.floor(currentMonth) % indexData.length]
-                  ?.change >= 0
+                selectedIndex?.data[
+                  Math.floor(currentMonth) % selectedIndex.data.length
+                ]?.change >= 0
                   ? "text-green-400"
                   : "text-red-400"
               }`}
             >
-              {indexData[Math.floor(currentMonth) % indexData.length]?.change >=
-              0
+              {selectedIndex?.data[
+                Math.floor(currentMonth) % selectedIndex.data.length
+              ]?.change >= 0
                 ? "▲"
                 : "▼"}{" "}
               {Math.abs(
-                indexData[Math.floor(currentMonth) % indexData.length]
-                  ?.change || 0
+                selectedIndex?.data[
+                  Math.floor(currentMonth) % selectedIndex.data.length
+                ]?.change || 0
               ).toFixed(2)}
               %
             </p>
