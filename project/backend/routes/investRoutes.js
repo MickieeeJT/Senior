@@ -22,8 +22,11 @@ router.post("/init", (req, res) => {
     currentYear: 1,
     currentMonth: 0,
     fundBalance: 0,
+    goldBalance: 0,
     indexShares: 0,
+    goldShares: 0,
     indexAvgPrice: 0,
+    goldAvgPrice: 0,
     profit: {
       savings: 0,
       bonds: 0,
@@ -34,6 +37,7 @@ router.post("/init", (req, res) => {
       bonds: 0,
       index: 0,
       gold: 0,
+      stocks: {},
     },
     bondInvestments: [],
     bondInterestRates,
@@ -62,7 +66,8 @@ router.get("/state/:sessionId", (req, res) => {
 
 // Handle investment transactions
 router.post("/transaction", (req, res) => {
-  const { sessionId, action, amount, bondType, indexValue } = req.body;
+  const { sessionId, action, amount, bondType, indexValue, goldValue } =
+    req.body;
   const gameState = gameSessions.get(sessionId);
 
   if (!gameState) {
@@ -138,7 +143,9 @@ router.post("/transaction", (req, res) => {
     // Update average purchase price
     const totalShares = gameState.indexShares;
     if (totalShares > 0) {
-      gameState.indexAvgPrice = (gameState.indexAvgPrice * (totalShares - sharesBought) + value) / totalShares;
+      gameState.indexAvgPrice =
+        (gameState.indexAvgPrice * (totalShares - sharesBought) + value) /
+        totalShares;
     } else {
       gameState.indexAvgPrice = indexValue;
     }
@@ -162,32 +169,58 @@ router.post("/transaction", (req, res) => {
     gameState.indexShares = Math.max(0, gameState.indexShares - sharesToSell);
     gameState.fundBalance -= value;
     gameState.pocket += value;
-    gameState.holdings.index = Math.max(0, gameState.holdings.index - costBasis);
+    gameState.holdings.index = Math.max(
+      0,
+      gameState.holdings.index - costBasis
+    );
     gameState.profit.index += profitAmount;
   }
 
   // GOLD BUY
   else if (action === "gold-buy") {
+    if (!goldValue) {
+      return res.status(400).json({ error: "Gold value required" });
+    }
     if (value > gameState.pocket) {
       return res.status(400).json({ error: "Insufficient pocket money" });
     }
+
+    const gramsBought = value / goldValue;
     gameState.pocket -= value;
+    gameState.goldBalance += value;
+    gameState.goldShares += gramsBought;
+
+    // Update average purchase price
+    const totalGrams = gameState.goldShares;
+    if (totalGrams > 0) {
+      gameState.goldAvgPrice =
+        (gameState.goldAvgPrice * (totalGrams - gramsBought) + value) /
+        totalGrams;
+    } else {
+      gameState.goldAvgPrice = goldValue;
+    }
+
     gameState.holdings.gold += value;
   }
 
   // GOLD SELL
   else if (action === "gold-sell") {
-    if (value > gameState.holdings.gold) {
-      return res.status(400).json({ error: "Insufficient gold holdings" });
+    if (!goldValue) {
+      return res.status(400).json({ error: "Gold value required" });
     }
-    gameState.holdings.gold -= value;
-    gameState.pocket += value;
-    const profitAmount = value * 0.015;
-    gameState.profit.gold += profitAmount;
-  }
+    if (value > gameState.goldBalance) {
+      return res.status(400).json({ error: "Insufficient gold balance" });
+    }
 
-  else {
-    return res.status(400).json({ error: "Invalid action" });
+    const gramsToSell = value / goldValue;
+    const costBasis = gramsToSell * gameState.goldAvgPrice;
+    const profitAmount = value - costBasis;
+
+    gameState.goldShares = Math.max(0, gameState.goldShares - gramsToSell);
+    gameState.goldBalance -= value;
+    gameState.pocket += value;
+    gameState.holdings.gold = Math.max(0, gameState.holdings.gold - costBasis);
+    gameState.profit.gold += profitAmount;
   }
 
   gameSessions.set(sessionId, gameState);
@@ -196,7 +229,7 @@ router.post("/transaction", (req, res) => {
 
 // Monthly update (called by frontend timer)
 router.post("/monthly-update", (req, res) => {
-  const { sessionId, month, indexData } = req.body;
+  const { sessionId, month, indexData, goldData } = req.body;
   const gameState = gameSessions.get(sessionId);
 
   if (!gameState) {
@@ -204,7 +237,11 @@ router.post("/monthly-update", (req, res) => {
   }
 
   if (month <= gameState.lastProcessedMonth) {
-    return res.json({ success: true, message: "Already processed", gameState });
+    return res.json({
+      success: true,
+      message: "Already processed",
+      gameState,
+    });
   }
 
   // Update savings interest (1.5% monthly)
@@ -214,9 +251,15 @@ router.post("/monthly-update", (req, res) => {
   gameState.profit.savings += interest;
 
   // Update index fund value
-  if (indexData) {
+  if (indexData && gameState.indexShares > 0) {
     const changePercent = indexData.change / 100;
-    gameState.fundBalance *= (1 + changePercent);
+    gameState.fundBalance *= 1 + changePercent;
+  }
+
+  // Update gold value
+  if (goldData && gameState.goldShares > 0) {
+    const changePercent = goldData.change / 100;
+    gameState.goldBalance *= 1 + changePercent;
   }
 
   // Half-year income
@@ -289,6 +332,29 @@ router.post("/bond-update", (req, res) => {
   });
 });
 
+// Gold monthly update (triggered once per in-game month)
+router.post("/gold-update", (req, res) => {
+  const { sessionId } = req.body;
+  const gameState = gameSessions.get(sessionId);
+
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  // Calculate gold profit based on current gold value vs purchase value
+  if (gameState.goldShares > 0 && gameState.goldBalance > 0) {
+    const goldProfit = gameState.goldBalance - gameState.holdings.gold;
+    gameState.profit.gold = goldProfit;
+  }
+
+  gameSessions.set(sessionId, gameState);
+
+  res.json({
+    success: true,
+    gameState,
+  });
+});
+
 // Bond early sell (manual collect with 10% penalty)
 router.post("/bond-sell", (req, res) => {
   const { sessionId, bondId } = req.body;
@@ -298,7 +364,9 @@ router.post("/bond-sell", (req, res) => {
     return res.status(404).json({ error: "Session not found" });
   }
 
-  const bondIndex = gameState.bondInvestments.findIndex((b) => b.id === bondId);
+  const bondIndex = gameState.bondInvestments.findIndex(
+    (b) => b.id === bondId
+  );
   if (bondIndex === -1) {
     return res.status(404).json({ error: "Bond not found" });
   }
@@ -312,7 +380,10 @@ router.post("/bond-sell", (req, res) => {
   gameState.pocket += sellAmount;
 
   // Adjust holdings
-  gameState.holdings.bonds = Math.max(0, gameState.holdings.bonds - bond.amount);
+  gameState.holdings.bonds = Math.max(
+    0,
+    gameState.holdings.bonds - bond.amount
+  );
 
   // Remove bond from active investments
   gameState.bondInvestments.splice(bondIndex, 1);
@@ -384,7 +455,6 @@ router.post("/stock-buy", (req, res) => {
   });
 });
 
-
 // STOCK SELL
 router.post("/stock-sell", (req, res) => {
   const { sessionId, symbol, amount, price } = req.body;
@@ -405,7 +475,7 @@ router.post("/stock-sell", (req, res) => {
   }
 
   if (!gameState.holdings.stocks || !gameState.holdings.stocks[symbol]) {
-    return res.status(400).json({ error: "You don’t own this stock" });
+    return res.status(400).json({ error: "You don't own this stock" });
   }
 
   const holding = gameState.holdings.stocks[symbol];
@@ -442,7 +512,6 @@ router.post("/stock-sell", (req, res) => {
     updatedGameState: gameState,
   });
 });
-
 
 // Year increment
 router.post("/year-increment", (req, res) => {

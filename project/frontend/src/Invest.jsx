@@ -12,6 +12,9 @@ const indexFiles = import.meta.glob("./data/IndexFund/*.json", { eager: true });
 // Import all stock data files
 const stockFiles = import.meta.glob("./data/Stocks/*.json", { eager: true });
 
+// Import all gold data files
+const goldFiles = import.meta.glob("./data/Gold/*.json", { eager: true });
+
 // Function to randomly select 4 stocks
 const getRandomStocks = () => {
   const allStocks = Object.entries(stockFiles).map(([path, module]) => ({
@@ -36,6 +39,18 @@ const getRandomIndex = () => {
   return allIndexes[randomIndex];
 };
 
+// Function to randomly select 1 gold asset
+const getRandomGold = () => {
+  const allGold = Object.entries(goldFiles).map(([path, module]) => ({
+    symbol: path.split("/").pop().replace(".json", ""),
+    data: module.default || module,
+  }));
+
+  // Pick a random one
+  const randomIndex = Math.floor(Math.random() * allGold.length);
+  return allGold[randomIndex];
+};
+
 export default function Invest() {
   const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(null);
@@ -47,6 +62,7 @@ export default function Invest() {
   const [isRunning, setIsRunning] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
 
+  // Bonds
   const [activeInput, setActiveInput] = useState(null);
   const [amount, setAmount] = useState("");
   const [selectedBond, setSelectedBond] = useState("");
@@ -60,15 +76,22 @@ export default function Invest() {
   const [stockAmounts, setStockAmounts] = useState({});
   const [activeStockInput, setActiveStockInput] = useState(null);
 
+  // Gold state
+  const [selectedGold, setSelectedGold] = useState(null);
+  const [goldValue, setGoldValue] = useState(0);
+
   const timerRef = useRef(null);
 
   // Initialize random stocks and index on mount
   useEffect(() => {
     const randomStocks = getRandomStocks();
     const randomIndex = getRandomIndex();
+    const randomGold = getRandomGold();
     setSelectedStocks(randomStocks);
     setSelectedIndex(randomIndex);
     setIndexValue(randomIndex.data[0].close);
+    setSelectedGold(randomGold);
+    setGoldValue(randomGold.data[0].close);
   }, []);
 
   // Initialize game session
@@ -110,6 +133,7 @@ export default function Invest() {
           amount: transactionAmount,
           bondType,
           indexValue,
+          goldValue,
         }),
       });
 
@@ -180,7 +204,7 @@ export default function Invest() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId, // 🧠 include session ID (required by backend)
+          sessionId,
           symbol,
           amount,
           price,
@@ -253,9 +277,9 @@ export default function Invest() {
     };
   }, [isRunning, sessionId, gameState]);
 
-  // Monthly updates (stocks, index, AND bond)
+  // Monthly updates (stocks, index, bond, AND gold)
   useEffect(() => {
-    if (!sessionId || !gameState || !selectedIndex) return;
+    if (!sessionId || !gameState || !selectedIndex || !selectedGold) return;
 
     const month = Math.floor(currentMonth);
 
@@ -265,6 +289,11 @@ export default function Invest() {
       const currentIndexData = selectedIndex.data[monthIndex];
       setIndexValue(currentIndexData.close);
 
+      // Update gold value
+      const goldMonthIndex = (month - 1) % selectedGold.data.length;
+      const currentGoldData = selectedGold.data[goldMonthIndex];
+      setGoldValue(currentGoldData.close);
+
       fetch(`${API_BASE_URL}/monthly-update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -272,13 +301,14 @@ export default function Invest() {
           sessionId,
           month,
           indexData: currentIndexData,
+          goldData: currentGoldData, // Add gold data
         }),
       })
         .then((res) => res.json())
         .then((data) => {
           setGameState(data.gameState);
 
-          //  Bond Update (trigger once per month, after monthly-update success) ---
+          // Bond Update (trigger once per month, after monthly-update success)
           return fetch(`${API_BASE_URL}/bond-update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -288,12 +318,25 @@ export default function Invest() {
         .then((res) => (res ? res.json() : null))
         .then((data) => {
           if (data?.gameState) setGameState(data.gameState);
+
+          return fetch(`${API_BASE_URL}/gold-update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              goldData: currentGoldData,
+            }),
+          });
+        })
+        .then((res) => (res ? res.json() : null))
+        .then((data) => {
+          if (data?.gameState) setGameState(data.gameState);
         })
         .catch((error) =>
-          console.error("Monthly or bond update failed:", error)
+          console.error("Monthly, bond, or gold update failed:", error)
         );
     }
-  }, [currentMonth, sessionId, gameState, selectedIndex]);
+  }, [currentMonth, sessionId, gameState, selectedIndex, selectedGold]);
 
   if (loading || !gameState) {
     return (
@@ -568,27 +611,27 @@ export default function Invest() {
             <p className="text-white text-xl font-jersey">
               Price: {indexValue.toFixed(2)}
             </p>
-            <p
-              className={`text-lg font-jersey ${
+            <div
+              className={`text-xl font-jersey ${
                 selectedIndex?.data[
-                  Math.floor(currentMonth) % selectedIndex.data.length
+                  Math.max(0, Math.floor(currentMonth) - 1) % selectedIndex.data.length
                 ]?.change >= 0
                   ? "text-green-400"
                   : "text-red-400"
               }`}
             >
               {selectedIndex?.data[
-                Math.floor(currentMonth) % selectedIndex.data.length
+                Math.max(0, Math.floor(currentMonth) - 1) % selectedIndex.data.length
               ]?.change >= 0
                 ? "▲"
                 : "▼"}{" "}
               {Math.abs(
                 selectedIndex?.data[
-                  Math.floor(currentMonth) % selectedIndex.data.length
+                  Math.max(0, Math.floor(currentMonth) - 1) % selectedIndex.data.length
                 ]?.change || 0
-              ).toFixed(2)}
+              ).toFixed(2)}{" "}
               %
-            </p>
+            </div>
           </div>
           <p className="text-white text-xl font-jersey">
             Fund Balance: {gameState.fundBalance.toFixed(2)} $
@@ -751,6 +794,89 @@ export default function Invest() {
                 );
               })}
             </div>
+          </div>
+        </div>
+
+        {/* Gold */}
+        <div className="p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
+          <h3 className="text-3xl font-jersey mb-1 text-white">
+            GOLD - {selectedGold?.symbol || "Loading..."}
+          </h3>
+          <div className="flex justify-center">
+            <img src={gold} alt="gold icon" className="w-[90px] h-[90px]" />
+          </div>
+          <div className="flex justify-center gap-3">
+            <p className="text-white text-xl font-jersey">
+              Price: {goldValue.toFixed(2)}
+            </p>
+            <p
+              className={`text-lg font-jersey ${
+                selectedGold?.data[
+                  Math.max(0, Math.floor(currentMonth) - 1) % selectedGold.data.length
+                ]?.change >= 0
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
+            >
+              {selectedGold?.data[
+                Math.max(0, Math.floor(currentMonth) - 1) % selectedGold.data.length
+              ]?.change >= 0
+                ? "▲"
+                : "▼"}{" "}
+              {Math.abs(
+                selectedGold?.data[
+                  Math.max(0, Math.floor(currentMonth) - 1) % selectedGold.data.length
+                ]?.change || 0
+              ).toFixed(2)}
+              %
+            </p>
+          </div>
+          <p className="text-white text-xl font-jersey">
+            Gold Balance: {gameState.goldBalance?.toFixed(2) || 0} $
+          </p>
+          <p className="text-white text-2xl font-jersey">
+            Profit: {gameState.profit?.gold?.toFixed(2) || 0} $
+          </p>
+          {!activeInput?.includes("gold") && (
+            <div className="flex justify-center gap-4 mt-4">
+              <button
+                onClick={() => toggleInput("gold-sell")}
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+              >
+                SELL
+              </button>
+              <button
+                onClick={() => toggleInput("gold-buy")}
+                className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+              >
+                BUY
+              </button>
+            </div>
+          )}
+          <div
+            className={`mt-2 overflow-hidden transition-all duration-500 flex justify-center items-center gap-4 ${
+              activeInput?.includes("gold")
+                ? "max-h-40 opacity-100"
+                : "max-h-0 opacity-0"
+            }`}
+          >
+            {activeInput?.includes("gold") && (
+              <>
+                <input
+                  type="number"
+                  placeholder="Enter amount"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="px-3 py-2 rounded border border-gray-400 text-black w-40 h-10 text-xl font-jersey"
+                />
+                <button
+                  onClick={handleSubmit}
+                  className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                >
+                  {activeInput === "gold-buy" ? "BUY" : "SELL"}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
