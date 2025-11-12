@@ -513,6 +513,121 @@ router.post("/stock-sell", (req, res) => {
   });
 });
 
+// CURRENCY BUY
+router.post("/currency-buy", (req, res) => {
+  const { sessionId, symbol, amount, price } = req.body;
+  const gameState = gameSessions.get(sessionId);
+
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  const units = parseInt(amount);
+  const currencyPrice = parseFloat(price);
+
+  if (isNaN(units) || units <= 0) {
+    return res.status(400).json({ error: "Invalid currency amount" });
+  }
+  if (isNaN(currencyPrice) || currencyPrice <= 0) {
+    return res.status(400).json({ error: "Invalid currency price" });
+  }
+
+  const totalCost = units * currencyPrice;
+  if (totalCost > gameState.pocket) {
+    return res.status(400).json({ error: "Insufficient pocket balance" });
+  }
+
+  // Deduct from pocket
+  gameState.pocket -= totalCost;
+
+  // Initialize holdings if not exist
+  if (!gameState.holdings.currencies) gameState.holdings.currencies = {};
+  if (!gameState.holdings.currencies[symbol]) {
+    gameState.holdings.currencies[symbol] = {
+      units: 0,
+      avgCost: 0,
+    };
+  }
+
+  const holding = gameState.holdings.currencies[symbol];
+
+  // Update average cost
+  const totalUnits = holding.units + units;
+  holding.avgCost =
+    totalUnits === 0
+      ? 0
+      : (holding.units * holding.avgCost + units * currencyPrice) / totalUnits;
+
+  holding.units = totalUnits;
+
+  // Save updated game state
+  gameSessions.set(sessionId, gameState);
+
+  res.json({
+    success: true,
+    message: `Bought ${units} units of ${symbol} at ${currencyPrice.toFixed(2)}$`,
+    updatedGameState: gameState,
+  });
+});
+
+// CURRENCY SELL
+router.post("/currency-sell", (req, res) => {
+  const { sessionId, symbol, amount, price } = req.body;
+  const gameState = gameSessions.get(sessionId);
+
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  const units = parseInt(amount);
+  const currencyPrice = parseFloat(price);
+
+  if (isNaN(units) || units <= 0) {
+    return res.status(400).json({ error: "Invalid currency amount" });
+  }
+  if (isNaN(currencyPrice) || currencyPrice <= 0) {
+    return res.status(400).json({ error: "Invalid currency price" });
+  }
+
+  if (!gameState.holdings.currencies || !gameState.holdings.currencies[symbol]) {
+    return res.status(400).json({ error: "You don't own this currency" });
+  }
+
+  const holding = gameState.holdings.currencies[symbol];
+
+  if (units > holding.units) {
+    return res.status(400).json({ error: "Not enough units to sell" });
+  }
+
+  const totalSellValue = units * currencyPrice;
+  const costBasis = units * holding.avgCost;
+  const profitAmount = totalSellValue - costBasis;
+
+  // Update profit
+  if (!gameState.profit.currencies) gameState.profit.currencies = {};
+  if (!gameState.profit.currencies[symbol]) gameState.profit.currencies[symbol] = 0;
+  gameState.profit.currencies[symbol] += profitAmount;
+
+  // Add cash to pocket
+  gameState.pocket += totalSellValue;
+
+  // Reduce holdings
+  holding.units -= units;
+
+  // Remove currency if no units left
+  if (holding.units <= 0) {
+    delete gameState.holdings.currencies[symbol];
+  }
+
+  gameSessions.set(sessionId, gameState);
+
+  res.json({
+    success: true,
+    message: `Sold ${units} units of ${symbol} at ${currencyPrice.toFixed(2)}$ (Profit: ${profitAmount.toFixed(2)}$)`,
+    updatedGameState: gameState,
+  });
+});
+
 // Year increment
 router.post("/year-increment", (req, res) => {
   const { sessionId } = req.body;

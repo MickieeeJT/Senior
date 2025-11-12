@@ -15,6 +15,11 @@ const stockFiles = import.meta.glob("./data/Stocks/*.json", { eager: true });
 // Import all gold data files
 const goldFiles = import.meta.glob("./data/Gold/*.json", { eager: true });
 
+//Import all currency data files
+const currencyFiles = import.meta.glob("./data/Currencies/*.json", {
+  eager: true,
+});
+
 // Function to randomly select 4 stocks
 const getRandomStocks = () => {
   const allStocks = Object.entries(stockFiles).map(([path, module]) => ({
@@ -51,6 +56,18 @@ const getRandomGold = () => {
   return allGold[randomIndex];
 };
 
+// Function to randomly select 3 currencies
+const getRandomCurrency = () => {
+  const allCurrencies = Object.entries(currencyFiles).map(([path, module]) => ({
+    symbol: path.split("/").pop().replace(".json", ""),
+    data: module.default || module,
+  }));
+
+  // Shuffle and pick 3
+  const shuffled = allCurrencies.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 3);
+};
+
 export default function Invest() {
   const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(null);
@@ -80,18 +97,25 @@ export default function Invest() {
   const [selectedGold, setSelectedGold] = useState(null);
   const [goldValue, setGoldValue] = useState(0);
 
+  // Currency state
+  const [selectedCurrency, setSelectedCurrency] = useState([]);
+  const [currencyAmounts, setCurrencyAmounts] = useState({});
+  const [activeCurrencyInput, setActiveCurrencyInput] = useState(null);
+
   const timerRef = useRef(null);
 
-  // Initialize random stocks and index on mount
+  // Initialize random stocks, index, gold, and currencies on mount
   useEffect(() => {
     const randomStocks = getRandomStocks();
     const randomIndex = getRandomIndex();
     const randomGold = getRandomGold();
+    const randomCurrency = getRandomCurrency();
     setSelectedStocks(randomStocks);
     setSelectedIndex(randomIndex);
     setIndexValue(randomIndex.data[0].close);
     setSelectedGold(randomGold);
     setGoldValue(randomGold.data[0].close);
+    setSelectedCurrency(randomCurrency);
   }, []);
 
   // Initialize game session
@@ -234,6 +258,63 @@ export default function Invest() {
     }
   };
 
+  // Handle currency transactions (similar to stocks)
+  const handleCurrencyTransaction = async (symbol, action, price) => {
+    const amountStr = currencyAmounts[symbol] || "1";
+    let amount = 0;
+
+    // Determine number of units to buy or sell
+    const holding = gameState.holdings?.currencies?.[symbol];
+
+    if (amountStr === "MAX") {
+      amount =
+        action === "buy"
+          ? Math.floor(gameState.pocket / price) // buy as many as possible
+          : holding?.units || 0; // sell all owned units
+    } else {
+      amount = parseInt(amountStr);
+    }
+
+    if (amount <= 0 || isNaN(amount)) {
+      alert("Please enter a valid currency amount.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/currency-${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          symbol,
+          amount,
+          price,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Transaction failed");
+        return;
+      }
+
+      console.log(`Currency ${action.toUpperCase()} Success:`, data.message);
+
+      // Update frontend game state
+      if (data.updatedGameState) {
+        setGameState(data.updatedGameState);
+      } else if (data.gameState) {
+        setGameState(data.gameState);
+      }
+
+      setActiveCurrencyInput(null);
+    } catch (error) {
+      console.error("Currency transaction error:", error);
+      alert("Failed to process currency transaction.");
+    }
+  };
+
   // Main year timer
   useEffect(() => {
     if (!isRunning || !gameState) return;
@@ -301,14 +382,14 @@ export default function Invest() {
           sessionId,
           month,
           indexData: currentIndexData,
-          goldData: currentGoldData, // Add gold data
+          goldData: currentGoldData,
         }),
       })
         .then((res) => res.json())
         .then((data) => {
           setGameState(data.gameState);
 
-          // Bond Update (trigger once per month, after monthly-update success)
+          // Bond Update
           return fetch(`${API_BASE_URL}/bond-update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -614,20 +695,23 @@ export default function Invest() {
             <div
               className={`text-xl font-jersey ${
                 selectedIndex?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) % selectedIndex.data.length
+                  Math.max(0, Math.floor(currentMonth) - 1) %
+                    selectedIndex.data.length
                 ]?.change >= 0
                   ? "text-green-400"
                   : "text-red-400"
               }`}
             >
               {selectedIndex?.data[
-                Math.max(0, Math.floor(currentMonth) - 1) % selectedIndex.data.length
+                Math.max(0, Math.floor(currentMonth) - 1) %
+                  selectedIndex.data.length
               ]?.change >= 0
                 ? "▲"
                 : "▼"}{" "}
               {Math.abs(
                 selectedIndex?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) % selectedIndex.data.length
+                  Math.max(0, Math.floor(currentMonth) - 1) %
+                    selectedIndex.data.length
                 ]?.change || 0
               ).toFixed(2)}{" "}
               %
@@ -812,20 +896,23 @@ export default function Invest() {
             <p
               className={`text-lg font-jersey ${
                 selectedGold?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) % selectedGold.data.length
+                  Math.max(0, Math.floor(currentMonth) - 1) %
+                    selectedGold.data.length
                 ]?.change >= 0
                   ? "text-green-400"
                   : "text-red-400"
               }`}
             >
               {selectedGold?.data[
-                Math.max(0, Math.floor(currentMonth) - 1) % selectedGold.data.length
+                Math.max(0, Math.floor(currentMonth) - 1) %
+                  selectedGold.data.length
               ]?.change >= 0
                 ? "▲"
                 : "▼"}{" "}
               {Math.abs(
                 selectedGold?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) % selectedGold.data.length
+                  Math.max(0, Math.floor(currentMonth) - 1) %
+                    selectedGold.data.length
                 ]?.change || 0
               ).toFixed(2)}
               %
@@ -877,6 +964,119 @@ export default function Invest() {
                 </button>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Currency Exchange */}
+        <div className="col-span-2 p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
+          <h3 className="text-center text-3xl font-jersey text-white">
+            CURRENCY EXCHANGE
+          </h3>
+
+          <div className="lg:col-span-3 p-2 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {selectedCurrency.map((currency) => {
+                const monthIndex =
+                  Math.floor(currentMonth) % currency.data.length;
+                const currentCurrencyData = currency.data[monthIndex];
+                const currencyId = currency.symbol;
+                const holding = gameState.holdings?.currencies?.[currencyId];
+                const unrealizedCurrencyProfit = holding
+                  ? currentCurrencyData.close * holding.units -
+                    holding.avgCost * holding.units
+                  : 0;
+
+                return (
+                  <div
+                    key={currencyId}
+                    className="border border-dashed border-white p-3 rounded"
+                  >
+                    <p className="text-white text-2xl font-jersey">
+                      {currency.symbol}
+                    </p>
+
+                    <div className="flex justify-between px-8">
+                      <p className="text-white text-lg font-jersey">
+                        {currentCurrencyData.close.toFixed(2)} $
+                      </p>
+                      <p
+                        className={`text-lg font-jersey ${
+                          currentCurrencyData.change >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {currentCurrencyData.change >= 0 ? "▲" : "▼"}{" "}
+                        {Math.abs(currentCurrencyData.change).toFixed(2)}%
+                      </p>
+                    </div>
+
+                    <p
+                      className={`text-sm font-jersey ${
+                        unrealizedCurrencyProfit >= 0
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      Unrealized: {unrealizedCurrencyProfit.toFixed(2)} $
+                    </p>
+                    <p className="text-white text-md font-jersey">
+                      Units: {holding?.units || 0}
+                    </p>
+
+                    {/* Amount buttons */}
+                    <div className="flex justify-between px-16 mt-2 text-sm">
+                      {["1", "10", "25", "MAX"].map((amt) => (
+                        <button
+                          key={amt}
+                          onClick={() =>
+                            setCurrencyAmounts({
+                              ...currencyAmounts,
+                              [currencyId]: amt,
+                            })
+                          }
+                          className={`text-xl font-jersey transition-all duration-200 ${
+                            currencyAmounts[currencyId] === amt
+                              ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
+                              : "text-white opacity-70 hover:opacity-100"
+                          }`}
+                        >
+                          {amt}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex justify-center gap-4 mt-3">
+                      <button
+                        onClick={() =>
+                          handleCurrencyTransaction(
+                            currencyId,
+                            "sell",
+                            currentCurrencyData.close
+                          )
+                        }
+                        className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                      >
+                        SELL
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleCurrencyTransaction(
+                            currencyId,
+                            "buy",
+                            currentCurrencyData.close
+                          )
+                        }
+                        className="bg-[#11942F] text-white text-xl font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E]"
+                      >
+                        BUY
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
