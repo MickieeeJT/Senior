@@ -7,6 +7,7 @@ import PrivateRoute from "./PrivateRoute.jsx";
 import Score from "./Score.jsx";
 import Tutorial from "./Tutorial.jsx";
 import Invest from "./Invest.jsx";
+import Dashboard from "./Dashboard.jsx";
 
 export default function App() {
   return (
@@ -36,6 +37,14 @@ export default function App() {
         element={
           <PrivateRoute>
             <Tutorial />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <Dashboard />
           </PrivateRoute>
         }
       />
