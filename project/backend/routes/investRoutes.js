@@ -655,6 +655,27 @@ router.post("/year-increment", (req, res) => {
   });
 });
 
+router.post("/apply-event", (req, res) => {
+  const { sessionId, effect } = req.body;
+  const gameState = gameSessions.get(sessionId); // ✅ Use .get() for Map
+
+  if (!gameState) {
+    return res.status(400).json({ error: "Invalid session" });
+  }
+
+  const amount = effect.amount || 0;
+
+  gameState.pocket += amount;
+  if (gameState.pocket < 0) gameState.pocket = 0;
+
+  gameSessions.set(sessionId, gameState);
+
+  return res.json({
+    message: "Event applied",
+    gameState: gameState,
+  });
+});
+
 // Delete session (cleanup)
 router.delete("/session/:sessionId", (req, res) => {
   const { sessionId } = req.params;
