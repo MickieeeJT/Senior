@@ -337,8 +337,20 @@ export default function Invest() {
             .then((data) => {
               if (data.gameComplete) {
                 setIsRunning(false);
+                // Navigate to dashboard when game is complete (20 years finished)
+                setTimeout(() => {
+                  navigate("/dashboard", { 
+                    state: { 
+                      finalGameState: data.gameState,
+                      gameComplete: true 
+                    }
+                  });
+                }, 1000); // Small delay to show completion
               }
               setGameState(data.gameState);
+            })
+            .catch((error) => {
+              console.error("Year increment failed:", error);
             });
 
           setProgress(0);
@@ -356,7 +368,7 @@ export default function Invest() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     };
-  }, [isRunning, sessionId, gameState]);
+  }, [isRunning, sessionId, gameState, navigate]);
 
   // Monthly updates (stocks, index, bond, AND gold)
   useEffect(() => {
