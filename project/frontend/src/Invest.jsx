@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
+import randomEvent from "./data/Event/event.json";
 
 const API_BASE_URL = "http://localhost:8080/api/invest";
 
@@ -101,6 +102,17 @@ export default function Invest() {
   const [selectedCurrency, setSelectedCurrency] = useState([]);
   const [currencyAmounts, setCurrencyAmounts] = useState({});
   const [activeCurrencyInput, setActiveCurrencyInput] = useState(null);
+
+  // Event popup state
+  const [eventData, setEventData] = useState(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [debtAmount, setDebtAmount] = useState(0); // Track unpaid debt
+  const [inDebtMode, setInDebtMode] = useState(false); // Track if user is finding funds
+  const randomEvents = randomEvent;
+
+  function getRandomEvent() {
+    return randomEvents[Math.floor(Math.random() * randomEvents.length)];
+  }
 
   const timerRef = useRef(null);
 
@@ -315,6 +327,40 @@ export default function Invest() {
     }
   };
 
+  const applyEventEffect = async (effect) => {
+    const res = await fetch(`${API_BASE_URL}/apply-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        effect,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.updatedGameState) {
+      setGameState(data.updatedGameState);
+    } else if (data.gameState) {
+      setGameState(data.gameState);
+    }
+  };
+
+  const checkDebtPayment = async () => {
+    if (inDebtMode && gameState.pocket >= debtAmount) {
+      // User has enough money to pay debt
+      const confirmPay = window.confirm(
+        `You now have enough to pay your debt of ${debtAmount.toLocaleString()}$. Pay now?`
+      );
+
+      if (confirmPay) {
+        await applyEventEffect({ amount: -debtAmount });
+        setDebtAmount(0);
+        setInDebtMode(false);
+      }
+    }
+  };
+
   // Main year timer
   useEffect(() => {
     if (!isRunning || !gameState) return;
@@ -339,11 +385,11 @@ export default function Invest() {
                 setIsRunning(false);
                 // Navigate to dashboard when game is complete (20 years finished)
                 setTimeout(() => {
-                  navigate("/dashboard", { 
-                    state: { 
+                  navigate("/dashboard", {
+                    state: {
                       finalGameState: data.gameState,
-                      gameComplete: true 
-                    }
+                      gameComplete: true,
+                    },
                   });
                 }, 1000); // Small delay to show completion
               }
@@ -378,6 +424,13 @@ export default function Invest() {
 
     // Only trigger when the next month starts and hasn't been processed yet
     if (month >= 1 && month <= 12 && month > gameState.lastProcessedMonth) {
+      // Chance to trigger event (20%)
+      if (Math.random() < 0.1) {
+        const event = getRandomEvent();
+        setEventData(event);
+        setShowEventModal(true);
+      }
+
       const monthIndex = (month - 1) % selectedIndex.data.length;
       const currentIndexData = selectedIndex.data[monthIndex];
       setIndexValue(currentIndexData.close);
@@ -1115,6 +1168,146 @@ export default function Invest() {
             </div>
           </div>
         </div>
+      )}
+      {showEventModal && eventData && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-10 text-center w-[500px]">
+            <h2 className="text-5xl font-jersey mb-4 text-[#B7FD5E]">
+              {eventData.title}
+            </h2>
+
+            <p className="text-3xl font-jersey text-white mb-6">
+              {eventData.message}
+            </p>
+
+            <p
+              className={`text-4xl font-jersey mb-6 ${
+                eventData.amount >= 0 ? "text-[#B7FD5E]" : "text-red-500"
+              }`}
+            >
+              {eventData.amount > 0
+                ? `+${eventData.amount.toLocaleString()}$`
+                : `${eventData.amount.toLocaleString()}$`}
+            </p>
+
+            {/* If it's a GAIN */}
+            {eventData.amount >= 0 ? (
+              <button
+                onClick={async () => {
+                  await applyEventEffect({ amount: eventData.amount });
+                  setShowEventModal(false);
+                }}
+                className="bg-[#11942F] text-white text-3xl font-jersey px-8 py-2 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
+              >
+                Collect
+              </button>
+            ) : (
+              /* If it's a LOSS */
+              <div className="flex flex-col gap-4">
+                {/* Pay with Pocket Cash - only show if user has enough */}
+                {gameState.pocket >= Math.abs(eventData.amount) && (
+                  <button
+                    onClick={async () => {
+                      await applyEventEffect({ amount: eventData.amount });
+                      setShowEventModal(false);
+                    }}
+                    className="bg-[#11942F] text-white text-2xl font-jersey px-6 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
+                  >
+                    Pay with Pocket Cash (
+                    {Math.abs(eventData.amount).toLocaleString()}$)
+                  </button>
+                )}
+
+                {/* Find Funds - enter debt mode without paying yet */}
+                <button
+                  onClick={() => {
+                    setDebtAmount(Math.abs(eventData.amount));
+                    setInDebtMode(true);
+                    setShowEventModal(false);
+                    // Don't apply the effect yet - user must pay later
+                  }}
+                  className="bg-red-600 text-white text-2xl font-jersey px-6 py-3 rounded hover:bg-red-700 transition-colors"
+                >
+                  Find Funds (Sell Assets)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Debt Mode Overlay */}
+      {inDebtMode && (
+        <>
+          {/* Dark overlay on entire screen */}
+          <div className="fixed inset-0 bg-black bg-opacity-40 pointer-events-none z-40"></div>
+
+          {/* Compact debt indicator - expands on hover */}
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+            <div className="relative group">
+              {/* Compact view (default) - THIS is the hover trigger */}
+              <div className="bg-red-600 border-4 border-red-800 rounded-lg px-6 py-3 shadow-2xl cursor-pointer pointer-events-auto">
+                <p className="text-2xl font-jersey text-white text-center whitespace-nowrap">
+                  ⚠️ Debt: {debtAmount.toLocaleString()}$
+                </p>
+              </div>
+
+              {/* Expanded view (on hover) - positioned absolutely */}
+              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-red-600 border-4 border-red-800 rounded-lg p-6 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 w-[350px] pointer-events-auto">
+                <p className="text-3xl font-jersey text-white text-center mb-2">
+                  ⚠️ DEBT MODE ⚠️
+                </p>
+                <p className="text-2xl font-jersey text-white text-center mb-1">
+                  You owe: {debtAmount.toLocaleString()}$
+                </p>
+                <p className="text-lg font-jersey text-gray-300 text-center mb-3">
+                  Sell assets to raise funds
+                </p>
+
+                {/* Progress bar */}
+                <div className="w-full bg-red-900 rounded-full h-3 mb-3">
+                  <div
+                    className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(
+                        (gameState.pocket / debtAmount) * 100,
+                        100
+                      )}%`,
+                    }}
+                  ></div>
+                </div>
+
+                {/* Current pocket balance */}
+                <p className="text-lg font-jersey text-white text-center mb-4">
+                  Pocket: {gameState.pocket.toLocaleString()}$ /{" "}
+                  {debtAmount.toLocaleString()}$
+                </p>
+
+                {/* Pay button */}
+                <button
+                  onClick={async () => {
+                    if (gameState.pocket >= debtAmount) {
+                      await applyEventEffect({ amount: -debtAmount });
+                      setDebtAmount(0);
+                      setInDebtMode(false);
+                    }
+                  }}
+                  disabled={gameState.pocket < debtAmount}
+                  className={`w-full text-xl font-jersey px-6 py-3 rounded transition-colors ${
+                    gameState.pocket >= debtAmount
+                      ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                      : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  {gameState.pocket >= debtAmount
+                    ? `Pay Debt (${debtAmount.toLocaleString()}$)`
+                    : `Need ${(
+                        debtAmount - gameState.pocket
+                      ).toLocaleString()}$ more`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -657,7 +657,7 @@ router.post("/year-increment", (req, res) => {
 
 router.post("/apply-event", (req, res) => {
   const { sessionId, effect } = req.body;
-  const gameState = gameSessions.get(sessionId); // ✅ Use .get() for Map
+  const gameState = gameSessions.get(sessionId);
 
   if (!gameState) {
     return res.status(400).json({ error: "Invalid session" });

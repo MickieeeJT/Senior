@@ -597,6 +597,7 @@ export default function Invest() {
           </div>
         </div>
       </div>
+
       <div className="grid grid-cols-3 gap-3">
         {/* Savings Account */}
         <div className="p-1 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F]">
