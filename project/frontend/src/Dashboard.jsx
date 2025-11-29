@@ -127,14 +127,14 @@ export default function Dashboard() {
         {/* HEADER */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-[#7CFC00]">
-            🏆 FINAL GAME SUMMARY 🏆
+            FINAL GAME SUMMARY
           </h1>
           <p className="text-sm text-[#66ffcc]">Investment Performance Overview - 20 Years Complete!</p>
         </div>
 
         {/* TOP SUMMARY */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-10">
-          <div className="bg-black/50 border-2 border-[#00ff99] p-4 rounded-xl text-center">
+          <div className="bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-4 rounded-xl text-center">
             <h2 className="text-lg font-bold text-[#00ff99]">Total Money</h2>
             <p className="text-2xl mt-1">${totalMoney.toLocaleString()}</p>
             <p className={`${totalGain >= 0 ? 'text-[#00ff66]' : 'text-red-400'}`}>
@@ -142,13 +142,13 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="bg-black/50 border-2 border-[#00ffaa] p-4 rounded-xl text-center">
+          <div className="bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-4 rounded-xl text-center">
             <h2 className="text-lg font-bold text-[#00ffaa]">Highest Performer</h2>
             <p className="text-xl mt-1">{highestPerformer.name}</p>
             <p className="text-sm text-[#66ffcc]">+${highestPerformer.profit.toFixed(2)}</p>
           </div>
 
-          <div className="bg-black/50 border-2 border-[#33ff88] p-4 rounded-xl text-center">
+          <div className="bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-4 rounded-xl text-center">
             <h2 className="text-lg font-bold text-[#33ff88]">Lowest Performer</h2>
             <p className="text-xl mt-1">{lowestPerformer.name}</p>
             <p className="text-sm text-red-400">${lowestPerformer.profit.toFixed(2)}</p>
@@ -156,8 +156,8 @@ export default function Dashboard() {
         </div>
 
         {/* BOT COMPARISON */}
-        <div className="w-full max-w-5xl bg-black/50 border-2 border-[#00ff88] rounded-xl p-6 mb-10">
-          <h2 className="text-xl font-bold text-[#00ff88] mb-4">🤖 BOT Comparison</h2>
+        <div className="w-full max-w-5xl bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] rounded-xl p-6 mb-10">
+          <h2 className="text-xl font-bold text-[#00ff88] mb-4">BOT Comparison</h2>
 
           <table className="w-full text-sm text-left">
             <tbody>
@@ -183,7 +183,7 @@ export default function Dashboard() {
         </div>
 
         {/* INVESTMENT PORTFOLIO */}
-        <div className="w-full max-w-5xl bg-black/50 border-2 border-[#22ff88] rounded-xl p-6 mb-10">
+        <div className="w-full max-w-5xl bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] rounded-xl p-6 mb-10">
           <h2 className="text-xl font-bold text-[#22ff88] mb-4">Investment Portfolio</h2>
           <table className="w-full text-left text-sm">
             <thead>
@@ -209,8 +209,18 @@ export default function Dashboard() {
           </table>
         </div>
 
+        {/* Pie Chart */}
+        <div className="w-full max-w-5xl bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] rounded-xl p-6 mb-10">
+          {/* Placeholder for Pie Chart */}
+          <h2 className="text-xl font-bold text-[#00ffaa] mb-4">Investment Distribution</h2>
+          <div className="w-full h-64 flex items-center justify-center text-[#66ffcc]">
+            [Pie Chart Placeholder]
+          </div>
+        </div>
+
+
         {/* KEY TAKEAWAYS */}
-        <div className="w-full max-w-5xl bg-black/50 border-2 border-[#33ffbb] rounded-xl p-6 mb-10">
+        <div className="w-full max-w-5xl bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] rounded-xl p-6 mb-10">
           <h2 className="text-xl font-bold text-[#33ffbb] mb-4">💡 Key Takeaways</h2>
 
           <ul className="list-disc pl-6 text-sm text-[#99ffe6]">
@@ -221,7 +231,7 @@ export default function Dashboard() {
         </div>
 
         {/* ACHIEVEMENTS */}
-        <div className="w-full max-w-5xl bg-black/50 border-2 border-[#00ffaa] rounded-xl p-6 mb-10">
+        <div className="w-full max-w-5xl bg-black/50 border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] rounded-xl p-6 mb-10">
           <h2 className="text-xl font-bold text-[#00ffaa] mb-4">Achievements</h2>
 
           <div className="flex flex-wrap justify-center gap-4">
