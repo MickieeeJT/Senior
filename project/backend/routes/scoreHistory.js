@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/", authenticateToken, (req, res) => {
   const userId = req.user.id;
 
-  const sql = "SELECT * FROM score_history WHERE user_id = ?";
+  const sql = "SELECT * FROM score_history WHERE user_id = ? ORDER BY played_at DESC, id DESC";
   db.query(sql, [userId], (err, rows) => {
     if (err) {
       console.error("Database error:", err);

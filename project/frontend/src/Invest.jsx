@@ -106,8 +106,8 @@ export default function Invest() {
   // Event popup state
   const [eventData, setEventData] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
-  const [debtAmount, setDebtAmount] = useState(0); // Track unpaid debt
-  const [inDebtMode, setInDebtMode] = useState(false); // Track if user is finding funds
+  const [debtAmount, setDebtAmount] = useState(0);
+  const [inDebtMode, setInDebtMode] = useState(false);
   const randomEvents = randomEvent;
 
   function getRandomEvent() {
@@ -115,6 +115,59 @@ export default function Invest() {
   }
 
   const timerRef = useRef(null);
+
+  const saveScore = async () => {
+    // 1. Gather current prices from your frontend state/files
+    const finalStockPrices = {};
+    selectedStocks.forEach((stock) => {
+      // Logic to find price at current month
+      const totalMonthsPassed =
+        (gameState.currentYear - 1) * 12 + Math.floor(currentMonth);
+      const monthIndex = totalMonthsPassed % stock.data.length;
+      finalStockPrices[stock.symbol] = stock.data[monthIndex].close;
+    });
+
+    const finalCurrencyPrices = {};
+    selectedCurrency.forEach((curr) => {
+      const totalMonthsPassed =
+        (gameState.currentYear - 1) * 12 + Math.floor(currentMonth);
+      const monthIndex = totalMonthsPassed % curr.data.length;
+      finalCurrencyPrices[curr.symbol] = curr.data[monthIndex].close;
+    });
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        "http://localhost:8080/api/invest/end-game",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            sessionId, // Send the session ID
+            finalStockPrices, // Send the prices map
+            finalCurrencyPrices, // Send the currency map
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Return the data to the UI to display
+        return { score: data.score, star: data.star };
+      } else {
+        alert("Failed to save score.");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      return null;
+    }
+  };
 
   // Initialize random stocks, index, gold, and currencies on mount
   useEffect(() => {
@@ -218,14 +271,13 @@ export default function Invest() {
     const amountStr = stockAmounts[symbol] || "1";
     let amount = 0;
 
-    // Determine number of shares to buy or sell
     const holding = gameState.holdings?.stocks?.[symbol];
 
     if (amountStr === "MAX") {
       amount =
         action === "buy"
-          ? Math.floor(gameState.pocket / price) // buy as many as possible
-          : holding?.shares || 0; // sell all owned shares
+          ? Math.floor(gameState.pocket / price)
+          : holding?.shares || 0;
     } else {
       amount = parseInt(amountStr);
     }
@@ -256,7 +308,6 @@ export default function Invest() {
 
       console.log(`${action.toUpperCase()} Success:`, data.message);
 
-      // Update frontend game state
       if (data.updatedGameState) {
         setGameState(data.updatedGameState);
       } else if (data.gameState) {
@@ -270,19 +321,17 @@ export default function Invest() {
     }
   };
 
-  // Handle currency transactions (similar to stocks)
   const handleCurrencyTransaction = async (symbol, action, price) => {
     const amountStr = currencyAmounts[symbol] || "1";
     let amount = 0;
 
-    // Determine number of units to buy or sell
     const holding = gameState.holdings?.currencies?.[symbol];
 
     if (amountStr === "MAX") {
       amount =
         action === "buy"
-          ? Math.floor(gameState.pocket / price) // buy as many as possible
-          : holding?.units || 0; // sell all owned units
+          ? Math.floor(gameState.pocket / price)
+          : holding?.units || 0;
     } else {
       amount = parseInt(amountStr);
     }
@@ -313,7 +362,6 @@ export default function Invest() {
 
       console.log(`Currency ${action.toUpperCase()} Success:`, data.message);
 
-      // Update frontend game state
       if (data.updatedGameState) {
         setGameState(data.updatedGameState);
       } else if (data.gameState) {
@@ -348,7 +396,6 @@ export default function Invest() {
 
   const checkDebtPayment = async () => {
     if (inDebtMode && gameState.pocket >= debtAmount) {
-      // User has enough money to pay debt
       const confirmPay = window.confirm(
         `You now have enough to pay your debt of ${debtAmount.toLocaleString()}$. Pay now?`
       );
@@ -373,27 +420,37 @@ export default function Invest() {
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          // Year complete
           fetch(`${API_BASE_URL}/year-increment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sessionId }),
           })
             .then((res) => res.json())
-            .then((data) => {
+            .then(async (data) => {
               if (data.gameComplete) {
                 setIsRunning(false);
-                // Navigate to dashboard when game is complete (20 years finished)
-                setTimeout(() => {
-                  navigate("/dashboard", {
-                    state: {
-                      finalGameState: data.gameState,
-                      gameComplete: true,
-                    },
-                  });
-                }, 1000); // Small delay to show completion
+
+                // 1. Wait for backend to calculate score
+                const saved = await saveScore();
+
+                if (saved) {
+                  setTimeout(() => {
+                    navigate("/dashboard", {
+                      state: {
+                        finalGameState: data.gameState,
+                        gameComplete: true,
+                        // 2. PASS THE BACKEND RESULT (saved) HERE
+                        // Do NOT call calculateFinalScore()
+                        scoreData: saved,
+                      },
+                    });
+                  }, 2000);
+                }
               }
-              setGameState(data.gameState);
+              // Only update state if game is not over to prevent flickering
+              if (!data.gameComplete) {
+                setGameState(data.gameState);
+              }
             })
             .catch((error) => {
               console.error("Year increment failed:", error);
@@ -414,7 +471,15 @@ export default function Invest() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     };
-  }, [isRunning, sessionId, gameState, navigate]);
+  }, [
+    isRunning,
+    sessionId,
+    gameState,
+    navigate,
+    selectedStocks,
+    selectedCurrency,
+    currentMonth,
+  ]);
 
   // Monthly updates (stocks, index, bond, AND gold)
   useEffect(() => {
@@ -424,8 +489,8 @@ export default function Invest() {
 
     // Only trigger when the next month starts and hasn't been processed yet
     if (month >= 1 && month <= 12 && month > gameState.lastProcessedMonth) {
-      // Chance to trigger event (20%)
-      if (Math.random() < 0.1) {
+      // Chance to trigger event
+      if (Math.random() < 1) {
         const event = getRandomEvent();
         setEventData(event);
         setShowEventModal(true);
@@ -1239,47 +1304,25 @@ export default function Invest() {
       {inDebtMode && (
         <>
           {/* Dark overlay on entire screen */}
-          <div className="fixed inset-0 bg-black bg-opacity-40 pointer-events-none z-40"></div>
+          <div className="fixed inset-0 bg-black bg-opacity-20 pointer-events-none z-40"></div>
 
           {/* Compact debt indicator - expands on hover */}
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
             <div className="relative group">
               {/* Compact view (default) - THIS is the hover trigger */}
-              <div className="bg-red-600 border-4 border-red-800 rounded-lg px-6 py-3 shadow-2xl cursor-pointer pointer-events-auto">
+              <div className="bg-red-500 border-4 border-red-400 rounded-lg px-6 py-3 shadow-2xl cursor-pointer pointer-events-auto">
                 <p className="text-2xl font-jersey text-white text-center whitespace-nowrap">
-                  ⚠️ Debt: {debtAmount.toLocaleString()}$
+                  Debt: {debtAmount.toLocaleString()}$
                 </p>
               </div>
 
               {/* Expanded view (on hover) - positioned absolutely */}
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-red-600 border-4 border-red-800 rounded-lg p-6 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 w-[350px] pointer-events-auto">
-                <p className="text-3xl font-jersey text-white text-center mb-2">
-                  ⚠️ DEBT MODE ⚠️
-                </p>
-                <p className="text-2xl font-jersey text-white text-center mb-1">
+              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-red-500 border-4 border-red-400 rounded-lg p-6 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 w-[350px] pointer-events-auto">
+                <p className="text-3xl font-jersey text-white text-center mb-1">
                   You owe: {debtAmount.toLocaleString()}$
                 </p>
-                <p className="text-lg font-jersey text-gray-300 text-center mb-3">
+                <p className="text-2xl font-jersey text-white text-center mb-3">
                   Sell assets to raise funds
-                </p>
-
-                {/* Progress bar */}
-                <div className="w-full bg-red-900 rounded-full h-3 mb-3">
-                  <div
-                    className="bg-green-500 h-3 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(
-                        (gameState.pocket / debtAmount) * 100,
-                        100
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-
-                {/* Current pocket balance */}
-                <p className="text-lg font-jersey text-white text-center mb-4">
-                  Pocket: {gameState.pocket.toLocaleString()}$ /{" "}
-                  {debtAmount.toLocaleString()}$
                 </p>
 
                 {/* Pay button */}
@@ -1292,9 +1335,9 @@ export default function Invest() {
                     }
                   }}
                   disabled={gameState.pocket < debtAmount}
-                  className={`w-full text-xl font-jersey px-6 py-3 rounded transition-colors ${
+                  className={`w-full text-2xl font-jersey px-6 py-3 rounded transition-colors ${
                     gameState.pocket >= debtAmount
-                      ? "bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                      ? "bg-[#941111] text-white hover:bg-[#fd5e5e] cursor-pointer"
                       : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
                   }`}
                 >

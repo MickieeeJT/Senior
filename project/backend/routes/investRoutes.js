@@ -1,7 +1,8 @@
 import express from "express";
-const router = express.Router();
+import { authenticateToken } from "../middleware/authMiddleware.js"; // Import Auth
+import db from "../config/db.js"; // Import your DB connection
 
-// In-memory game state storage (use database in production)
+const router = express.Router();
 const gameSessions = new Map();
 
 // Initialize a new game session
@@ -674,6 +675,90 @@ router.post("/apply-event", (req, res) => {
     message: "Event applied",
     gameState: gameState,
   });
+});
+
+router.post("/end-game", authenticateToken, (req, res) => {
+  const userId = req.user.id; // Got from authenticateToken
+  const { sessionId, finalStockPrices, finalCurrencyPrices } = req.body;
+
+  // 1. Retrieve Game State from Memory
+  const gameState = gameSessions.get(sessionId);
+
+  if (!gameState) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  try {
+    // 2. Calculate Base Assets
+    const baseAssets =
+      gameState.pocket +
+      gameState.savingsBalance +
+      gameState.fundBalance +
+      gameState.goldBalance +
+      (gameState.holdings.bonds || 0);
+
+    // 3. Calculate Stock Value (using server quantity * frontend price)
+    let stockValue = 0;
+    if (gameState.holdings.stocks) {
+      for (const [symbol, holding] of Object.entries(gameState.holdings.stocks)) {
+        const currentPrice = finalStockPrices[symbol] || 0;
+        stockValue += currentPrice * holding.shares;
+      }
+    }
+
+    // 4. Calculate Currency Value
+    let currencyValue = 0;
+    if (gameState.holdings.currencies) {
+      for (const [symbol, holding] of Object.entries(gameState.holdings.currencies)) {
+        const currentPrice = finalCurrencyPrices[symbol] || 0;
+        currencyValue += currentPrice * holding.units;
+      }
+    }
+
+    // 5. Total Score
+    const finalScore = baseAssets + stockValue + currencyValue;
+
+    // 6. Calculate Star Rating
+    let star = 0;
+    if (finalScore >= 1500000) star = 5;
+    else if (finalScore >= 1000000) star = 4;
+    else if (finalScore >= 750000) star = 3;
+    else if (finalScore >= 500000) star = 2;
+    else if (finalScore >= 25000) star = 1;
+
+    const roundedScore = Math.round(finalScore);
+
+    // 7. SAVE TO DATABASE (Using your MySQL connection)
+    const sql = `
+      INSERT INTO score_history 
+      (user_id, score, star, played_at) 
+      VALUES (?, ?, ?, NOW())
+    `;
+
+    db.query(sql, [userId, roundedScore, star], (err, result) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to save score",
+        });
+      }
+
+      // 8. Clear the session from memory
+      gameSessions.delete(sessionId);
+
+      // 9. Send success response
+      res.json({
+        success: true,
+        score: roundedScore,
+        star: star,
+        scoreId: result.insertId,
+      });
+    });
+  } catch (error) {
+    console.error("Calculation error:", error);
+    res.status(500).json({ success: false, error: "Server error calculating score" });
+  }
 });
 
 // Delete session (cleanup)

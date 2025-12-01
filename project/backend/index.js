@@ -25,7 +25,7 @@ app.use("/auth", authRoutes);
 app.use("/api/score-history", scoreHistory);
 
 // ✅ Investment logic route
-app.use("/api/invest", investRoutes); // 👈 added new route here
+app.use("/api/invest", investRoutes);
 
 // ✅ Example protected route
 app.get("/home", authenticateToken, (req, res) => {

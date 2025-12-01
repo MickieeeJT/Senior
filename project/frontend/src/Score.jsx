@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import star from "./assets/star.png";
 
 export default function ScoreHistoryPage() {
   const [scores, setScores] = useState([]);
@@ -16,12 +17,15 @@ export default function ScoreHistoryPage() {
       }
 
       try {
-        const response = await fetch("http://localhost:8080/api/score-history", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await fetch(
+          "http://localhost:8080/api/score-history",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         const data = await response.json();
         console.log("Score history response:", data);
@@ -76,6 +80,7 @@ export default function ScoreHistoryPage() {
                   <th className="py-3 text-lg font-bold">DATE</th>
                   <th className="py-3 text-lg font-bold">TOTAL EARNED ($)</th>
                   <th className="py-3 text-lg font-bold">ACHIEVEMENTS</th>
+                  <th className="py-3 text-lg font-bold">STARS</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,7 +101,9 @@ export default function ScoreHistoryPage() {
                         entry.achievements.map((achv, i) => (
                           <img
                             key={i}
-                            src={achv.icon || "/assets/pixel_achv_placeholder.png"}
+                            src={
+                              achv.icon || "/assets/pixel_achv_placeholder.png"
+                            }
                             alt={achv.name}
                             className="w-8 h-8"
                           />
@@ -104,6 +111,22 @@ export default function ScoreHistoryPage() {
                       ) : (
                         <span className="text-[#9ACD32]">None</span>
                       )}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex justify-center space-x-1">
+                        {Number(entry.star) > 0 ? (
+                          [...Array(Number(entry.star))].map((_, i) => (
+                            <img
+                              key={i}
+                              src={star}
+                              alt="star"
+                              className="w-6 h-6"
+                            />
+                          ))
+                        ) : (
+                          <span></span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
