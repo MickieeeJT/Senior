@@ -76,9 +76,10 @@ export default function Invest() {
   const [loading, setLoading] = useState(true);
 
   const [progress, setProgress] = useState(0);
-  const [currentMonth, setCurrentMonth] = useState(0);
+  const [currentMonth, setCurrentMonth] = useState(1); // Start at 1, not 0
   const [isRunning, setIsRunning] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [isProcessingYear, setIsProcessingYear] = useState(false); // New state to pause timer during API call
 
   // Bonds
   const [activeInput, setActiveInput] = useState(null);
@@ -115,22 +116,26 @@ export default function Invest() {
   }
 
   const timerRef = useRef(null);
+  // Ref to track processed months locally to prevent double firing
+  const processingRef = useRef(null);
 
   const saveScore = async () => {
     // 1. Gather current prices from your frontend state/files
     const finalStockPrices = {};
+
+    // Calculate total cumulative months properly
+    const totalMonthsPassed = Math.max(
+      0,
+      (gameState.currentYear - 1) * 12 + Math.floor(currentMonth) - 1
+    );
+
     selectedStocks.forEach((stock) => {
-      // Logic to find price at current month
-      const totalMonthsPassed =
-        (gameState.currentYear - 1) * 12 + Math.floor(currentMonth);
       const monthIndex = totalMonthsPassed % stock.data.length;
       finalStockPrices[stock.symbol] = stock.data[monthIndex].close;
     });
 
     const finalCurrencyPrices = {};
     selectedCurrency.forEach((curr) => {
-      const totalMonthsPassed =
-        (gameState.currentYear - 1) * 12 + Math.floor(currentMonth);
       const monthIndex = totalMonthsPassed % curr.data.length;
       finalCurrencyPrices[curr.symbol] = curr.data[monthIndex].close;
     });
@@ -147,9 +152,9 @@ export default function Invest() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            sessionId, // Send the session ID
-            finalStockPrices, // Send the prices map
-            finalCurrencyPrices, // Send the currency map
+            sessionId,
+            finalStockPrices,
+            finalCurrencyPrices,
           }),
         }
       );
@@ -157,7 +162,6 @@ export default function Invest() {
       const data = await response.json();
 
       if (data.success) {
-        // Return the data to the UI to display
         return { score: data.score, star: data.star };
       } else {
         alert("Failed to save score.");
@@ -410,7 +414,8 @@ export default function Invest() {
 
   // Main year timer
   useEffect(() => {
-    if (!isRunning || !gameState) return;
+    // If paused for processing year, do not tick
+    if (!isRunning || !gameState || isProcessingYear) return;
     if (timerRef.current) return;
 
     const duration = 60000;
@@ -419,7 +424,10 @@ export default function Invest() {
 
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
+        // If we hit 100, we trigger Year Increment
         if (prev >= 100) {
+          setIsProcessingYear(true); // Pause timer logic locally
+
           fetch(`${API_BASE_URL}/year-increment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -430,7 +438,7 @@ export default function Invest() {
               if (data.gameComplete) {
                 setIsRunning(false);
 
-                // 1. Wait for backend to calculate score
+                // Wait for backend to calculate score
                 const saved = await saveScore();
 
                 if (saved) {
@@ -439,30 +447,36 @@ export default function Invest() {
                       state: {
                         finalGameState: data.gameState,
                         gameComplete: true,
-                        // 2. PASS THE BACKEND RESULT (saved) HERE
-                        // Do NOT call calculateFinalScore()
                         scoreData: saved,
                       },
                     });
                   }, 2000);
                 }
               }
-              // Only update state if game is not over to prevent flickering
+              // Only update state if game is not over
               if (!data.gameComplete) {
                 setGameState(data.gameState);
+                // Reset progress/month ONLY after we successfully got the new year data
+                // This prevents the UI from jumping back to "Year X Month 1" prematurely
+                setProgress(0);
+                setCurrentMonth(1);
+                setIsProcessingYear(false); // Resume timer
               }
             })
             .catch((error) => {
               console.error("Year increment failed:", error);
+              setIsProcessingYear(false);
             });
 
-          setProgress(0);
-          setCurrentMonth(0);
-          return 0;
+          return 100; // Hold at 100 while waiting
         }
 
         const newProgress = prev + 1;
-        setCurrentMonth(newProgress / 8.33);
+        // Improved Math: Map 0-100 to 1-12.99 directly
+        // This eliminates the "Month 0" dead zone.
+        // Math.floor(0) + 1 = 1. Math.floor(11.99) + 1 = 12.
+        const newMonth = Math.floor((newProgress / 100) * 12) + 1;
+        setCurrentMonth(newMonth);
         return newProgress;
       });
     }, interval);
@@ -479,29 +493,39 @@ export default function Invest() {
     selectedStocks,
     selectedCurrency,
     currentMonth,
+    isProcessingYear, // Added dependency
   ]);
 
   // Monthly updates (stocks, index, bond, AND gold)
   useEffect(() => {
     if (!sessionId || !gameState || !selectedIndex || !selectedGold) return;
 
+    // Use currentMonth directly (it's now 1-12)
     const month = Math.floor(currentMonth);
 
     // Only trigger when the next month starts and hasn't been processed yet
     if (month >= 1 && month <= 12 && month > gameState.lastProcessedMonth) {
+      // Deduplication Logic
+      const updateKey = `${gameState.currentYear}-${month}`;
+      if (processingRef.current === updateKey) return;
+      processingRef.current = updateKey;
+
       // Chance to trigger event
-      if (Math.random() < 1) {
+      if (Math.random() < 0.1) {
         const event = getRandomEvent();
         setEventData(event);
         setShowEventModal(true);
       }
 
-      const monthIndex = (month - 1) % selectedIndex.data.length;
+      // UPDATED: Use Cumulative Month Index (Year-based)
+      const totalMonths = (gameState.currentYear - 1) * 12 + (month - 1);
+
+      const monthIndex = totalMonths % selectedIndex.data.length;
       const currentIndexData = selectedIndex.data[monthIndex];
       setIndexValue(currentIndexData.close);
 
       // Update gold value
-      const goldMonthIndex = (month - 1) % selectedGold.data.length;
+      const goldMonthIndex = totalMonths % selectedGold.data.length;
       const currentGoldData = selectedGold.data[goldMonthIndex];
       setGoldValue(currentGoldData.close);
 
@@ -589,6 +613,11 @@ export default function Invest() {
   const currentIndexValue = gameState.indexShares * indexValue;
   const indexUnrealizedProfit =
     gameState.fundBalance - gameState.holdings.index;
+
+  // Helper for UI display: Get current total months passed for rendering correct data point
+  const displayTotalMonths =
+    (gameState.currentYear - 1) * 12 +
+    Math.max(0, Math.floor(currentMonth) - 1);
 
   return (
     <div className="min-h-screen bg-[#011D10] text-[#494a48] font-mono flex flex-col p-6">
@@ -825,23 +854,20 @@ export default function Invest() {
             <div
               className={`text-xl font-jersey ${
                 selectedIndex?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) %
-                    selectedIndex.data.length
+                  displayTotalMonths % selectedIndex.data.length
                 ]?.change >= 0
                   ? "text-green-400"
                   : "text-red-400"
               }`}
             >
               {selectedIndex?.data[
-                Math.max(0, Math.floor(currentMonth) - 1) %
-                  selectedIndex.data.length
+                displayTotalMonths % selectedIndex.data.length
               ]?.change >= 0
                 ? "▲"
                 : "▼"}{" "}
               {Math.abs(
                 selectedIndex?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) %
-                    selectedIndex.data.length
+                  displayTotalMonths % selectedIndex.data.length
                 ]?.change || 0
               ).toFixed(2)}{" "}
               %
@@ -911,7 +937,7 @@ export default function Invest() {
           <div className="lg:col-span-3 p-2 text-center">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {selectedStocks.map((stock) => {
-                const monthIndex = Math.floor(currentMonth) % stock.data.length;
+                const monthIndex = displayTotalMonths % stock.data.length;
                 const currentStockData = stock.data[monthIndex];
                 const stockId = stock.symbol;
                 const holding = gameState.holdings?.stocks?.[stockId];
@@ -1026,23 +1052,19 @@ export default function Invest() {
             <p
               className={`text-lg font-jersey ${
                 selectedGold?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) %
-                    selectedGold.data.length
+                  displayTotalMonths % selectedGold.data.length
                 ]?.change >= 0
                   ? "text-green-400"
                   : "text-red-400"
               }`}
             >
-              {selectedGold?.data[
-                Math.max(0, Math.floor(currentMonth) - 1) %
-                  selectedGold.data.length
-              ]?.change >= 0
+              {selectedGold?.data[displayTotalMonths % selectedGold.data.length]
+                ?.change >= 0
                 ? "▲"
                 : "▼"}{" "}
               {Math.abs(
                 selectedGold?.data[
-                  Math.max(0, Math.floor(currentMonth) - 1) %
-                    selectedGold.data.length
+                  displayTotalMonths % selectedGold.data.length
                 ]?.change || 0
               ).toFixed(2)}
               %
@@ -1106,8 +1128,7 @@ export default function Invest() {
           <div className="lg:col-span-3 p-2 text-center">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {selectedCurrency.map((currency) => {
-                const monthIndex =
-                  Math.floor(currentMonth) % currency.data.length;
+                const monthIndex = displayTotalMonths % currency.data.length;
                 const currentCurrencyData = currency.data[monthIndex];
                 const currencyId = currency.symbol;
                 const holding = gameState.holdings?.currencies?.[currencyId];

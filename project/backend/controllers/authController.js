@@ -75,7 +75,7 @@ export const login = (req, res) => {
         const token = jwt.sign(
             { id: user.id, email: user.email },
             SECRET_KEY,
-            { expiresIn: "1h" }
+            { expiresIn: "3h" }
         );
 
         // ✅ Send the token back
