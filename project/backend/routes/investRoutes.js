@@ -5,20 +5,69 @@ import db from "../config/db.js"; // Import your DB connection
 const router = express.Router();
 const gameSessions = new Map();
 
+// --- MATH HELPERS ---
+
+// Calculate Total Return Percentage (Profit / Total Cash Put In)
+const calculateTotalReturn = (totalInvested, finalValue) => {
+  if (totalInvested <= 0) return 0;
+  return (finalValue - totalInvested) / totalInvested;
+};
+
+// Calculate Standard Deviation (Volatility)
+const calculateVolatility = (history) => {
+  if (history.length < 2) return 0;
+
+  // Calculate year-over-year returns
+  const returns = [];
+  for (let i = 1; i < history.length; i++) {
+    const r = (history[i] - history[i - 1]) / history[i - 1];
+    returns.push(r);
+  }
+
+  // Calculate Mean Return
+  const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+
+  // Calculate Variance
+  const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+
+  return Math.sqrt(variance);
+};
+
+// Calculate Max Drawdown (Risk)
+const calculateMaxDrawdown = (history) => {
+  let peak = history[0];
+  let maxDrawdown = 0;
+
+  for (const value of history) {
+    if (value > peak) {
+      peak = value;
+    }
+    const drawdown = (value - peak) / peak;
+    if (drawdown < maxDrawdown) {
+      maxDrawdown = drawdown;
+    }
+  }
+  return maxDrawdown;
+};
+
 // Initialize a new game session
 router.post("/init", (req, res) => {
   const sessionId = Date.now().toString();
 
-  // Generate random bond interest rates
   const bondInterestRates = {
     "1 year": 0.05 + Math.random() * 0.05,
     "5 years": 0.07 + Math.random() * 0.05,
     "10 years": 0.09 + Math.random() * 0.05,
   };
 
+  const initialCapital = 4000; // Define starting money
+
   const gameState = {
     sessionId,
-    pocket: 4000,
+    pocket: initialCapital,
+    // [FIX] Track total money put into the game (starts with initial)
+    totalInvested: initialCapital,
+    portfolioHistory: [initialCapital], // Store Year 0 value
     savingsBalance: 0,
     currentYear: 1,
     currentMonth: 0,
@@ -39,6 +88,7 @@ router.post("/init", (req, res) => {
       index: 0,
       gold: 0,
       stocks: {},
+      currencies: {} 
     },
     bondInvestments: [],
     bondInterestRates,
@@ -266,6 +316,8 @@ router.post("/monthly-update", (req, res) => {
   // Half-year income
   if (month === 6 || month === 12) {
     gameState.pocket += 4000;
+    // [FIX] Increment totalInvested to accurately track how much cash entered the game
+    gameState.totalInvested += 4000; 
   }
 
   gameState.lastProcessedMonth = month;
@@ -631,12 +683,17 @@ router.post("/currency-sell", (req, res) => {
 
 // Year increment
 router.post("/year-increment", (req, res) => {
-  const { sessionId } = req.body;
+  const { sessionId, currentNetWorth } = req.body; // Frontend MUST send total value
   const gameState = gameSessions.get(sessionId);
 
   if (!gameState) {
     return res.status(404).json({ error: "Session not found" });
   }
+
+  // Record history for Volatility/Drawdown calculation
+  // If frontend didn't send net worth, fallback to pocket (not ideal, but prevents crash)
+  const val = currentNetWorth ? parseFloat(currentNetWorth) : gameState.pocket; 
+  gameState.portfolioHistory.push(val);
 
   if (gameState.currentYear >= 20) {
     return res.json({
@@ -678,26 +735,14 @@ router.post("/apply-event", (req, res) => {
 });
 
 router.post("/end-game", authenticateToken, (req, res) => {
-  const userId = req.user.id; // Got from authenticateToken
+  const userId = req.user.id;
   const { sessionId, finalStockPrices, finalCurrencyPrices } = req.body;
 
-  // 1. Retrieve Game State from Memory
   const gameState = gameSessions.get(sessionId);
-
-  if (!gameState) {
-    return res.status(404).json({ error: "Session not found" });
-  }
+  if (!gameState) return res.status(404).json({ error: "Session not found" });
 
   try {
-    // 2. Calculate Base Assets
-    const baseAssets =
-      gameState.pocket +
-      gameState.savingsBalance +
-      gameState.fundBalance +
-      gameState.goldBalance +
-      (gameState.holdings.bonds || 0);
-
-    // 3. Calculate Stock Value (using server quantity * frontend price)
+    // --- 1. Calculate Final Net Worth ---
     let stockValue = 0;
     if (gameState.holdings.stocks) {
       for (const [symbol, holding] of Object.entries(gameState.holdings.stocks)) {
@@ -706,7 +751,6 @@ router.post("/end-game", authenticateToken, (req, res) => {
       }
     }
 
-    // 4. Calculate Currency Value
     let currencyValue = 0;
     if (gameState.holdings.currencies) {
       for (const [symbol, holding] of Object.entries(gameState.holdings.currencies)) {
@@ -715,46 +759,190 @@ router.post("/end-game", authenticateToken, (req, res) => {
       }
     }
 
-    // 5. Total Score
-    const finalScore = baseAssets + stockValue + currencyValue;
+    const finalValue =
+      gameState.pocket +
+      gameState.savingsBalance +
+      gameState.fundBalance +
+      gameState.goldBalance +
+      (gameState.holdings.bonds || 0) +
+      stockValue +
+      currencyValue;
+    
+    // Add final year to history for accurate calculations
+    gameState.portfolioHistory.push(finalValue);
 
-    // 6. Calculate Star Rating
-    let star = 0;
-    if (finalScore >= 1500000) star = 5;
-    else if (finalScore >= 1000000) star = 4;
-    else if (finalScore >= 750000) star = 3;
-    else if (finalScore >= 500000) star = 2;
-    else if (finalScore >= 25000) star = 1;
+    console.log("\n====== END GAME ASSESSMENT DEBUG LOG ======");
+    console.log("Total Invested (Cumulative Salary):", gameState.totalInvested);
+    console.log("Final Portfolio Value:", finalValue.toFixed(2));
+    
+    // --- 2. THE 5-STAR ASSESSMENT LOGIC ---
+    
+    const assessment = {
+      stars: 0,
+      details: []
+    };
 
-    const roundedScore = Math.round(finalScore);
+    // A. WEALTH STAR (Inflation Check)
+    const inflationTarget = gameState.totalInvested * 1.3;
+    const wealthStar = finalValue > inflationTarget;
+    
+    console.log(`\n[WEALTH STAR]`);
+    console.log(`Target: > ${inflationTarget.toFixed(2)}`);
+    console.log(`Actual: ${finalValue.toFixed(2)}`);
 
-    // 7. SAVE TO DATABASE (Using your MySQL connection)
+    if (wealthStar) {
+      assessment.stars++;
+      assessment.details.push({ id: "wealth", passed: true, msg: "Beat Inflation" });
+    } else {
+      assessment.details.push({ id: "wealth", passed: false, msg: "Lost purchasing power" });
+    }
+
+    // B. ROI STAR (Total Return %)
+    // Target: > 50% Total Return
+    const totalReturn = calculateTotalReturn(gameState.totalInvested, finalValue);
+    const roiStar = totalReturn > 0.50; 
+
+    console.log(`\n[ROI STAR]`);
+    console.log(`Target: > 50% (0.50)`);
+    console.log(`Actual: ${(totalReturn * 100).toFixed(2)}%`);
+
+    if (roiStar) {
+      assessment.stars++;
+      assessment.details.push({ id: "roi", passed: true, msg: `Strong Return (+${(totalReturn*100).toFixed(1)}%)` });
+    } else {
+      assessment.details.push({ id: "roi", passed: false, msg: `Low Return (+${(totalReturn*100).toFixed(1)}%)` });
+    }
+
+    // C. VOLATILITY STAR (Stability)
+    // Relax volatility if user made huge profit (Suffering from Success fix)
+    let volatilityThreshold = 0.25; 
+    if (totalReturn > 1.0) {
+      volatilityThreshold = 0.50; 
+    }
+
+    const volatility = calculateVolatility(gameState.portfolioHistory);
+    const volStar = volatility < volatilityThreshold;
+
+    console.log(`\n[VOLATILITY STAR]`);
+    console.log(`Target: < ${volatilityThreshold}`);
+    console.log(`Actual: ${(volatility * 100).toFixed(2)}%`);
+
+    if (volStar) {
+      assessment.stars++;
+      assessment.details.push({ id: "volatility", passed: true, msg: "Stable Portfolio" });
+    } else {
+      assessment.details.push({ id: "volatility", passed: false, msg: "Too Volatile" });
+    }
+
+    // [REAL LIFE FIX 1] DIVERSIFICATION STAR (Correlation Check)
+    // Instead of just counting active assets, we check for "Balanced Exposure"
+    // Defensive Assets: Cash, Savings, Bonds, Gold
+    // Growth Assets: Stocks, Index, Crypto
+    
+    const totalDefensive = 
+      gameState.pocket + 
+      gameState.savingsBalance + 
+      (gameState.holdings.bonds || 0) + 
+      gameState.goldBalance;
+
+    const totalGrowth = 
+      stockValue + 
+      gameState.fundBalance + 
+      currencyValue;
+
+    const defensiveWeight = totalDefensive / finalValue;
+    const growthWeight = totalGrowth / finalValue;
+
+    // Logic: Must have at least 15% in Defensive AND 15% in Growth
+    // UNLESS you are a "Lucky Winner" (ROI > 100%)
+    
+    let divStar = false;
+    
+    // Condition 1: Basic Balance
+    if (defensiveWeight > 0.15 && growthWeight > 0.15) {
+      divStar = true;
+    }
+    // Condition 2: Lucky Winner Override
+    else if (totalReturn > 1.0) {
+      divStar = true;
+    }
+
+    console.log(`\n[DIVERSIFICATION STAR]`);
+    console.log(`Defensive Weight: ${(defensiveWeight * 100).toFixed(2)}%`);
+    console.log(`Growth Weight: ${(growthWeight * 100).toFixed(2)}%`);
+    console.log(`Pass: ${divStar}`);
+
+    if (divStar) {
+      assessment.stars++;
+      assessment.details.push({ id: "diversification", passed: true, msg: "Balanced Asset Mix" });
+    } else {
+      assessment.details.push({ id: "diversification", passed: false, msg: "Unbalanced Strategy" });
+    }
+
+    // [REAL LIFE FIX 2] RISK STAR (Liquidity Check)
+    // Real Life Rule: You need an emergency fund.
+    // Logic: Must end with > 5% in Cash/Savings + No major crashes
+    
+    const totalLiquidity = gameState.pocket + gameState.savingsBalance;
+    const liquidityRatio = totalLiquidity / finalValue;
+    const hasEmergencyFund = liquidityRatio > 0.05;
+
+    const maxDD = calculateMaxDrawdown(gameState.portfolioHistory);
+    const noCrash = maxDD > -0.30; 
+    
+    const riskStar = noCrash && hasEmergencyFund;
+
+    console.log(`\n[RISK STAR]`);
+    console.log(`Liquidity Ratio: ${(liquidityRatio * 100).toFixed(2)}% (Target > 5%)`);
+    console.log(`Max Drawdown: ${(maxDD * 100).toFixed(2)}% (Target > -30%)`);
+    console.log(`Pass: ${riskStar}`);
+
+    if (riskStar) {
+      assessment.stars++;
+      assessment.details.push({ id: "risk", passed: true, msg: "Resilient & Liquid" });
+    } else {
+      if (!hasEmergencyFund) {
+        assessment.details.push({ id: "risk", passed: false, msg: "No Emergency Fund" });
+      } else {
+        assessment.details.push({ id: "risk", passed: false, msg: `Big Crash (${(maxDD*100).toFixed(1)}%)` });
+      }
+    }
+
+    console.log(`\n[FINAL RESULT]`);
+    console.log(`Total Stars Earned: ${assessment.stars}/5`);
+    console.log("========================================\n");
+
+    // --- 3. SAVE TO DB ---
+    const roundedScore = Math.round(finalValue);
+    
     const sql = `
       INSERT INTO score_history 
       (user_id, score, star, played_at) 
       VALUES (?, ?, ?, NOW())
     `;
 
-    db.query(sql, [userId, roundedScore, star], (err, result) => {
+    db.query(sql, [userId, roundedScore, assessment.stars], (err, result) => {
       if (err) {
         console.error("Database error:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to save score",
-        });
+        return res.status(500).json({ success: false, message: "Failed to save score" });
       }
 
-      // 8. Clear the session from memory
       gameSessions.delete(sessionId);
 
-      // 9. Send success response
       res.json({
         success: true,
         score: roundedScore,
-        star: star,
-        scoreId: result.insertId,
+        star: assessment.stars,
+        details: assessment.details,
+        metrics: {
+          roi: totalReturn,
+          volatility: volatility,
+          maxDrawdown: maxDD,
+          inflationAdjusted: wealthStar
+        }
       });
     });
+
   } catch (error) {
     console.error("Calculation error:", error);
     res.status(500).json({ success: false, error: "Server error calculating score" });
