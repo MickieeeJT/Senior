@@ -50,14 +50,64 @@ const calculateMaxDrawdown = (history) => {
   return maxDrawdown;
 };
 
+// --- BOT SIMULATION ENGINE ---
+const simulateBot = (indexPrices) => {
+  // Bot Strategy: "The Disciplined DCA"
+  let bondBalance = 0;
+  let indexShares = 0;
+  
+  const monthlyBondRate = 0.07 / 12; // 7% Annual Return for Bot Bonds
+  const initialCash = 4000;
+  const income = 4000;
+
+  // Month 0: Initial Investment
+  const startPrice = indexPrices[0] || 100; // Fallback to 100 if missing
+  bondBalance += initialCash * 0.5;
+  indexShares += (initialCash * 0.5) / startPrice;
+
+  // Simulation Loop (20 Years = 240 Months)
+  const totalSteps = indexPrices.length; 
+  let priceIndex = 1; // Start looking for Month 6 (index 1)
+
+  for (let m = 1; m <= 240; m++) {
+    // 1. Grow Bonds (Compound Interest)
+    bondBalance *= (1 + monthlyBondRate);
+
+    // 2. Income Event (Every 6 months)
+    if (m % 6 === 0) {
+      // Add Cash to Assets
+      bondBalance += income * 0.5;
+
+      // Buy Stocks if we have price data
+      if (priceIndex < totalSteps) {
+        const currentPrice = indexPrices[priceIndex];
+        indexShares += (income * 0.5) / currentPrice;
+        priceIndex++;
+      }
+    }
+  }
+
+  // Calculate Final Value
+  const finalPrice = indexPrices[indexPrices.length - 1] || startPrice;
+  const totalIndexValue = indexShares * finalPrice;
+  
+  return bondBalance + totalIndexValue;
+};
+
+// --- GAME ROUTES ---
+
 // Initialize a new game session
 router.post("/init", (req, res) => {
   const sessionId = Date.now().toString();
 
+  // [FIXED] Bond Logic: Ensure longer duration always yields higher return
+  // Base rate between 3% and 5%
+  const baseRate = 0.03 + Math.random() * 0.02;
+  
   const bondInterestRates = {
-    "1 year": 0.05 + Math.random() * 0.05,
-    "5 years": 0.07 + Math.random() * 0.05,
-    "10 years": 0.09 + Math.random() * 0.05,
+    "1 year": baseRate,
+    "5 years": baseRate + 0.015 + (Math.random() * 0.01), // Adds 1.5% - 2.5% on top
+    "10 years": baseRate + 0.03 + (Math.random() * 0.015), // Adds 3.0% - 4.5% on top
   };
 
   const initialCapital = 4000; // Define starting money
@@ -65,7 +115,7 @@ router.post("/init", (req, res) => {
   const gameState = {
     sessionId,
     pocket: initialCapital,
-    // [FIX] Track total money put into the game (starts with initial)
+    // Track total money put into the game (starts with initial)
     totalInvested: initialCapital,
     portfolioHistory: [initialCapital], // Store Year 0 value
     savingsBalance: 0,
@@ -316,7 +366,7 @@ router.post("/monthly-update", (req, res) => {
   // Half-year income
   if (month === 6 || month === 12) {
     gameState.pocket += 4000;
-    // [FIX] Increment totalInvested to accurately track how much cash entered the game
+    // Increment totalInvested to accurately track how much cash entered the game
     gameState.totalInvested += 4000; 
   }
 
@@ -705,6 +755,14 @@ router.post("/year-increment", (req, res) => {
 
   gameState.currentYear += 1;
   gameState.lastProcessedMonth = 0;
+
+  // [NEW] Decrease Bond Yields each year to encourage diversification
+  // Rates drop by ~5% relative each year (e.g. 5.0% -> 4.75%)
+  // We keep a floor of 0.5% so it doesn't hit zero.
+  for (const key in gameState.bondInterestRates) {
+    gameState.bondInterestRates[key] = Math.max(0.005, gameState.bondInterestRates[key] * 0.95);
+  }
+
   gameSessions.set(sessionId, gameState);
 
   res.json({
@@ -736,7 +794,8 @@ router.post("/apply-event", (req, res) => {
 
 router.post("/end-game", authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const { sessionId, finalStockPrices, finalCurrencyPrices } = req.body;
+  // [NEW] Receive 'botIndexHistory' from frontend
+  const { sessionId, finalStockPrices, finalCurrencyPrices, botIndexHistory } = req.body;
 
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -775,7 +834,18 @@ router.post("/end-game", authenticateToken, (req, res) => {
     console.log("Total Invested (Cumulative Salary):", gameState.totalInvested);
     console.log("Final Portfolio Value:", finalValue.toFixed(2));
     
-    // --- 2. THE 5-STAR ASSESSMENT LOGIC ---
+    // --- 2. RUN BOT SIMULATION ---
+    let botScore = 0;
+    if (botIndexHistory && Array.isArray(botIndexHistory)) {
+      console.log("Running Bot Simulation using index history...");
+      botScore = simulateBot(botIndexHistory);
+    } else {
+      console.log("No Bot history received, using fallback.");
+      botScore = gameState.totalInvested * 1.6;
+    }
+    console.log("Bot Score:", botScore.toFixed(2));
+
+    // --- 3. THE 5-STAR ASSESSMENT LOGIC ---
     
     const assessment = {
       stars: 0,
@@ -834,42 +904,37 @@ router.post("/end-game", authenticateToken, (req, res) => {
       assessment.details.push({ id: "volatility", passed: false, msg: "Too Volatile" });
     }
 
-    // [REAL LIFE FIX 1] DIVERSIFICATION STAR (Correlation Check)
-    // Instead of just counting active assets, we check for "Balanced Exposure"
-    // Defensive Assets: Cash, Savings, Bonds, Gold
-    // Growth Assets: Stocks, Index, Crypto
-    
-    const totalDefensive = 
-      gameState.pocket + 
-      gameState.savingsBalance + 
-      (gameState.holdings.bonds || 0) + 
-      gameState.goldBalance;
+    // [UPDATED] D. DIVERSIFICATION STAR (Distinct Asset Category Count)
+    // Categories: Cash/Savings, Bonds, Funds, Stocks, Gold, Crypto
+    const assetBreakdown = {
+      cash: gameState.pocket + gameState.savingsBalance,
+      bonds: gameState.holdings.bonds || 0,
+      funds: gameState.fundBalance,
+      stocks: stockValue,
+      gold: gameState.goldBalance,
+      crypto: currencyValue
+    };
 
-    const totalGrowth = 
-      stockValue + 
-      gameState.fundBalance + 
-      currencyValue;
-
-    const defensiveWeight = totalDefensive / finalValue;
-    const growthWeight = totalGrowth / finalValue;
-
-    // Logic: Must have at least 15% in Defensive AND 15% in Growth
-    // UNLESS you are a "Lucky Winner" (ROI > 100%)
-    
-    let divStar = false;
-    
-    // Condition 1: Basic Balance
-    if (defensiveWeight > 0.15 && growthWeight > 0.15) {
-      divStar = true;
+    let activeCategories = 0;
+    // Count how many categories have at least 5% allocation
+    for (const value of Object.values(assetBreakdown)) {
+      if ((value / finalValue) > 0.05) {
+        activeCategories++;
+      }
     }
-    // Condition 2: Lucky Winner Override
-    else if (totalReturn > 1.0) {
+
+    let divStar = false;
+    // Condition: Must have at least 3 distinct active asset categories
+    // OR be a "Lucky Winner" (ROI > 100%)
+    if (activeCategories >= 3) {
+      divStar = true;
+    } else if (totalReturn > 1.0) {
       divStar = true;
     }
 
     console.log(`\n[DIVERSIFICATION STAR]`);
-    console.log(`Defensive Weight: ${(defensiveWeight * 100).toFixed(2)}%`);
-    console.log(`Growth Weight: ${(growthWeight * 100).toFixed(2)}%`);
+    console.log(`Active Categories (>5%): ${activeCategories} (Need 3)`);
+    console.log(`Total Return: ${(totalReturn * 100).toFixed(2)}%`);
     console.log(`Pass: ${divStar}`);
 
     if (divStar) {
@@ -879,12 +944,8 @@ router.post("/end-game", authenticateToken, (req, res) => {
       assessment.details.push({ id: "diversification", passed: false, msg: "Unbalanced Strategy" });
     }
 
-    // [REAL LIFE FIX 2] RISK STAR (Liquidity Check)
-    // Real Life Rule: You need an emergency fund.
-    // Logic: Must end with > 5% in Cash/Savings + No major crashes
-    
-    const totalLiquidity = gameState.pocket + gameState.savingsBalance;
-    const liquidityRatio = totalLiquidity / finalValue;
+    // E. RISK STAR (Liquidity Check)
+    const liquidityRatio = (gameState.pocket + gameState.savingsBalance) / finalValue;
     const hasEmergencyFund = liquidityRatio > 0.05;
 
     const maxDD = calculateMaxDrawdown(gameState.portfolioHistory);
@@ -932,6 +993,7 @@ router.post("/end-game", authenticateToken, (req, res) => {
       res.json({
         success: true,
         score: roundedScore,
+        botScore: Math.round(botScore), // Send Bot Score
         star: assessment.stars,
         details: assessment.details,
         metrics: {

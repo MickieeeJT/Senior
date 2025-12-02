@@ -76,7 +76,7 @@ export default function Invest() {
   const [isRunning, setIsRunning] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
   const [isProcessingYear, setIsProcessingYear] = useState(false);
-  
+
   // NEW: State for real-time Total Assets display
   const [totalAssets, setTotalAssets] = useState(0);
 
@@ -241,6 +241,17 @@ export default function Invest() {
       finalCurrencyPrices[curr.symbol] = curr.data[monthIndex].close;
     });
 
+    // --- [NEW] Prepare Data for Backend Bot ---
+    // We need the Index Fund price for every 6 months (0, 6, 12, ... 240)
+    const botIndexHistory = [];
+    if (selectedIndex && selectedIndex.data) {
+      for (let m = 0; m <= 240; m += 6) {
+        // Use modulo to wrap around if data is shorter than 20 years
+        const dataIndex = m % selectedIndex.data.length;
+        botIndexHistory.push(selectedIndex.data[dataIndex].close);
+      }
+    }
+
     try {
       const token = localStorage.getItem("token");
 
@@ -254,6 +265,7 @@ export default function Invest() {
           sessionId,
           finalStockPrices,
           finalCurrencyPrices,
+          botIndexHistory, // [NEW] Sending history to backend
         }),
       });
 
@@ -262,6 +274,7 @@ export default function Invest() {
       if (data.success) {
         return {
           score: data.score,
+          botScore: data.botScore, // [NEW] Receive Bot Score
           star: data.star,
           details: data.details,
           metrics: data.metrics,
