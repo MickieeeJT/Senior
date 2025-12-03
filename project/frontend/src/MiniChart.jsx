@@ -41,7 +41,7 @@ export default function MiniChart({ data = [], currentIndex = 0 }) {
   const fallColor = "#FF4D4D";
 
   // Determine the trend direction based on the latest available change value
-  const lastChange = slicedData[safeIndex]?.change ?? 0;
+  const lastChange = slicedData[slicedData.length - 1]?.change ?? 0;
 
   const borderColor = lastChange >= 0 ? riseColor : fallColor;
   const fillColor =
