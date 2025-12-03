@@ -22,8 +22,12 @@ export default function MiniChart({ data = [], currentIndex = 0 }) {
     data.length - 1
   );
 
-  // Slice the data to include history only up to the current index
-  const slicedData = data.slice(0, safeIndex + 1);
+  // Window size that chart show month
+  const windowSize = 24;
+
+  // Slice the data to include window size only up to the current index
+  const startIndex = Math.max(0, safeIndex - windowSize + 1);
+  const slicedData = data.slice(startIndex, safeIndex + 1);
 
   // Extract separate arrays for X-axis labels (months) and Y-axis values (prices)
   const labels = slicedData.map((d) => d.month || "");
