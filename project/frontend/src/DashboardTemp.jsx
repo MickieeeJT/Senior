@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-// Inline Star Icon SVG Component to prevent build errors with missing assets
+// --- COMPONENTS ---
+
 const StarIcon = ({ filled, className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -17,7 +18,6 @@ const StarIcon = ({ filled, className }) => (
   </svg>
 );
 
-// Simple SVG Pie Chart Component (Unchanged)
 const SimplePieChart = ({ data }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   let currentAngle = 0;
@@ -34,11 +34,8 @@ const SimplePieChart = ({ data }) => {
           const y1 = Math.sin(currentAngle);
           const x2 = Math.cos(currentAngle + sliceAngle);
           const y2 = Math.sin(currentAngle + sliceAngle);
-
           const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
-
           const pathData = `M 0 0 L ${x1} ${y1} A 1 1 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
-
           currentAngle += sliceAngle;
 
           return (
@@ -57,7 +54,6 @@ const SimplePieChart = ({ data }) => {
         })}
         <circle cx="0" cy="0" r="0.6" fill="#002b11" />
       </svg>
-
       <div className="flex flex-wrap justify-center gap-4 mt-6">
         {data.map((item) => (
           <div key={item.name} className="flex items-center gap-2">
@@ -75,31 +71,55 @@ const SimplePieChart = ({ data }) => {
   );
 };
 
-// --- LESSON DATA ---
+// --- DATA ---
+
 const getLessonContent = (id, passed) => {
   const lessons = {
     wealth: {
-      pass: "You successfully beat inflation! By investing, your money grew faster than the cost of living, preserving your real purchasing power.",
-      fail: "Inflation ate your wealth. Keeping money in low-yield accounts means you actually lost purchasing power over 20 years.",
+      pass: "You successfully beat inflation! By investing, your money grew faster than the cost of living.",
+      fail: "Inflation ate your wealth. Keeping money in low-yield accounts means you lost purchasing power.",
     },
     roi: {
-      pass: "Compound interest worked its magic. Earning a high return on your total invested capital is the key to building generational wealth.",
-      fail: "Your returns were too conservative. While safety is good, you missed out on the exponential growth that stocks or funds can provide.",
+      pass: "Compound interest worked its magic. High returns on invested capital build generational wealth.",
+      fail: "Your returns were too conservative. You missed out on exponential growth opportunities.",
     },
     volatility: {
-      pass: "Smooth sailing! A stable portfolio prevents panic selling. You managed to grow your wealth without suffering heart-stopping crashes.",
-      fail: "It was a bumpy ride! High volatility is dangerous because it often causes investors to panic and sell at the bottom.",
+      pass: "Smooth sailing! A stable portfolio prevents panic selling and protects against crashes.",
+      fail: "It was a bumpy ride! High volatility often causes investors to panic and sell at the bottom.",
     },
     diversification: {
-      pass: "You mastered Asset Allocation! By mixing growth assets (Stocks) with defensive assets (Gold/Bonds), you balanced risk and reward perfectly.",
-      fail: "Don't put all your eggs in one basket. Relying on a single asset class exposes you to massive risk if that specific sector crashes.",
+      pass: "Masterful Asset Allocation! You balanced growth assets (Stocks) with defensive assets (Gold/Bonds).",
+      fail: "Don't put all eggs in one basket. Relying on one asset class exposes you to massive sector risk.",
     },
     risk: {
-      pass: "You kept a safety net! Maintaining liquidity (Cash/Savings) ensures you never have to sell assets at a loss when emergencies strike.",
-      fail: "You ran out of liquidity! Being 'Asset Rich but Cash Poor' is dangerous. Always keep an emergency fund for unexpected events.",
+      pass: "You kept a safety net! Liquidity ensures you never have to sell assets at a loss during emergencies.",
+      fail: "You ran out of liquidity! Being 'Asset Rich but Cash Poor' is dangerous. Always keep an emergency fund.",
     },
   };
   return lessons[id] ? (passed ? lessons[id].pass : lessons[id].fail) : "";
+};
+
+const ACHIEVEMENT_DATA = {
+  "5_STAR": {
+    name: "5-Star General",
+    icon: "⭐⭐⭐⭐⭐",
+    desc: "Perfect Strategy",
+  },
+  WHALE: { name: "The Whale", icon: "🐋", desc: "Net Worth > $1M" },
+  BOT_CRUSHER: { name: "Bot Crusher", icon: "🤖", desc: "Beat Bot by 20%" },
+  INFLATION_BUSTER: {
+    name: "Inflation Buster",
+    icon: "📈",
+    desc: "> 200% Return",
+  },
+  TURTLE: { name: "The Turtle", icon: "🐢", desc: "Profit with 0% Risk" },
+  YOLO: { name: "YOLO Trader", icon: "🚀", desc: ">90% in Stocks" },
+  IRON_HANDS: { name: "Iron Hands", icon: "🦾", desc: "Survived -40% Crash" },
+  HOARDER: { name: "The Hoarder", icon: "🐿️", desc: ">$100k Cash" },
+  GOLDFINGER: { name: "Goldfinger", icon: "👑", desc: "Gold is Best Asset" },
+  COUPON_CLIPPER: { name: "Coupon Clipper", icon: "✂️", desc: "Bond Profits" },
+  REKT: { name: "Rekt", icon: "📉", desc: "Lost Money" },
+  LOST_DECADE: { name: "Lost Decade", icon: "💀", desc: "Lost to Bot" },
 };
 
 export default function Dashboard() {
@@ -122,8 +142,7 @@ export default function Dashboard() {
     );
   }
 
-  // --- 1. DATA PREPARATION ---
-
+  // --- METRICS ---
   const assetDistribution = [
     {
       name: "Cash & Savings",
@@ -152,25 +171,22 @@ export default function Dashboard() {
     },
   ].filter((item) => item.value > 0);
 
-  // --- 2. PERFORMANCE METRICS ---
-
   const totalMoney = scoreData?.score || 0;
   const totalInvested = finalGameState.totalInvested || 4000;
   const totalGain = totalMoney - totalInvested;
   const percentGain =
     totalInvested > 0 ? ((totalGain / totalInvested) * 100).toFixed(2) : 0;
-
-  // Use the Bot Score from backend, fallback to 1.6x if missing
   const botMoney = scoreData?.botScore || totalInvested * 1.6;
   const youWin = totalMoney > botMoney;
-
   const feedbackDetails = scoreData?.details || [];
+
+  // Use the achievements passed from the current game session
+  const sessionAchievements = scoreData?.newAchievements || [];
 
   return (
     <div className="min-h-screen bg-[url('/retro-green.png')] bg-cover bg-center text-[#00ffcc] font-mono text-[#aaffaa]">
       <div className="bg-[#002b11]/90 min-h-screen flex flex-col items-center px-6 py-10 overflow-y-auto">
-        {/* HEADER */}
-        <div className="text-center mb-8 animate-fade-in-down">
+        <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-[#7CFC00] font-jersey drop-shadow-[0_0_10px_rgba(124,252,0,0.5)]">
             FINAL ASSESSMENT
           </h1>
@@ -179,11 +195,9 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* --- MAIN DASHBOARD GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          {/* LEFT COLUMN: FINANCIALS */}
           <div className="space-y-6">
-            {/* 1. SCORE CARD */}
+            {/* WEALTH REPORT */}
             <div className="bg-black/60 border-[3px] border-[#00ff99] rounded-xl p-6 shadow-[0_0_15px_rgba(0,255,153,0.2)]">
               <h2 className="text-2xl font-bold text-[#00ff99] mb-4 border-b border-[#00ff99]/30 pb-2">
                 Wealth Report
@@ -224,24 +238,20 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-
-            {/* 2. ASSET ALLOCATION CHART */}
+            {/* PIE CHART */}
             <div className="bg-black/60 border-[3px] border-[#00ff99] rounded-xl p-6">
               <h2 className="text-2xl font-bold text-[#00ff99] mb-4 text-center">
                 Portfolio Allocation
               </h2>
               <SimplePieChart data={assetDistribution} />
             </div>
-
-            {/* 3. VS THE BOT */}
+            {/* BOT */}
             <div className="bg-black/60 border-[3px] border-[#00ff99] rounded-xl p-6 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-[#00ffaa]">
                   VS. The Bot
                 </h3>
-                <p className="text-xs text-[#66ffcc]">
-                  Strategy: 50% Bonds / 50% Index (DCA)
-                </p>
+                <p className="text-xs text-[#66ffcc]">Strategy: 50/50 DCA</p>
               </div>
               <div className="text-right">
                 <p
@@ -261,9 +271,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: ASSESSMENT & LESSONS */}
           <div className="space-y-6">
-            {/* 4. STAR RATING (Using SVG Component) */}
+            {/* STAR RATING */}
             <div className="bg-black/60 border-[3px] border-[#00ff99] rounded-xl p-6 text-center">
               <h2 className="text-2xl font-bold text-[#00ff99] mb-4">
                 Investor Rating
@@ -293,62 +302,92 @@ export default function Dashboard() {
                   : "ROOKIE"}
               </p>
             </div>
-
-            {/* 5. EDUCATIONAL FEEDBACK */}
+            {/* LESSONS */}
             <div className="bg-black/60 border-[3px] border-[#00ff99] rounded-xl p-6">
               <h2 className="text-2xl font-bold text-[#00ff99] mb-4 border-b border-[#00ff99]/30 pb-2">
                 Lessons Learned
               </h2>
               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                {feedbackDetails.length > 0 ? (
-                  feedbackDetails.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-4 rounded border-l-4 ${
-                        item.passed
-                          ? "bg-[#003322] border-green-500"
-                          : "bg-[#2a0a0a] border-red-500"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className={`text-xl font-bold ${
-                            item.passed ? "text-green-400" : "text-red-400"
-                          }`}
-                        >
-                          {item.passed ? "PASSED" : "FAILED"}:
-                        </span>
-                        <span className="text-white font-bold text-lg capitalize font-jersey tracking-wide">
-                          {item.id} Star
-                        </span>
-                      </div>
-
-                      {/* Technical Feedback */}
-                      <p
-                        className={`text-sm mb-2 ${
-                          item.passed ? "text-[#99ffcc]" : "text-[#ff9999]"
+                {feedbackDetails.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded border-l-4 ${
+                      item.passed
+                        ? "bg-[#003322] border-green-500"
+                        : "bg-[#2a0a0a] border-red-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`text-xl font-bold ${
+                          item.passed ? "text-green-400" : "text-red-400"
                         }`}
                       >
-                        Result: {item.msg}
-                      </p>
-
-                      {/* Educational Lesson */}
-                      <p className="text-xs text-gray-300 italic border-t border-white/10 pt-2 mt-2">
-                        💡 {getLessonContent(item.id, item.passed)}
-                      </p>
+                        {item.passed ? "PASSED" : "FAILED"}:
+                      </span>
+                      <span className="text-white font-bold text-lg capitalize font-jersey tracking-wide">
+                        {item.id} Star
+                      </span>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-gray-400 italic">
-                    No detailed feedback available.
-                  </p>
-                )}
+                    <p
+                      className={`text-sm mb-2 ${
+                        item.passed ? "text-[#99ffcc]" : "text-[#ff9999]"
+                      }`}
+                    >
+                      Result: {item.msg}
+                    </p>
+                    <p className="text-xs text-gray-300 italic border-t border-white/10 pt-2 mt-2">
+                      💡 {getLessonContent(item.id, item.passed)}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
 
-        {/* BOTTOM NAV */}
+        {/* ACHIEVEMENTS SECTION */}
+        <div className="w-full max-w-6xl mt-8">
+          <div className="bg-black/60 border-[3px] border-[#ffd700] rounded-xl p-6 shadow-[0_0_20px_rgba(255,215,0,0.3)]">
+            <h2 className="text-3xl font-bold text-[#ffd700] mb-6 text-center font-jersey">
+              🏆 SESSION ACHIEVEMENTS
+            </h2>
+
+            {sessionAchievements.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {sessionAchievements.map((code) => {
+                  const achievement = ACHIEVEMENT_DATA[code];
+                  if (!achievement) return null;
+                  return (
+                    <div
+                      key={code}
+                      className="bg-[#2a2a10] border border-[#ffd700] rounded-lg p-4 text-center hover:scale-105 transition-transform duration-300"
+                    >
+                      <div className="text-4xl mb-2">{achievement.icon}</div>
+                      <h3 className="text-[#ffd700] font-bold text-lg leading-tight mb-1">
+                        {achievement.name}
+                      </h3>
+                      <p className="text-xs text-[#fffec8]">
+                        {achievement.desc}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-[#fffec8] text-lg">
+                  No specific achievements unlocked this run.
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Try different strategies (High Risk, Safe, or Balanced) to
+                  unlock badges!
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="flex gap-6 mt-10 pb-10">
           <button
             onClick={() => navigate("/invest")}

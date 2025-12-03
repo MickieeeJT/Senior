@@ -14,10 +14,12 @@ import Dashboard from "./Dashboard.jsx";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      {/* --- PUBLIC ROUTES --- */}
+      <Route path="/" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
 
+      {/* --- PROTECTED ROUTES (Require Login) --- */}
       <Route
         path="/home"
         element={

@@ -8,58 +8,41 @@ const API_BASE_URL = "http://localhost:8080/api/invest";
 
 //Import all index fund data files
 const indexFiles = import.meta.glob("./data/IndexFund/*.json", { eager: true });
-
-// Import all stock data files
 const stockFiles = import.meta.glob("./data/Stocks/*.json", { eager: true });
-
-// Import all gold data files
 const goldFiles = import.meta.glob("./data/Gold/*.json", { eager: true });
-
-//Import all currency data files
-const currencyFiles = import.meta.glob("./data/Currencies/*.json", {
-  eager: true,
-});
+const currencyFiles = import.meta.glob("./data/Currencies/*.json", { eager: true });
 
 // --- HELPER FUNCTIONS FOR INITIALIZATION ---
-
-// Function to randomly select 4 stocks
 const getRandomStocks = () => {
   const allStocks = Object.entries(stockFiles).map(([path, module]) => ({
     symbol: path.split("/").pop().replace(".json", ""),
     data: module.default || module,
   }));
-  const shuffled = allStocks.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 4);
+  return allStocks.sort(() => Math.random() - 0.5).slice(0, 4);
 };
 
-// Function to randomly select 1 index fund
 const getRandomIndex = () => {
   const allIndexes = Object.entries(indexFiles).map(([path, module]) => ({
     symbol: path.split("/").pop().replace(".json", ""),
     data: module.default || module,
   }));
-  const randomIndex = Math.floor(Math.random() * allIndexes.length);
-  return allIndexes[randomIndex];
+  return allIndexes[Math.floor(Math.random() * allIndexes.length)];
 };
 
-// Function to randomly select 1 gold asset
 const getRandomGold = () => {
   const allGold = Object.entries(goldFiles).map(([path, module]) => ({
     symbol: path.split("/").pop().replace(".json", ""),
     data: module.default || module,
   }));
-  const randomIndex = Math.floor(Math.random() * allGold.length);
-  return allGold[randomIndex];
+  return allGold[Math.floor(Math.random() * allGold.length)];
 };
 
-// Function to randomly select 3 currencies
 const getRandomCurrency = () => {
   const allCurrencies = Object.entries(currencyFiles).map(([path, module]) => ({
     symbol: path.split("/").pop().replace(".json", ""),
     data: module.default || module,
   }));
-  const shuffled = allCurrencies.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 3);
+  return allCurrencies.sort(() => Math.random() - 0.5).slice(0, 3);
 };
 
 export default function Invest() {
@@ -69,105 +52,76 @@ export default function Invest() {
   const [sessionId, setSessionId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [progress, setProgress] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(1);
   const [isRunning, setIsRunning] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
   const [isProcessingYear, setIsProcessingYear] = useState(false);
-
-  // NEW: State for real-time Total Assets display
   const [totalAssets, setTotalAssets] = useState(0);
 
-  // Bonds
+  // Asset States
   const [activeInput, setActiveInput] = useState(null);
   const [amount, setAmount] = useState("");
   const [selectedBond, setSelectedBond] = useState("");
-
-  // Index fund state
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [indexValue, setIndexValue] = useState(0);
-
-  // Stock-related state
   const [selectedStocks, setSelectedStocks] = useState([]);
   const [stockAmounts, setStockAmounts] = useState({});
   const [activeStockInput, setActiveStockInput] = useState(null);
-
-  // Gold state
   const [selectedGold, setSelectedGold] = useState(null);
   const [goldValue, setGoldValue] = useState(0);
-
-  // Currency state
   const [selectedCurrency, setSelectedCurrency] = useState([]);
   const [currencyAmounts, setCurrencyAmounts] = useState({});
   const [activeCurrencyInput, setActiveCurrencyInput] = useState(null);
 
-  // Event popup state
+  // Event & Timer
   const [eventData, setEventData] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [debtAmount, setDebtAmount] = useState(0);
   const [inDebtMode, setInDebtMode] = useState(false);
   const randomEvents = randomEvent;
-
-  // Timers Refs
   const timerRef = useRef(null);
   const processingRef = useRef(null);
 
-  // --- REFS FOR LIVE DATA (CRITICAL FOR 5-STAR LOGIC) ---
+  // Refs for Live Data (Crucial for timers and async functions)
   const gameStateRef = useRef(gameState);
   const stocksRef = useRef(selectedStocks);
   const currencyRef = useRef(selectedCurrency);
   const currentMonthRef = useRef(currentMonth);
+  const selectedIndexRef = useRef(selectedIndex);
 
-  // Sync Refs with State whenever state changes
   useEffect(() => {
     gameStateRef.current = gameState;
     stocksRef.current = selectedStocks;
     currencyRef.current = selectedCurrency;
     currentMonthRef.current = currentMonth;
-  }, [gameState, selectedStocks, selectedCurrency, currentMonth]);
+    selectedIndexRef.current = selectedIndex;
+  }, [gameState, selectedStocks, selectedCurrency, currentMonth, selectedIndex]);
 
-  // NEW: Calculate Total Assets for UI Display (Runs whenever game state or time changes)
+  // Calculate Total Assets for UI
   useEffect(() => {
     if (!gameState) return;
+    const displayTotalMonths = (gameState.currentYear - 1) * 12 + Math.max(0, Math.floor(currentMonth) - 1);
+    let total = gameState.pocket + gameState.savingsBalance + (gameState.holdings.bonds || 0) + gameState.fundBalance + gameState.goldBalance;
 
-    const displayTotalMonths =
-      (gameState.currentYear - 1) * 12 +
-      Math.max(0, Math.floor(currentMonth) - 1);
-
-    // 1. Start with Cash + Savings + Bonds + Fund + Gold
-    // Note: fundBalance and goldBalance are value-based in your gameState, so we add them directly.
-    let total =
-      gameState.pocket +
-      gameState.savingsBalance +
-      (gameState.holdings.bonds || 0) +
-      gameState.fundBalance +
-      gameState.goldBalance;
-
-    // 2. Add Real-time Stock Value
     if (gameState.holdings.stocks) {
       selectedStocks.forEach((stock) => {
         const holding = gameState.holdings.stocks[stock.symbol];
         if (holding && holding.shares > 0) {
           const monthIndex = displayTotalMonths % stock.data.length;
-          const currentPrice = stock.data[monthIndex].close;
-          total += holding.shares * currentPrice;
+          total += holding.shares * stock.data[monthIndex].close;
         }
       });
     }
-
-    // 3. Add Real-time Currency Value
     if (gameState.holdings.currencies) {
       selectedCurrency.forEach((curr) => {
         const holding = gameState.holdings.currencies[curr.symbol];
         if (holding && holding.units > 0) {
           const monthIndex = displayTotalMonths % curr.data.length;
-          const currentPrice = curr.data[monthIndex].close;
-          total += holding.units * currentPrice;
+          total += holding.units * curr.data[monthIndex].close;
         }
       });
     }
-
     setTotalAssets(total);
   }, [gameState, currentMonth, selectedStocks, selectedCurrency]);
 
@@ -175,108 +129,82 @@ export default function Invest() {
     return randomEvents[Math.floor(Math.random() * randomEvents.length)];
   }
 
-  // --- NET WORTH CALCULATOR (FOR BACKEND STATISTICS) ---
   const calculateCurrentNetWorth = () => {
     const gs = gameStateRef.current;
-    const stocks = stocksRef.current;
-    const currencies = currencyRef.current;
-    const month = currentMonthRef.current;
-
     if (!gs) return 0;
+    const displayTotalMonths = (gs.currentYear - 1) * 12 + Math.floor(currentMonthRef.current) - 1;
+    let total = gs.pocket + gs.savingsBalance + (gs.holdings.bonds || 0) + gs.fundBalance + gs.goldBalance;
 
-    // 1. Base Assets
-    let total =
-      gs.pocket +
-      gs.savingsBalance +
-      (gs.holdings.bonds || 0) +
-      gs.fundBalance +
-      gs.goldBalance;
-
-    const totalMonths = (gs.currentYear - 1) * 12 + Math.floor(month) - 1;
-
-    // 2. Add Stocks (Shares * Live Price)
-    if (gs.holdings.stocks && stocks.length > 0) {
-      Object.entries(gs.holdings.stocks).forEach(([symbol, holding]) => {
-        const stockObj = stocks.find((s) => s.symbol === symbol);
-        if (stockObj && holding.shares > 0) {
-          const safeIndex = Math.max(0, totalMonths % stockObj.data.length);
-          const currentPrice = stockObj.data[safeIndex].close;
-          total += holding.shares * currentPrice;
+    if (gs.holdings.stocks) {
+      stocksRef.current.forEach((stock) => {
+        const holding = gs.holdings.stocks[stock.symbol];
+        if (holding && holding.shares > 0) {
+          const monthIndex = displayTotalMonths % stock.data.length;
+          total += holding.shares * stock.data[monthIndex].close;
         }
       });
     }
-
-    // 3. Add Currencies (Units * Live Price)
-    if (gs.holdings.currencies && currencies.length > 0) {
-      Object.entries(gs.holdings.currencies).forEach(([symbol, holding]) => {
-        const currObj = currencies.find((c) => c.symbol === symbol);
-        if (currObj && holding.units > 0) {
-          const safeIndex = Math.max(0, totalMonths % currObj.data.length);
-          const currentPrice = currObj.data[safeIndex].close;
-          total += holding.units * currentPrice;
+    if (gs.holdings.currencies) {
+      currencyRef.current.forEach((curr) => {
+        const holding = gs.holdings.currencies[curr.symbol];
+        if (holding && holding.units > 0) {
+          const monthIndex = displayTotalMonths % curr.data.length;
+          total += holding.units * curr.data[monthIndex].close;
         }
       });
     }
-
     return total;
   };
 
   const saveScore = async () => {
-    // Gather current prices based on final month
-    const finalStockPrices = {};
-    const totalMonthsPassed = Math.max(
-      0,
-      (gameState.currentYear - 1) * 12 + Math.floor(currentMonth) - 1
-    );
+    const gs = gameStateRef.current;
+    if (!gs) return null;
 
-    selectedStocks.forEach((stock) => {
+    const finalStockPrices = {};
+    const totalMonthsPassed = Math.max(0, (gs.currentYear - 1) * 12 + Math.floor(currentMonthRef.current) - 1);
+
+    stocksRef.current.forEach((stock) => {
       const monthIndex = totalMonthsPassed % stock.data.length;
       finalStockPrices[stock.symbol] = stock.data[monthIndex].close;
     });
 
     const finalCurrencyPrices = {};
-    selectedCurrency.forEach((curr) => {
+    currencyRef.current.forEach((curr) => {
       const monthIndex = totalMonthsPassed % curr.data.length;
       finalCurrencyPrices[curr.symbol] = curr.data[monthIndex].close;
     });
 
-    // --- [NEW] Prepare Data for Backend Bot ---
-    // We need the Index Fund price for every 6 months (0, 6, 12, ... 240)
     const botIndexHistory = [];
-    if (selectedIndex && selectedIndex.data) {
+    const idx = selectedIndexRef.current;
+    if (idx && idx.data) {
       for (let m = 0; m <= 240; m += 6) {
-        // Use modulo to wrap around if data is shorter than 20 years
-        const dataIndex = m % selectedIndex.data.length;
-        botIndexHistory.push(selectedIndex.data[dataIndex].close);
+        const dataIndex = m % idx.data.length;
+        botIndexHistory.push(idx.data[dataIndex].close);
       }
     }
 
     try {
       const token = localStorage.getItem("token");
-
       const response = await fetch(`${API_BASE_URL}/end-game`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          sessionId,
-          finalStockPrices,
-          finalCurrencyPrices,
-          botIndexHistory, // [NEW] Sending history to backend
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ 
+          sessionId: gs.sessionId, 
+          finalStockPrices, 
+          finalCurrencyPrices, 
+          botIndexHistory 
         }),
       });
-
       const data = await response.json();
-
+      
       if (data.success) {
         return {
           score: data.score,
-          botScore: data.botScore, // [NEW] Receive Bot Score
+          botScore: data.botScore,
           star: data.star,
           details: data.details,
           metrics: data.metrics,
+          newAchievements: data.newAchievements
         };
       } else {
         alert("Failed to save score.");
@@ -288,9 +216,6 @@ export default function Invest() {
     }
   };
 
-  // --- INITIALIZATION EFFECTS ---
-
-  // Initialize random assets on mount
   useEffect(() => {
     const randomStocks = getRandomStocks();
     const randomIndex = getRandomIndex();
@@ -304,7 +229,6 @@ export default function Invest() {
     setSelectedCurrency(randomCurrency);
   }, []);
 
-  // Initialize game session
   useEffect(() => {
     const initGame = async () => {
       try {
@@ -326,68 +250,50 @@ export default function Invest() {
 
   // --- MAIN GAME TIMER ---
   useEffect(() => {
-    // If paused for processing year, do not tick
     if (!isRunning || !gameState || isProcessingYear) return;
     if (timerRef.current) return;
 
-    const duration = 60000; // 1 minute per year
+    const duration = 600;
     const steps = 100;
     const interval = duration / steps;
 
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
-        // --- YEAR INCREMENT TRIGGER ---
         if (prev >= 100) {
-          setIsProcessingYear(true); // Pause timer logic locally
-
-          // Calculate current value to send to backend for volatility stats
+          setIsProcessingYear(true);
           const currentNetWorth = calculateCurrentNetWorth();
 
           fetch(`${API_BASE_URL}/year-increment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              sessionId,
-              currentNetWorth: currentNetWorth,
-            }),
+            body: JSON.stringify({ sessionId, currentNetWorth }),
           })
             .then((res) => res.json())
             .then(async (data) => {
               if (data.gameComplete) {
                 setIsRunning(false);
-
-                // Wait for backend to calculate score
                 const saved = await saveScore();
-
                 if (saved) {
                   setTimeout(() => {
                     navigate("/dashboard", {
-                      state: {
-                        finalGameState: data.gameState,
-                        gameComplete: true,
-                        scoreData: saved,
-                      },
+                      state: { finalGameState: data.gameState, gameComplete: true, scoreData: saved },
                     });
                   }, 2000);
                 }
               }
-              // Only update state if game is not over
               if (!data.gameComplete) {
                 setGameState(data.gameState);
                 setProgress(0);
                 setCurrentMonth(1);
-                setIsProcessingYear(false); // Resume timer
+                setIsProcessingYear(false);
               }
             })
             .catch((error) => {
               console.error("Year increment failed:", error);
               setIsProcessingYear(false);
             });
-
-          return 100; // Hold at 100 while waiting
+          return 100;
         }
-
-        // --- NORMAL TICK ---
         const newProgress = prev + 1;
         const newMonth = Math.floor((newProgress / 100) * 12) + 1;
         setCurrentMonth(newMonth);
@@ -399,41 +305,29 @@ export default function Invest() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     };
-  }, [
-    isRunning,
-    sessionId,
-    isProcessingYear,
-    navigate,
-    gameState, // Only re-bind if entire game state object reference changes
-  ]);
+  }, [isRunning, sessionId, isProcessingYear, navigate, gameState]);
 
   // --- MONTHLY UPDATE EFFECT ---
   useEffect(() => {
     if (!sessionId || !gameState || !selectedIndex || !selectedGold) return;
-
     const month = Math.floor(currentMonth);
 
-    // Only trigger when the next month starts and hasn't been processed yet
     if (month >= 1 && month <= 12 && month > gameState.lastProcessedMonth) {
       const updateKey = `${gameState.currentYear}-${month}`;
       if (processingRef.current === updateKey) return;
       processingRef.current = updateKey;
 
-      // Chance to trigger event
-      if (Math.random() < 0.1) {
+      if (Math.random() < 0) {
         const event = getRandomEvent();
         setEventData(event);
         setShowEventModal(true);
       }
 
-      // Calculate Indices
       const totalMonths = (gameState.currentYear - 1) * 12 + (month - 1);
-
       const monthIndex = totalMonths % selectedIndex.data.length;
       const currentIndexData = selectedIndex.data[monthIndex];
       setIndexValue(currentIndexData.close);
 
-      // Update gold value
       const goldMonthIndex = totalMonths % selectedGold.data.length;
       const currentGoldData = selectedGold.data[goldMonthIndex];
       setGoldValue(currentGoldData.close);
@@ -451,8 +345,6 @@ export default function Invest() {
         .then((res) => res.json())
         .then((data) => {
           setGameState(data.gameState);
-
-          // Bond Update
           return fetch(`${API_BASE_URL}/bond-update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -462,14 +354,10 @@ export default function Invest() {
         .then((res) => (res ? res.json() : null))
         .then((data) => {
           if (data?.gameState) setGameState(data.gameState);
-
           return fetch(`${API_BASE_URL}/gold-update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              sessionId,
-              goldData: currentGoldData,
-            }),
+            body: JSON.stringify({ sessionId, goldData: currentGoldData }),
           });
         })
         .then((res) => (res ? res.json() : null))
@@ -482,62 +370,30 @@ export default function Invest() {
     }
   }, [currentMonth, sessionId, gameState, selectedIndex, selectedGold]);
 
-  // --- TRANSACTION HANDLERS ---
-
-  const handleTransaction = async (
-    action,
-    transactionAmount,
-    bondType = null
-  ) => {
+  const handleTransaction = async (action, transactionAmount, bondType = null) => {
     if (!sessionId) return;
-
     try {
       const response = await fetch(`${API_BASE_URL}/transaction`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          action,
-          amount: transactionAmount,
-          bondType,
-          indexValue,
-          goldValue,
-        }),
+        body: JSON.stringify({ sessionId, action, amount: transactionAmount, bondType, indexValue, goldValue }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        alert(data.error);
-        return;
-      }
-
+      if (!response.ok) { alert(data.error); return; }
       setGameState(data.gameState);
       setAmount("");
       setActiveInput(null);
       setSelectedBond("");
-    } catch (error) {
-      console.error("Transaction failed:", error);
-      alert("Transaction failed");
-    }
+    } catch (error) { console.error("Transaction failed:", error); alert("Transaction failed"); }
   };
 
   const handleSubmit = () => {
     const value = parseFloat(amount);
-    if (isNaN(value) || value <= 0) {
-      alert("Please enter a valid amount!");
-      return;
-    }
-
+    if (isNaN(value) || value <= 0) { alert("Please enter a valid amount!"); return; }
     if (activeInput === "bond-select") {
-      if (!selectedBond) {
-        alert("Please select a bond duration!");
-        return;
-      }
+      if (!selectedBond) { alert("Please select a bond duration!"); return; }
       handleTransaction("bond-buy", value, selectedBond);
-    } else if (activeInput) {
-      handleTransaction(activeInput, value);
-    }
+    } else if (activeInput) { handleTransaction(activeInput, value); }
   };
 
   const toggleInput = (type) => {
@@ -550,94 +406,48 @@ export default function Invest() {
     const amountStr = stockAmounts[symbol] || "1";
     let amount = 0;
     const holding = gameState.holdings?.stocks?.[symbol];
-
     if (amountStr === "MAX") {
-      amount =
-        action === "buy"
-          ? Math.floor(gameState.pocket / price)
-          : holding?.shares || 0;
+      amount = action === "buy" ? Math.floor(gameState.pocket / price) : holding?.shares || 0;
     } else {
       amount = parseInt(amountStr);
     }
-
-    if (amount <= 0 || isNaN(amount)) {
-      alert("Please enter a valid share amount.");
-      return;
-    }
-
+    if (amount <= 0 || isNaN(amount)) { alert("Please enter a valid share amount."); return; }
     try {
       const res = await fetch(`${API_BASE_URL}/stock-${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          symbol,
-          amount,
-          price,
-        }),
+        body: JSON.stringify({ sessionId, symbol, amount, price }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Transaction failed");
-        return;
-      }
-
+      if (!res.ok) { alert(data.error || "Transaction failed"); return; }
       if (data.updatedGameState) setGameState(data.updatedGameState);
       else if (data.gameState) setGameState(data.gameState);
-
       setActiveStockInput(null);
-    } catch (error) {
-      console.error("Stock transaction error:", error);
-      alert("Failed to process stock transaction.");
-    }
+    } catch (error) { console.error("Stock transaction error:", error); alert("Failed to process stock transaction."); }
   };
 
   const handleCurrencyTransaction = async (symbol, action, price) => {
     const amountStr = currencyAmounts[symbol] || "1";
     let amount = 0;
     const holding = gameState.holdings?.currencies?.[symbol];
-
     if (amountStr === "MAX") {
-      amount =
-        action === "buy"
-          ? Math.floor(gameState.pocket / price)
-          : holding?.units || 0;
+      amount = action === "buy" ? Math.floor(gameState.pocket / price) : holding?.units || 0;
     } else {
       amount = parseInt(amountStr);
     }
-
-    if (amount <= 0 || isNaN(amount)) {
-      alert("Please enter a valid currency amount.");
-      return;
-    }
-
+    if (amount <= 0 || isNaN(amount)) { alert("Please enter a valid currency amount."); return; }
     try {
       const res = await fetch(`${API_BASE_URL}/currency-${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          symbol,
-          amount,
-          price,
-        }),
+        body: JSON.stringify({ sessionId, symbol, amount, price }),
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Transaction failed");
-        return;
-      }
-
+      if (!res.ok) { alert(data.error || "Transaction failed"); return; }
       if (data.updatedGameState) setGameState(data.updatedGameState);
       else if (data.gameState) setGameState(data.gameState);
-
       setActiveCurrencyInput(null);
-    } catch (error) {
-      console.error("Currency transaction error:", error);
-      alert("Failed to process currency transaction.");
-    }
+    } catch (error) { console.error("Currency transaction error:", error); alert("Failed to process currency transaction."); }
   };
 
   const handleBondSell = async (inv) => {
@@ -645,40 +455,25 @@ export default function Invest() {
       const res = await fetch(`${API_BASE_URL}/bond-sell`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          bondId: inv.id,
-        }),
+        body: JSON.stringify({ sessionId, bondId: inv.id }),
       });
       const data = await res.json();
       if (data?.gameState) setGameState(data.gameState);
-    } catch (error) {
-      console.error("Error selling bond:", error);
-    }
+    } catch (error) { console.error("Error selling bond:", error); }
   };
-
-  // --- EVENT & DEBT HANDLERS ---
 
   const applyEventEffect = async (effect) => {
     const res = await fetch(`${API_BASE_URL}/apply-event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId,
-        effect,
-      }),
+      body: JSON.stringify({ sessionId, effect }),
     });
-
     const data = await res.json();
     if (data.updatedGameState) setGameState(data.updatedGameState);
     else if (data.gameState) setGameState(data.gameState);
   };
 
-  const handleExitConfirm = () => {
-    navigate("/");
-  };
-
-  // --- RENDERING ---
+  const handleExitConfirm = () => { navigate("/"); };
 
   if (loading || !gameState) {
     return (
@@ -689,11 +484,8 @@ export default function Invest() {
   }
 
   const currentIndexValue = gameState.indexShares * indexValue;
-  const indexUnrealizedProfit =
-    gameState.fundBalance - gameState.holdings.index;
-  const displayTotalMonths =
-    (gameState.currentYear - 1) * 12 +
-    Math.max(0, Math.floor(currentMonth) - 1);
+  const indexUnrealizedProfit = gameState.fundBalance - gameState.holdings.index;
+  const displayTotalMonths = (gameState.currentYear - 1) * 12 + Math.max(0, Math.floor(currentMonth) - 1);
 
   return (
     <div className="min-h-screen bg-[#011D10] text-[#494a48] font-mono flex flex-col p-6">
