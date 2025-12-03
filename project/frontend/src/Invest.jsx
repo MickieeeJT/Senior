@@ -1,9 +1,8 @@
 import { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
-import index from "./assets/Index.png";
-import gold from "./assets/Gold.png";
 import randomEvent from "./data/Event/event.json";
+import MiniChart from "./MiniChart";
 
 const API_BASE_URL = "http://localhost:8080/api/invest";
 
@@ -927,9 +926,21 @@ export default function Invest() {
           <h3 className="text-3xl font-jersey mb-1 text-white">
             INDEX FUND - {selectedIndex?.symbol || "Loading..."}
           </h3>
-          <div className="flex justify-center">
-            <img src={index} alt="index icon" className="w-[90px] h-[90px]" />
+
+          {/* Mini Chart */}
+          <div className="w-full flex justify-center mb-2">
+            <div className="w-[85%] h-[70px]">
+              <MiniChart
+                data={selectedIndex?.data || []}
+                currentIndex={
+                  selectedIndex?.data
+                    ? displayTotalMonths % selectedIndex.data.length
+                    : 0
+                }
+              />
+            </div>
           </div>
+
           <div className="flex justify-center gap-3">
             <p className="text-white text-xl font-jersey">
               Price: {indexValue.toFixed(2)}
@@ -1038,6 +1049,20 @@ export default function Invest() {
                       {stock.symbol}
                     </p>
 
+                    {/* Mini CHart */}
+                    <div className="w-full flex justify-center mb-2">
+                      <div className="w-[85%] h-[70px]">
+                        <MiniChart
+                          data={stock?.data || []}
+                          currentIndex={
+                            stock?.data
+                              ? displayTotalMonths % stock.data.length
+                              : 0
+                          }
+                        />
+                      </div>
+                    </div>
+
                     <div className="flex justify-between px-8">
                       <p className="text-white text-lg font-jersey">
                         {currentStockData.close.toFixed(2)} $
@@ -1125,9 +1150,21 @@ export default function Invest() {
           <h3 className="text-3xl font-jersey mb-1 text-white">
             GOLD - {selectedGold?.symbol || "Loading..."}
           </h3>
-          <div className="flex justify-center">
-            <img src={gold} alt="gold icon" className="w-[90px] h-[90px]" />
-          </div>
+          
+          {/* Mini Chart */}
+          <div className="w-full flex justify-center mb-2">
+            <div className="w-[85%] h-[70px]">
+              <MiniChart
+                data={selectedGold?.data || []}
+                currentIndex={
+                  selectedGold?.data
+                    ? displayTotalMonths % selectedGold.data.length
+                    : 0
+                }
+              />
+            </div>
+          </div> 
+
           <div className="flex justify-center gap-3">
             <p className="text-white text-xl font-jersey">
               Price: {goldValue.toFixed(2)}
@@ -1228,6 +1265,20 @@ export default function Invest() {
                     <p className="text-white text-2xl font-jersey">
                       {currency.symbol}
                     </p>
+
+                    {/* Mini Chart */}
+                    <div className="w-full flex justify-center mb-2">
+                      <div className="w-[85%] h-[70px]">
+                      <MiniChart
+                        data={currency?.data || []}
+                        currentIndex={
+                          currency?.data
+                            ? displayTotalMonths % currency.data.length
+                            : 0
+                        }
+                      />
+                      </div>
+                    </div>  
 
                     <div className="flex justify-between px-8">
                       <p className="text-white text-lg font-jersey">
