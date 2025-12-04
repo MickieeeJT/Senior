@@ -8,7 +8,7 @@ import "./config/db.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
 
 const app = express();
-const PORT = 8080;
+const PORT = 8000;
 
 app.use(cors());
 app.use(bodyParser.json());

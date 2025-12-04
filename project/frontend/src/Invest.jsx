@@ -4,7 +4,7 @@ import saving from "./assets/Saving.png";
 import randomEvent from "./data/Event/event.json";
 import MiniChart from "./MiniChart";
 
-const API_BASE_URL = "http://localhost:8080/api/invest";
+const API_BASE_URL = "http://localhost:8000/api/invest";
 
 //Import all index fund data files
 const indexFiles = import.meta.glob("./data/IndexFund/*.json", { eager: true });

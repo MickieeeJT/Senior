@@ -18,7 +18,7 @@ export default function ScoreHistoryPage() {
 
       try {
         const response = await fetch(
-          "http://localhost:8080/api/score-history",
+          "http://localhost:8000/api/score-history",
           {
             headers: {
               Authorization: `Bearer ${token}`,

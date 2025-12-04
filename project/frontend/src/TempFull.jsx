@@ -5,7 +5,7 @@ import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
 import randomEvent from "./data/Event/event.json";
 
-const API_BASE_URL = "http://localhost:8080/api/invest";
+const API_BASE_URL = "http://localhost:8000/api/invest";
 
 //Import all index fund data files
 const indexFiles = import.meta.glob("./data/IndexFund/*.json", { eager: true });
@@ -144,7 +144,7 @@ export default function Invest() {
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        "http://localhost:8080/api/invest/end-game",
+        "http://localhost:8000/api/invest/end-game",
         {
           method: "POST",
           headers: {
