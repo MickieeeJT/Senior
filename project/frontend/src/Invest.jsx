@@ -556,7 +556,7 @@ export default function Invest() {
   };
 
   const handleExitConfirm = () => {
-    navigate("/");
+    navigate("/home");
   };
 
   if (loading || !gameState) {

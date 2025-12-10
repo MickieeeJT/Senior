@@ -6,8 +6,8 @@ import PrivateRoute from "./PrivateRoute.jsx";
 import Score from "./Score.jsx";
 import Tutorial from "./Tutorial.jsx";
 import Invest from "./Invest.jsx";
-import Dashboard from "./Dashboard.jsx";
-// import Dashboard from "./DashboardTemp.jsx";
+// import Dashboard from "./Dashboard.jsx";
+import Dashboard from "./DashboardTemp.jsx";
 
 
 export default function App() {
