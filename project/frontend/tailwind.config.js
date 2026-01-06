@@ -6,6 +6,7 @@ export default {
       fontFamily: {
         kameron: ['"Kameron"', "serif"],
         jersey: ['"Jersey 10"', 'sans-serif'],
+        poiret: ['"Poiret One"', 'cursive'],
       },
     },
   },
