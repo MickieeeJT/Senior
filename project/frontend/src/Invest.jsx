@@ -602,7 +602,8 @@ export default function Invest() {
       className="h-screen w-screen bg-[#011D10] text-[#494a48] font-poiret flex flex-col px-6 overflow-hidden"
       onClick={handleBackgroundClick} // GLOBAL CLICK HANDLER
     >
-      <header className="flex justify-between items-end border-b-4 border-[#ffffff] mb-3 px-4 pb-1">
+<div className="w-screen h-screen scale-90 origin-center origin-top flex flex-col font-poiret text-[#494a48]">
+        <header className="flex justify-between items-end border-b-4 border-[#ffffff] mb-3 px-4 pb-1">
         {/* LEFT SIDE: Group Title and Stats together */}
         <div className="flex items-end gap-10">
           <button
@@ -1337,6 +1338,7 @@ export default function Invest() {
           </div>
         </div>
       </div>
+    </div>
 
       {showExitModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
