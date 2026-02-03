@@ -13,6 +13,16 @@ const TUTORIAL_TYPES = {
   CURRENCY: 'currency'
 };
 
+// Define the required order for tutorial completion
+const TUTORIAL_ORDER = [
+  TUTORIAL_TYPES.SAVINGS,
+  TUTORIAL_TYPES.BONDS,
+  TUTORIAL_TYPES.INDEX_FUND,
+  TUTORIAL_TYPES.STOCKS,
+  TUTORIAL_TYPES.GOLD,
+  TUTORIAL_TYPES.CURRENCY
+];
+
 const TUTORIAL_DATA = {
   [TUTORIAL_TYPES.SAVINGS]: {
     title: "SAVINGS ACCOUNT",
@@ -198,7 +208,7 @@ export default function Tutorial() {
   // ฟังก์ชันบันทึกการเรียนจบ tutorial
   const markTutorialComplete = async (tutorialType) => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) return false;
 
     try {
       const response = await fetch('http://localhost:8080/api/tutorial/complete', {
@@ -211,15 +221,26 @@ export default function Tutorial() {
       });
 
       if (response.ok) {
-        // อัพเดท state ใน frontend
+        // อัพเดท state ใน frontend - ทำให้ progress เพิ่มขึ้น
         const newCompleted = new Set(completedTutorials);
         newCompleted.add(tutorialType);
         setCompletedTutorials(newCompleted);
+        return true;
       } else {
         console.error('Failed to mark tutorial as complete');
+        // Still update frontend state even if API call fails
+        const newCompleted = new Set(completedTutorials);
+        newCompleted.add(tutorialType);
+        setCompletedTutorials(newCompleted);
+        return false;
       }
     } catch (error) {
       console.error('Error marking tutorial complete:', error);
+      // Still update frontend state even if network error occurs
+      const newCompleted = new Set(completedTutorials);
+      newCompleted.add(tutorialType);
+      setCompletedTutorials(newCompleted);
+      return false;
     }
   };
 
@@ -302,7 +323,35 @@ export default function Tutorial() {
     }
   };
 
+  // Function to check if a tutorial is available based on sequential completion
+  const isInvestmentAvailable = (type) => {
+    const tutorialIndex = TUTORIAL_ORDER.indexOf(type);
+    
+    // First tutorial (savings) is always available
+    if (tutorialIndex === 0) return true;
+    
+    // Check if all previous tutorials are completed
+    for (let i = 0; i < tutorialIndex; i++) {
+      if (!completedTutorials.has(TUTORIAL_ORDER[i])) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handleTutorialSelect = (type) => {
+    const tutorialIndex = TUTORIAL_ORDER.indexOf(type);
+    const isUnlocked = isInvestmentAvailable(type);
+    
+    if (!isUnlocked) {
+      // Show locked message
+      const previousTutorial = TUTORIAL_ORDER[tutorialIndex - 1];
+      const previousTutorialName = TUTORIAL_DATA[previousTutorial]?.title || 'previous tutorial';
+      alert(`Please complete ${previousTutorialName} first!`);
+      return;
+    }
+
     if (!completedTutorials.has(type)) {
       setActiveTutorial(type);
       setCurrentStep(0);
@@ -315,27 +364,15 @@ export default function Tutorial() {
     }
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     const tutorial = TUTORIAL_DATA[activeTutorial];
     if (currentStep < tutorial.content.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Tutorial completed - บันทึกลงฐานข้อมูลก่อน
-      const success = await markTutorialComplete(activeTutorial);
-      
-      if (success) {
-        // รอให้ state อัพเดทก่อนเปิด practice mode
-        setTimeout(() => {
-          initializePracticeMode(activeTutorial);
-          setShowGameInterface(false);
-          setShowPracticeMode(true);
-        }, 100);
-      } else {
-        // ถ้าบันทึกไม่สำเร็จ แต่ก็ให้เข้า practice mode ได้
-        initializePracticeMode(activeTutorial);
-        setShowGameInterface(false);
-        setShowPracticeMode(true);
-      }
+      // After reading all tutorial content, go to practice mode
+      initializePracticeMode(activeTutorial);
+      setShowGameInterface(false);
+      setShowPracticeMode(true);
     }
   };
 
@@ -357,6 +394,25 @@ export default function Tutorial() {
 
   const handleStartGame = () => {
     navigate("/invest");
+  };
+
+  const handleCompleteTutorial = async () => {
+    try {
+      // Mark tutorial as complete after practice mode
+      await markTutorialComplete(activeTutorial);
+            
+      // Close tutorial and return to main screen
+      setActiveTutorial(null);
+      setCurrentStep(0);
+      setShowGameInterface(false);
+      setShowPracticeMode(false);
+      setPracticeAmount("");
+      setSelectedBond("");
+      setSelectedStock("");
+    } catch (error) {
+      console.error('Error completing tutorial:', error);
+      alert("There was an issue saving your progress, but you can continue with other tutorials.");
+    }
   };
 
   // Practice mode functions
@@ -894,15 +950,14 @@ export default function Tutorial() {
           )}
         </div>
 
-        {/* Practice Mode Instructions */}
+        {/* Complete Tutorial Button */}
         <div className="mt-8 text-center">
-          <div className="bg-[#001a0a] border-2 border-[#B7FD5E] rounded p-6 max-w-2xl mx-auto">
-            <h4 className="text-[#B7FD5E] mb-4 text-xl font-jersey">📚 Practice Instructions</h4>
-            <p className="text-white font-jersey">
-              This is a safe practice environment! Try different amounts and see how the transactions work. 
-              Your practice data won't affect the real game, so experiment freely!
-            </p>
-          </div>
+          <button
+            onClick={handleCompleteTutorial}
+            className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
+          >
+            Complete Tutorial
+          </button>
         </div>
       </div>
     );
@@ -957,7 +1012,7 @@ export default function Tutorial() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {Object.entries(TUTORIAL_DATA).map(([type, data]) => {
             const isCompleted = completedTutorials.has(type);
-            const isAvailable = completedTutorials.size === 0 || !isCompleted;
+            const isAvailable = isInvestmentAvailable(type);
 
             return (
               <div
@@ -1083,36 +1138,9 @@ export default function Tutorial() {
                 className="bg-[#11942F] text-white text-xl font-jersey px-6 py-2 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
               >
                 {currentStep === TUTORIAL_DATA[activeTutorial].content.length - 1 
-                  ? "Complete Tutorial" 
+                  ? "Practice mode" 
                   : "Next →"}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tutorial Instructions */}
-      {!activeTutorial && (
-        <div className="mt-12 text-center max-w-4xl mx-auto">
-          <h3 className="text-2xl font-jersey text-[#B7FD5E] mb-4">
-            How the Tutorial Works
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg font-jersey text-white">
-            <div className="bg-[#001a0a] border-2 border-[#B7FD5E] rounded p-4">
-              <h4 className="text-[#B7FD5E] mb-2">🎯 Choose Your Path</h4>
-              <p>You can complete tutorials in any order you prefer. Each tutorial teaches a different investment strategy.</p>
-            </div>
-            <div className="bg-[#001a0a] border-2 border-[#B7FD5E] rounded p-4">
-              <h4 className="text-[#B7FD5E] mb-2">📈 Learn & Practice</h4>
-              <p>Each tutorial covers risk levels, expected returns, and best practices for that investment type.</p>
-            </div>
-            <div className="bg-[#001a0a] border-2 border-[#B7FD5E] rounded p-4">
-              <h4 className="text-[#B7FD5E] mb-2">✅ Track Progress</h4>
-              <p>Completed tutorials unlock full access to those investment options in the main game.</p>
-            </div>
-            <div className="bg-[#001a0a] border-2 border-[#B7FD5E] rounded p-4">
-              <h4 className="text-[#B7FD5E] mb-2">🚀 Start Playing</h4>
-              <p>Complete all 6 tutorials to unlock the full investment game experience!</p>
             </div>
           </div>
         </div>
