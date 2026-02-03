@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import scoreHistory from "./routes/scoreHistory.js";
 import userAchievements from "./routes/userAchievements.js"; 
 import investRoutes from "./routes/investRoutes.js";
+import tutorialRoutes from "./routes/tutorialRoutes.js";
 import "./config/db.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
 

@@ -54,6 +54,11 @@ export default function Invest() {
   const [sessionId, setSessionId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Tutorial completion state
+  const [completedTutorials, setCompletedTutorials] = useState(new Set());
+  const [practiceCompleted, setPracticeCompleted] = useState(new Set()); // State for practice completion
+
   const [progress, setProgress] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(1);
   const [isRunning, setIsRunning] = useState(true);
@@ -105,6 +110,38 @@ export default function Invest() {
     currentMonth,
     selectedIndex,
   ]);
+
+  // Load completed tutorials on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('completedTutorials');
+    const savedPractice = localStorage.getItem('practiceCompleted'); // โหลดข้อมูลการทดลองด้วย
+    if (saved) {
+      setCompletedTutorials(new Set(JSON.parse(saved)));
+    }
+    if (savedPractice) {
+      const practiceSet = new Set(JSON.parse(savedPractice));
+      // เช็คว่าผ่านการทดลองหรือไม่
+      setPracticeCompleted(practiceSet);
+    }
+  }, []);
+
+  // Check if an investment type is available (both tutorial and practice completed)
+  const isInvestmentAvailable = (tutorialType) => {
+    return completedTutorials.has(tutorialType) && practiceCompleted.has(tutorialType);
+  };
+
+  // Handle investment interactions with tutorial and practice restrictions
+  const handleRestrictedAction = (tutorialType, actionName) => {
+    if (!completedTutorials.has(tutorialType)) {
+      alert(`Complete the ${actionName} tutorial first to unlock this investment option!`);
+      return false;
+    }
+    if (!practiceCompleted.has(tutorialType)) {
+      alert(`Complete the ${actionName} practice session first! Go to Tutorial page to practice.`);
+      return false;
+    }
+    return true;
+  };
 
   // Calculate Total Assets for UI
   useEffect(() => {
