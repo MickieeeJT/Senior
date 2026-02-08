@@ -622,6 +622,50 @@ router.post("/end-game", authenticateToken, (req, res) => {
   }
 });
 
+router.get("/tutorial-progress", authenticateToken, (req, res) => {
+  const userId = req.user.id;
+
+  const sql = `SELECT tutorial_level FROM tutorial_progress WHERE user_id = ?`;
+  
+  db.query(sql, [userId], (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch tutorial progress" 
+      });
+    }
+
+    let tutorialLevel = 0;
+    if (results.length > 0) {
+      tutorialLevel = results[0].tutorial_level;
+    }
+
+    // Define section unlock mapping
+    // Level 1: Savings
+    // Level 2: Bonds
+    // Level 3: Index
+    // Level 4: Stocks
+    // Level 5: Gold
+    // Level 6: Currency
+    const unlockedSections = [];
+    
+    if (tutorialLevel >= 1) unlockedSections.push('savings');
+    if (tutorialLevel >= 2) unlockedSections.push('bonds');
+    if (tutorialLevel >= 3) unlockedSections.push('index');
+    if (tutorialLevel >= 4) unlockedSections.push('stocks');
+    if (tutorialLevel >= 5) unlockedSections.push('gold');
+    if (tutorialLevel >= 6) unlockedSections.push('currency');
+
+    res.json({
+      success: true,
+      tutorialLevel,
+      unlockedSections
+    });
+  });
+});
+
+
 router.delete("/session/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   gameSessions.delete(sessionId);

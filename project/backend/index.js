@@ -3,9 +3,10 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import authRoutes from "./routes/authRoutes.js";
 import scoreHistory from "./routes/scoreHistory.js";
-import userAchievements from "./routes/userAchievements.js"; 
+import userAchievements from "./routes/userAchievements.js";
 import investRoutes from "./routes/investRoutes.js";
 import tutorialRoutes from "./routes/tutorialRoutes.js";
+
 import "./config/db.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
 
@@ -26,6 +27,8 @@ app.use("/api/score-history", scoreHistory);
 app.use("/api/user-achievements", userAchievements);
 
 app.use("/api/invest", investRoutes);
+
+app.use("/api/tutorial", tutorialRoutes);
 
 app.get("/home", authenticateToken, (req, res) => {
     res.json({
