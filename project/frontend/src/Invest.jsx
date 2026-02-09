@@ -723,21 +723,21 @@ export default function Invest() {
             <div className="col-span-1 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col justify-between h-full relative">
               {!isSectionUnlocked('savings') && <LockedOverlay sectionName="SAVING ACCOUNT" />}
               <div>
-                <h3 className="text-lg font-poiret font-bold mb-1 text-white">
+                <h3 className="text-xl font-poiret font-bold mb-1 text-white">
                   SAVING ACCOUNT
                 </h3>
                 <div className="flex justify-center">
                   <img
                     src={saving}
                     alt="saving icon"
-                    className="w-16 h-16"
+                    className="w-20 h-20"
                   />
                 </div>
                 <div className="flex justify-between px-4 mt-1">
-                  <p className="text-white text-xs font-poiret font-bold">
+                  <p className="text-white text-base font-poiret font-bold">
                     Balance: {gameState.savingsBalance.toFixed(2)} $
                   </p>
-                  <p className="text-white text-xs font-poiret font-bold">
+                  <p className="text-white text-base font-poiret font-bold">
                     Profit: {gameState.profit.savings.toFixed(2)} $
                   </p>
                 </div>
@@ -783,11 +783,11 @@ export default function Invest() {
             <div className="col-span-1 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col justify-between overflow-hidden h-full relative">
               {!isSectionUnlocked('bonds') && <LockedOverlay sectionName="GOVERNMENT BONDS" />}
               <div className="flex-1 overflow-y-auto">
-                <h3 className="text-lg font-poiret font-bold mb-1 text-white">
+                <h3 className="text-xl font-poiret font-bold mb-1 text-white">
                   GOVERNMENT BONDS
                 </h3>
                 <div className="flex justify-center mb-1">
-                  <p className="text-white text-xs font-poiret font-bold">
+                  <p className="text-white text-base font-poiret font-bold">
                     Profit: {gameState.profit.bonds.toFixed(2)} $
                   </p>
                 </div>
@@ -825,7 +825,7 @@ export default function Invest() {
                                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                 />
                               </svg>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center text-xs font-poiret text-white">
+                              <div className="absolute inset-0 flex flex-col items-center justify-center text-base font-poiret text-white">
                                 <div className="text-sm font-poiret font-bold text-white">
                                   ${inv.amount.toFixed(0)}
                                 </div>
@@ -836,7 +836,7 @@ export default function Invest() {
                                 e.stopPropagation();
                                 handleBondSell(inv);
                               }}
-                              className="mt-1 text-white text-xs font-poiret font-bold hover:underline"
+                              className="mt-1 text-white text-base font-poiret font-bold hover:underline"
                             >
                               Collect
                             </button>
@@ -888,7 +888,7 @@ export default function Invest() {
                             className="flex flex-col items-center cursor-pointer"
                           >
                             <div
-                              className={`font-bold rounded-full w-10 h-10 flex items-center justify-center transition-all text-xs ${
+                              className={`font-bold rounded-full w-10 h-10 flex items-center justify-center transition-all text-base ${
                                 selectedBond === t
                                   ? "bg-[#B7FD5E] text-black scale-105 shadow-[0_0_10px_#00FF00]"
                                   : "bg-gray-100 text-black hover:bg-gray-300"
@@ -896,7 +896,7 @@ export default function Invest() {
                             >
                               {t.split(" ")[0]}
                             </div>
-                            <div className="text-xs font-poiret font-bold text-[#B7FD5E] mt-1">
+                            <div className="text-base font-poiret font-bold text-[#B7FD5E] mt-1">
                               {ratePercent}%
                             </div>
                           </div>
@@ -924,7 +924,7 @@ export default function Invest() {
             <div className="col-span-1 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col justify-between h-full relative">
               {!isSectionUnlocked('index') && <LockedOverlay sectionName="INDEX FUND" />}
               <div>
-                <h3 className="text-lg font-poiret font-bold mb-1 text-white">
+                <h3 className="text-xl font-poiret font-bold mb-1 text-white">
                   INDEX - {selectedIndex?.symbol || "Loading..."}
                 </h3>
 
@@ -968,11 +968,11 @@ export default function Invest() {
                   </div>
                 </div>
                 <div className="flex justify-between px-4 mt-1">
-                  <p className="text-white text-xs font-poiret font-bold">
+                  <p className="text-white text-base font-poiret font-bold">
                     Balance: {gameState.fundBalance.toFixed(2)} $
                   </p>
                   <p
-                    className={`text-xs font-poiret font-bold ${
+                    className={`text-base font-poiret font-bold ${
                       indexUnrealizedProfit >= 0
                         ? "text-green-400"
                         : "text-red-400"
@@ -1024,7 +1024,7 @@ export default function Invest() {
             {/* ROW 2: Individual Stocks (spanning 3 columns) */}
             <div className="col-span-3 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col h-full relative">
               {!isSectionUnlocked('stocks') && <LockedOverlay sectionName="INDIVIDUAL STOCKS" />}
-              <h3 className="text-center text-lg font-poiret font-bold text-white mb-1 flex-shrink-0">
+              <h3 className="text-center text-xl font-poiret font-bold text-white mb-1 flex-shrink-0">
                 INDIVIDUAL STOCKS
               </h3>
 
@@ -1082,7 +1082,7 @@ export default function Invest() {
 
                           <div className="flex justify-between px-2 mt-1">
                             <p
-                              className={`text-xs font-poiret font-bold ${
+                              className={`text-base font-poiret font-bold ${
                                 unrealizedStockProfit >= 0
                                   ? "text-green-400"
                                   : "text-red-400"
@@ -1090,7 +1090,7 @@ export default function Invest() {
                             >
                               Unreal: {unrealizedStockProfit.toFixed(0)} $
                             </p>
-                            <p className="text-white text-xs font-poiret font-bold">
+                            <p className="text-white text-base font-poiret font-bold">
                               Shares: {holding?.shares || 0}
                             </p>
                           </div>
@@ -1098,7 +1098,7 @@ export default function Invest() {
 
                         <div className="pb-1">
                           {/* Amount buttons */}
-                          <div className="flex justify-between px-4 mt-1 text-xs">
+                          <div className="flex justify-between px-4 mt-1 text-base">
                             {["1", "10", "25", "MAX"].map((amt) => (
                               <button
                                 key={amt}
@@ -1166,7 +1166,7 @@ export default function Invest() {
               {!isSectionUnlocked('gold') && <LockedOverlay sectionName="GOLD" />}
               <div className="flex-1 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-lg font-poiret font-bold mb-1 text-white">
+                  <h3 className="text-xl font-poiret font-bold mb-1 text-white">
                     GOLD - {selectedGold?.symbol || "Loading..."}
                   </h3>
 
@@ -1210,10 +1210,10 @@ export default function Invest() {
                   </p>
                 </div>
                 <div className="flex justify-between px-4 mt-1">
-                  <p className="text-white text-xs font-poiret font-bold">
+                  <p className="text-white text-base font-poiret font-bold">
                     Balance: {gameState.goldBalance?.toFixed(2) || 0} $
                   </p>
-                  <p className="text-white text-xs font-poiret font-bold">
+                  <p className="text-white text-base font-poiret font-bold">
                     Profit: {gameState.profit?.gold?.toFixed(2) || 0} $
                   </p>
                 </div>
@@ -1262,7 +1262,7 @@ export default function Invest() {
               onClick={(e) => e.stopPropagation()}
             >
               {!isSectionUnlocked('currency') && <LockedOverlay sectionName="CURRENCY EXCHANGE" />}
-              <h3 className="text-center text-lg font-poiret font-bold text-white mb-1 flex-shrink-0">
+              <h3 className="text-center text-xl font-poiret font-bold text-white mb-1 flex-shrink-0">
                 CURRENCY EXCHANGE
               </h3>
 
@@ -1322,7 +1322,7 @@ export default function Invest() {
 
                           <div className="flex justify-between px-2 mt-1">
                             <p
-                              className={`text-xs font-poiret font-bold ${
+                              className={`text-base font-poiret font-bold ${
                                 unrealizedCurrencyProfit >= 0
                                   ? "text-green-400"
                                   : "text-red-400"
@@ -1330,7 +1330,7 @@ export default function Invest() {
                             >
                               Unreal: {unrealizedCurrencyProfit.toFixed(0)} $
                             </p>
-                            <p className="text-white text-xs font-poiret font-bold">
+                            <p className="text-white text-base font-poiret font-bold">
                               Units: {holding?.units || 0}
                             </p>
                           </div>
@@ -1338,7 +1338,7 @@ export default function Invest() {
 
                         <div className="pb-1">
                           {/* Amount buttons */}
-                          <div className="flex justify-between px-4 mt-1 text-xs">
+                          <div className="flex justify-between px-4 mt-1 text-base">
                             {["1", "10", "25", "MAX"].map((amt) => (
                               <button
                                 key={amt}
@@ -1427,7 +1427,7 @@ export default function Invest() {
               {eventData.title}
             </h2>
 
-            <p className="text-lg font-poiret font-bold text-white mb-4">
+            <p className="text-xl font-poiret font-bold text-white mb-4">
               {eventData.message}
             </p>
 
@@ -1447,7 +1447,7 @@ export default function Invest() {
                   await applyEventEffect({ amount: eventData.amount });
                   setShowEventModal(false);
                 }}
-                className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-lg tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none"
+                className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none"
               >
                 Collect
               </button>
@@ -1459,7 +1459,7 @@ export default function Invest() {
                       await applyEventEffect({ amount: eventData.amount });
                       setShowEventModal(false);
                     }}
-                    className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-red-700 bg-red-400 px-4 font-poiret font-bold text-lg tracking-wide text-red-100 transition-all duration-150 [box-shadow:0px_6px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#550000] active:translate-y-[4px] active:shadow-none"
+                    className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-red-700 bg-red-400 px-4 font-poiret font-bold text-xl tracking-wide text-red-100 transition-all duration-150 [box-shadow:0px_6px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#550000] active:translate-y-[4px] active:shadow-none"
                   >
                     Pay with Pocket Cash (
                     {Math.abs(eventData.amount).toLocaleString()}$)
@@ -1472,7 +1472,7 @@ export default function Invest() {
                     setInDebtMode(true);
                     setShowEventModal(false);
                   }}
-                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-lg tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none"
+                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none"
                 >
                   Find Funds (Sell Assets)
                 </button>
@@ -1496,7 +1496,7 @@ export default function Invest() {
               </div>
 
               <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-red-600 border-2 border-red-800 rounded-sm p-4 [box-shadow:0px_4px_0px_#550000] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 w-[280px] pointer-events-auto">
-                <p className="text-lg font-poiret font-bold text-red-100 text-center mb-1">
+                <p className="text-xl font-poiret font-bold text-red-100 text-center mb-1">
                   You owe: {debtAmount.toLocaleString()}$
                 </p>
                 <p className="text-base font-poiret font-bold text-red-100 text-center mb-2">
