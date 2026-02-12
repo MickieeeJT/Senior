@@ -4,6 +4,10 @@ import saving from "./assets/Saving.png";
 import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
 
+// --- CONFIGURATION ---
+// CHECK YOUR BACKEND CONSOLE: If it says "Server running on port 8080", change this to 8080.
+const API_BASE_URL = "http://localhost:8000/api/tutorial"; 
+
 const TUTORIAL_TYPES = {
   SAVINGS: 'savings',
   BONDS: 'bonds',
@@ -14,6 +18,7 @@ const TUTORIAL_TYPES = {
 };
 
 // Define the required order for tutorial completion
+// This array acts as the map: Index 0 = Level 1, Index 1 = Level 2, etc.
 const TUTORIAL_ORDER = [
   TUTORIAL_TYPES.SAVINGS,
   TUTORIAL_TYPES.BONDS,
@@ -138,20 +143,6 @@ const TUTORIAL_DATA = {
   }
 };
 
-// Mock data for tutorial demonstration
-const MOCK_STOCKS = [
-  { symbol: "AOT", price: 72.50, change: 2.8 },
-  { symbol: "CPALL", price: 58.25, change: -1.2 },
-  { symbol: "DELTA", price: 15.75, change: 4.5 },
-  { symbol: "EGCO", price: 195.00, change: -0.8 }
-];
-
-const MOCK_CURRENCIES = [
-  { symbol: "USD", price: 35.42, change: 0.15 },
-  { symbol: "EUR", price: 38.76, change: -0.32 },
-  { symbol: "JPY", price: 0.24, change: 1.25 }
-];
-
 export default function Tutorial() {
   const navigate = useNavigate();
   const [completedTutorials, setCompletedTutorials] = useState(new Set());
@@ -168,9 +159,8 @@ export default function Tutorial() {
   const [practiceData, setPracticeData] = useState({});
   const [practiceAmount, setPracticeAmount] = useState("");
   const [selectedBond, setSelectedBond] = useState("");
-  const [selectedStock, setSelectedStock] = useState("");
 
-  // ฟังก์ชันดึงข้อมูล tutorial progress จาก API
+  // 1. UPDATED: Fetch Tutorial Progress (Number -> Set)
   const fetchTutorialProgress = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -180,7 +170,8 @@ export default function Tutorial() {
 
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8080/api/tutorial/progress', {
+      // Using API_BASE_URL to avoid port mismatch issues
+      const response = await fetch(`${API_BASE_URL}/progress`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -190,13 +181,18 @@ export default function Tutorial() {
 
       if (response.ok) {
         const data = await response.json();
-        setCompletedTutorials(new Set(data.completedTutorials));
+        
+        // Backend returns: { success: true, tutorialLevel: 3 }
+        // We convert Level 3 -> ['savings', 'bonds', 'indexFund']
+        const level = data.tutorialLevel || 0;
+        const completedList = TUTORIAL_ORDER.slice(0, level);
+        
+        setCompletedTutorials(new Set(completedList));
       } else if (response.status === 401) {
-        // Token expired or invalid
         localStorage.removeItem('token');
         navigate('/login');
       } else {
-        console.error('Failed to fetch tutorial progress');
+        console.error('Failed to fetch tutorial progress:', response.status);
       }
     } catch (error) {
       console.error('Error fetching tutorial progress:', error);
@@ -205,13 +201,14 @@ export default function Tutorial() {
     }
   };
 
-  // ฟังก์ชันบันทึกการเรียนจบ tutorial
+  // 2. Mark Tutorial Complete
   const markTutorialComplete = async (tutorialType) => {
     const token = localStorage.getItem('token');
     if (!token) return false;
 
     try {
-      const response = await fetch('http://localhost:8080/api/tutorial/complete', {
+      // Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -221,22 +218,18 @@ export default function Tutorial() {
       });
 
       if (response.ok) {
-        // อัพเดท state ใน frontend - ทำให้ progress เพิ่มขึ้น
+        // Optimistic UI Update: Add to set immediately so user sees checkmark
         const newCompleted = new Set(completedTutorials);
         newCompleted.add(tutorialType);
         setCompletedTutorials(newCompleted);
         return true;
       } else {
-        console.error('Failed to mark tutorial as complete');
-        // Still update frontend state even if API call fails
-        const newCompleted = new Set(completedTutorials);
-        newCompleted.add(tutorialType);
-        setCompletedTutorials(newCompleted);
-        return false;
+        console.error('Failed to complete tutorial:', response.status);
       }
+      return false;
     } catch (error) {
       console.error('Error marking tutorial complete:', error);
-      // Still update frontend state even if network error occurs
+      // Still update UI even if network fails temporarily (optional choice)
       const newCompleted = new Set(completedTutorials);
       newCompleted.add(tutorialType);
       setCompletedTutorials(newCompleted);
@@ -244,7 +237,6 @@ export default function Tutorial() {
     }
   };
 
-  // ดึงข้อมูลผู้ใช้และ tutorial progress เมื่อ component โหลด
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -252,7 +244,6 @@ export default function Tutorial() {
       return;
     }
 
-    // ดึงข้อมูลจาก JWT token
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUsername(payload.username || 'User');
@@ -323,29 +314,20 @@ export default function Tutorial() {
     }
   };
 
-  // Function to check if a tutorial is available based on sequential completion
   const isInvestmentAvailable = (type) => {
     const tutorialIndex = TUTORIAL_ORDER.indexOf(type);
-    
-    // First tutorial (savings) is always available
     if (tutorialIndex === 0) return true;
     
-    // Check if all previous tutorials are completed
-    for (let i = 0; i < tutorialIndex; i++) {
-      if (!completedTutorials.has(TUTORIAL_ORDER[i])) {
-        return false;
-      }
-    }
-    
-    return true;
+    // Check if previous tutorial in the ORDER list is completed
+    const previousType = TUTORIAL_ORDER[tutorialIndex - 1];
+    return completedTutorials.has(previousType);
   };
 
   const handleTutorialSelect = (type) => {
-    const tutorialIndex = TUTORIAL_ORDER.indexOf(type);
     const isUnlocked = isInvestmentAvailable(type);
     
     if (!isUnlocked) {
-      // Show locked message
+      const tutorialIndex = TUTORIAL_ORDER.indexOf(type);
       const previousTutorial = TUTORIAL_ORDER[tutorialIndex - 1];
       const previousTutorialName = TUTORIAL_DATA[previousTutorial]?.title || 'previous tutorial';
       alert(`Please complete ${previousTutorialName} first!`);
@@ -357,7 +339,6 @@ export default function Tutorial() {
       setCurrentStep(0);
       setShowGameInterface(true);
     } else {
-      // If tutorial is completed, go directly to practice mode
       setActiveTutorial(type);
       initializePracticeMode(type);
       setShowPracticeMode(true);
@@ -369,7 +350,6 @@ export default function Tutorial() {
     if (currentStep < tutorial.content.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // After reading all tutorial content, go to practice mode
       initializePracticeMode(activeTutorial);
       setShowGameInterface(false);
       setShowPracticeMode(true);
@@ -389,7 +369,6 @@ export default function Tutorial() {
     setShowPracticeMode(false);
     setPracticeAmount("");
     setSelectedBond("");
-    setSelectedStock("");
   };
 
   const handleStartGame = () => {
@@ -398,24 +377,16 @@ export default function Tutorial() {
 
   const handleCompleteTutorial = async () => {
     try {
-      // Mark tutorial as complete after practice mode
       await markTutorialComplete(activeTutorial);
-            
-      // Close tutorial and return to main screen
-      setActiveTutorial(null);
-      setCurrentStep(0);
-      setShowGameInterface(false);
-      setShowPracticeMode(false);
-      setPracticeAmount("");
-      setSelectedBond("");
-      setSelectedStock("");
+      handleCloseTutorial();
     } catch (error) {
       console.error('Error completing tutorial:', error);
-      alert("There was an issue saving your progress, but you can continue with other tutorials.");
+      alert("There was an issue saving your progress, but you can continue.");
+      handleCloseTutorial();
     }
   };
 
-  // Practice mode functions
+  // --- PRACTICE MODE HANDLERS ---
   const handlePracticeTransaction = (action) => {
     const amount = parseFloat(practiceAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -434,9 +405,7 @@ export default function Tutorial() {
               pocket: prev.pocket - amount,
               savingsBalance: prev.savingsBalance + amount
             }));
-          } else {
-            alert("Insufficient pocket money!");
-          }
+          } else alert("Insufficient pocket money!");
         } else if (action === 'withdraw') {
           if (amount <= practiceData.savingsBalance) {
             setPracticeData(prev => ({
@@ -444,9 +413,7 @@ export default function Tutorial() {
               pocket: prev.pocket + amount,
               savingsBalance: prev.savingsBalance - amount
             }));
-          } else {
-            alert("Insufficient savings balance!");
-          }
+          } else alert("Insufficient savings balance!");
         }
         break;
         
@@ -465,9 +432,7 @@ export default function Tutorial() {
               bondInvestments: [...prev.bondInvestments, newBond]
             }));
             setSelectedBond("");
-          } else {
-            alert("Insufficient pocket money!");
-          }
+          } else alert("Insufficient pocket money!");
         }
         break;
         
@@ -481,9 +446,7 @@ export default function Tutorial() {
               fundBalance: prev.fundBalance + amount,
               shares: prev.shares + shares
             }));
-          } else {
-            alert("Insufficient pocket money!");
-          }
+          } else alert("Insufficient pocket money!");
         } else if (action === 'sell') {
           if (amount <= practiceData.fundBalance) {
             setPracticeData(prev => ({
@@ -492,9 +455,7 @@ export default function Tutorial() {
               fundBalance: prev.fundBalance - amount,
               shares: prev.shares - shares
             }));
-          } else {
-            alert("Insufficient fund balance!");
-          }
+          } else alert("Insufficient fund balance!");
         }
         break;
         
@@ -506,9 +467,7 @@ export default function Tutorial() {
               pocket: prev.pocket - amount,
               goldBalance: prev.goldBalance + amount
             }));
-          } else {
-            alert("Insufficient pocket money!");
-          }
+          } else alert("Insufficient pocket money!");
         } else if (action === 'sell') {
           if (amount <= practiceData.goldBalance) {
             setPracticeData(prev => ({
@@ -516,13 +475,10 @@ export default function Tutorial() {
               pocket: prev.pocket + amount,
               goldBalance: prev.goldBalance - amount
             }));
-          } else {
-            alert("Insufficient gold balance!");
-          }
+          } else alert("Insufficient gold balance!");
         }
         break;
     }
-    
     setPracticeAmount("");
   };
 
@@ -544,9 +500,7 @@ export default function Tutorial() {
             }
           }
         }));
-      } else {
-        alert("Insufficient pocket money!");
-      }
+      } else alert("Insufficient pocket money!");
     } else if (action === 'sell') {
       const currentShares = practiceData.stocks[symbol].shares;
       if (amount <= currentShares) {
@@ -561,9 +515,7 @@ export default function Tutorial() {
             }
           }
         }));
-      } else {
-        alert("Insufficient shares!");
-      }
+      } else alert("Insufficient shares!");
     }
   };
 
@@ -585,9 +537,7 @@ export default function Tutorial() {
             }
           }
         }));
-      } else {
-        alert("Insufficient pocket money!");
-      }
+      } else alert("Insufficient pocket money!");
     } else if (action === 'sell') {
       const currentUnits = practiceData.currencies[symbol].units;
       if (amount <= currentUnits) {
@@ -602,52 +552,40 @@ export default function Tutorial() {
             }
           }
         }));
-      } else {
-        alert("Insufficient units!");
-      }
+      } else alert("Insufficient units!");
     }
   };
 
-  const isInvestmentBeingTutored = (type) => {
-    return activeTutorial === type;
-  };
+  const allTutorialsCompleted = completedTutorials.size === TUTORIAL_ORDER.length;
 
-  const allTutorialsCompleted = completedTutorials.size === Object.keys(TUTORIAL_TYPES).length;
-
-  // แสดง loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-[#011D10] text-white font-mono flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl font-jersey text-[#B7FD5E] mb-4">Loading Tutorial...</div>
+          <div className="text-4xl font-jersey text-[#B7FD5E] mb-4">Loading Progress...</div>
           <div className="animate-spin w-12 h-12 border-4 border-[#B7FD5E] border-t-transparent rounded-full mx-auto"></div>
         </div>
       </div>
     );
   }
 
-  // Render practice mode
+  // --- RENDER PRACTICE MODE ---
   if (showPracticeMode) {
     const config = TUTORIAL_DATA[activeTutorial].practiceConfig;
     
     return (
       <div className="min-h-screen bg-[#011D10] text-white font-mono p-6">
-        {/* Header */}
         <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-8">
           <h1 className="text-5xl font-jersey text-[#B7FD5E] mx-8">
             PRACTICE: {TUTORIAL_DATA[activeTutorial].title}
           </h1>
           <nav className="flex gap-10 text-3xl font-jersey mr-3">
-            <button
-              onClick={handleCloseTutorial}
-              className="text-[#B7FD5E] hover:text-white transition"
-            >
+            <button onClick={handleCloseTutorial} className="text-[#B7FD5E] hover:text-white transition">
               Back to Tutorials
             </button>
           </nav>
         </header>
 
-        {/* Practice Info */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-jersey text-white mb-4">
             Practice Mode - Try the buttons and see how it works!
@@ -657,21 +595,14 @@ export default function Tutorial() {
           </p>
         </div>
 
-        {/* Practice Interface */}
         <div className="max-w-4xl mx-auto">
           {config.type === 'savings' && (
-            <div className="border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-8 text-center">
+            <div className="border-4 border-[#11942F] p-8 text-center">
               <h3 className="text-3xl font-jersey mb-4 text-white">SAVINGS ACCOUNT PRACTICE</h3>
-              <div className="flex justify-center mb-4">
-                <img src={saving} alt="saving icon" className="w-[120px] h-[120px]" />
-              </div>
+              <div className="flex justify-center mb-4"><img src={saving} className="w-[120px]" /></div>
               <p className="text-2xl font-jersey text-white mb-2">
                 Savings Balance: {practiceData.savingsBalance?.toFixed(2)} $
               </p>
-              <p className="text-lg font-jersey text-green-400 mb-6">
-                Interest Rate: {((practiceData.interestRate || 0) * 100).toFixed(1)}% per month
-              </p>
-              
               <div className="flex justify-center items-center gap-4 mb-6">
                 <input
                   type="number"
@@ -681,41 +612,23 @@ export default function Tutorial() {
                   className="px-4 py-2 rounded border text-black text-xl font-jersey w-48"
                 />
               </div>
-              
               <div className="flex justify-center gap-6">
-                <button
-                  onClick={() => handlePracticeTransaction('deposit')}
-                  className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                >
-                  DEPOSIT
-                </button>
-                <button
-                  onClick={() => handlePracticeTransaction('withdraw')}
-                  className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                >
-                  WITHDRAW
-                </button>
+                <button onClick={() => handlePracticeTransaction('deposit')} className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">DEPOSIT</button>
+                <button onClick={() => handlePracticeTransaction('withdraw')} className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">WITHDRAW</button>
               </div>
             </div>
           )}
 
           {config.type === 'bonds' && (
-            <div className="border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">GOVERNMENT BONDS PRACTICE</h3>
-              <p className="text-2xl font-jersey text-white mb-6">
-                Active Bonds: {practiceData.bondInvestments?.length || 0}
-              </p>
-              
-              {/* Bond Selection */}
+            <div className="border-4 border-[#11942F] p-8 text-center">
+              <h3 className="text-3xl font-jersey mb-4 text-white">GOVERNMENT BONDS</h3>
               <div className="flex justify-center gap-4 mb-6">
                 {Object.entries(practiceData.bondRates || {}).map(([duration, rate]) => (
                   <div
                     key={duration}
                     onClick={() => setSelectedBond(duration)}
                     className={`cursor-pointer p-4 rounded border-2 transition-colors ${
-                      selectedBond === duration 
-                        ? "border-[#B7FD5E] bg-[#B7FD5E] text-black" 
-                        : "border-white text-white hover:border-[#B7FD5E]"
+                      selectedBond === duration ? "border-[#B7FD5E] bg-[#B7FD5E] text-black" : "border-white text-white"
                     }`}
                   >
                     <div className="text-lg font-jersey">{duration}</div>
@@ -723,7 +636,6 @@ export default function Tutorial() {
                   </div>
                 ))}
               </div>
-              
               <div className="flex justify-center items-center gap-4 mb-6">
                 <input
                   type="number"
@@ -735,23 +647,16 @@ export default function Tutorial() {
                 <button
                   onClick={() => handlePracticeTransaction('buy')}
                   disabled={!selectedBond}
-                  className={`text-xl font-jersey px-8 py-3 rounded transition-colors ${
-                    selectedBond 
-                      ? "bg-[#11942F] text-white hover:bg-[#B7FD5E] hover:text-black" 
-                      : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                  }`}
+                  className={`text-xl font-jersey px-8 py-3 rounded ${selectedBond ? "bg-[#11942F] text-white" : "bg-gray-600 text-gray-400"}`}
                 >
                   BUY BOND
                 </button>
               </div>
-              
-              {/* Show active bonds */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(practiceData.bondInvestments || []).map((bond) => (
                   <div key={bond.id} className="border border-white p-4 rounded">
                     <div className="text-lg font-jersey text-white">{bond.duration}</div>
                     <div className="text-sm text-[#B7FD5E]">${bond.amount.toFixed(2)}</div>
-                    <div className="text-sm text-green-400">{(bond.rate * 100).toFixed(1)}%</div>
                   </div>
                 ))}
               </div>
@@ -759,198 +664,63 @@ export default function Tutorial() {
           )}
 
           {config.type === 'indexFund' && (
-            <div className="border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">INDEX FUND PRACTICE</h3>
-              <div className="flex justify-center mb-4">
-                <img src={index} alt="index icon" className="w-[120px] h-[120px]" />
-              </div>
+            <div className="border-4 border-[#11942F] p-8 text-center">
+              <h3 className="text-3xl font-jersey mb-4 text-white">INDEX FUND</h3>
+              <div className="flex justify-center mb-4"><img src={index} className="w-[120px]" /></div>
               <div className="flex justify-center gap-8 mb-4">
-                <p className="text-xl font-jersey text-white">
-                  Price: {practiceData.price?.toFixed(2)}
-                </p>
+                <p className="text-xl font-jersey">Price: {practiceData.price?.toFixed(2)}</p>
                 <p className={`text-xl font-jersey ${practiceData.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  {practiceData.priceChange >= 0 ? "▲" : "▼"} {Math.abs(practiceData.priceChange || 0).toFixed(1)}%
+                  {practiceData.priceChange >= 0 ? "▲" : "▼"} {Math.abs(practiceData.priceChange || 0)}%
                 </p>
               </div>
-              <p className="text-2xl font-jersey text-white mb-2">
-                Fund Balance: {practiceData.fundBalance?.toFixed(2)} $
-              </p>
-              <p className="text-lg font-jersey text-[#B7FD5E] mb-6">
-                Shares: {practiceData.shares?.toFixed(4) || 0}
-              </p>
-              
-              <div className="flex justify-center items-center gap-4 mb-6">
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={practiceAmount}
-                  onChange={(e) => setPracticeAmount(e.target.value)}
-                  className="px-4 py-2 rounded border text-black text-xl font-jersey w-48"
-                />
-              </div>
-              
+              <p className="text-lg font-jersey text-[#B7FD5E] mb-6">Shares: {practiceData.shares?.toFixed(4) || 0}</p>
               <div className="flex justify-center gap-6">
-                <button
-                  onClick={() => handlePracticeTransaction('buy')}
-                  className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                >
-                  BUY
-                </button>
-                <button
-                  onClick={() => handlePracticeTransaction('sell')}
-                  className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                >
-                  SELL
-                </button>
+                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-jersey" placeholder="Amount" />
+                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">BUY</button>
+                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">SELL</button>
               </div>
             </div>
           )}
 
-          {config.type === 'stocks' && (
-            <div className="border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">INDIVIDUAL STOCKS PRACTICE</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {config.mockStocks.map((stock) => (
-                  <div key={stock.symbol} className="border border-white p-4 rounded">
-                    <h4 className="text-2xl font-jersey text-white mb-2">{stock.symbol}</h4>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-lg font-jersey text-white">${stock.price.toFixed(2)}</span>
-                      <span className={`text-lg font-jersey ${stock.change >= 0 ? "text-green-400" : "text-red-400"}`}>
-                        {stock.change >= 0 ? "▲" : "▼"} {Math.abs(stock.change).toFixed(1)}%
-                      </span>
-                    </div>
-                    <p className="text-md font-jersey text-[#B7FD5E] mb-4">
-                      Owned: {practiceData.stocks?.[stock.symbol]?.shares || 0} shares
-                    </p>
-                    
-                    <div className="flex items-center gap-2 mb-4">
-                      <input
-                        type="number"
-                        placeholder="Shares"
-                        value={practiceAmount}
-                        onChange={(e) => setPracticeAmount(e.target.value)}
-                        className="px-2 py-1 rounded border text-black font-jersey w-20"
-                      />
-                      <span className="text-white font-jersey">shares</span>
-                    </div>
-                    
-                    <div className="flex justify-center gap-4">
-                      <button
-                        onClick={() => handleStockTransaction(stock.symbol, 'buy', stock.price)}
-                        className="bg-[#11942F] text-white font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                      >
-                        BUY
-                      </button>
-                      <button
-                        onClick={() => handleStockTransaction(stock.symbol, 'sell', stock.price)}
-                        className="bg-[#11942F] text-white font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                      >
-                        SELL
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {(config.type === 'stocks' || config.type === 'currency') && (
+             <div className="border-4 border-[#11942F] p-8 text-center">
+               <h3 className="text-3xl font-jersey mb-4 text-white uppercase">{config.type} PRACTICE</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 {(config.mockStocks || config.currencies).map((item) => (
+                   <div key={item.symbol} className="border border-white p-4 rounded">
+                     <h4 className="text-2xl font-jersey text-white">{item.symbol}</h4>
+                     <div className="flex justify-between mb-2">
+                        <span className="text-white">${item.price.toFixed(2)}</span>
+                        <span className={item.change >= 0 ? "text-green-400" : "text-red-400"}>{item.change}%</span>
+                     </div>
+                     <p className="text-[#B7FD5E] mb-4">Owned: {config.type === 'stocks' ? practiceData.stocks?.[item.symbol]?.shares : practiceData.currencies?.[item.symbol]?.units} {config.type === 'stocks' ? 'shares' : 'units'}</p>
+                     <div className="flex items-center gap-2 mb-4 justify-center">
+                       <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="w-20 px-2 text-black font-jersey" placeholder="Qty" />
+                     </div>
+                     <div className="flex justify-center gap-4">
+                       <button onClick={() => config.type === 'stocks' ? handleStockTransaction(item.symbol, 'buy', item.price) : handleCurrencyTransaction(item.symbol, 'buy', item.price)} className="bg-[#11942F] px-4 py-1 rounded">BUY</button>
+                       <button onClick={() => config.type === 'stocks' ? handleStockTransaction(item.symbol, 'sell', item.price) : handleCurrencyTransaction(item.symbol, 'sell', item.price)} className="bg-[#11942F] px-4 py-1 rounded">SELL</button>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
           )}
-
+          
           {config.type === 'gold' && (
-            <div className="border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">GOLD INVESTMENT PRACTICE</h3>
-              <div className="flex justify-center mb-4">
-                <img src={gold} alt="gold icon" className="w-[120px] h-[120px]" />
-              </div>
-              <div className="flex justify-center gap-8 mb-4">
-                <p className="text-xl font-jersey text-white">
-                  Price: ${practiceData.goldPrice?.toFixed(2)}
-                </p>
-                <p className={`text-xl font-jersey ${practiceData.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  {practiceData.priceChange >= 0 ? "▲" : "▼"} {Math.abs(practiceData.priceChange || 0).toFixed(1)}%
-                </p>
-              </div>
-              <p className="text-2xl font-jersey text-white mb-6">
-                Gold Balance: {practiceData.goldBalance?.toFixed(2)} $
-              </p>
-              
-              <div className="flex justify-center items-center gap-4 mb-6">
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={practiceAmount}
-                  onChange={(e) => setPracticeAmount(e.target.value)}
-                  className="px-4 py-2 rounded border text-black text-xl font-jersey w-48"
-                />
-              </div>
-              
+            <div className="border-4 border-[#11942F] p-8 text-center">
+              <h3 className="text-3xl font-jersey mb-4 text-white">GOLD</h3>
+              <div className="flex justify-center mb-4"><img src={gold} className="w-[120px]" /></div>
+              <p className="text-2xl font-jersey text-white mb-6">Gold Balance: {practiceData.goldBalance?.toFixed(2)} $</p>
               <div className="flex justify-center gap-6">
-                <button
-                  onClick={() => handlePracticeTransaction('buy')}
-                  className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                >
-                  BUY
-                </button>
-                <button
-                  onClick={() => handlePracticeTransaction('sell')}
-                  className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                >
-                  SELL
-                </button>
-              </div>
-            </div>
-          )}
-
-          {config.type === 'currency' && (
-            <div className="border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">CURRENCY EXCHANGE PRACTICE</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {config.currencies.map((currency) => (
-                  <div key={currency.symbol} className="border border-white p-4 rounded">
-                    <h4 className="text-2xl font-jersey text-white mb-2">{currency.symbol}</h4>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-lg font-jersey text-white">${currency.price.toFixed(2)}</span>
-                      <span className={`text-lg font-jersey ${currency.change >= 0 ? "text-green-400" : "text-red-400"}`}>
-                        {currency.change >= 0 ? "▲" : "▼"} {Math.abs(currency.change).toFixed(2)}%
-                      </span>
-                    </div>
-                    <p className="text-md font-jersey text-[#B7FD5E] mb-4">
-                      Owned: {practiceData.currencies?.[currency.symbol]?.units || 0} units
-                    </p>
-                    
-                    <div className="flex items-center gap-2 mb-4">
-                      <input
-                        type="number"
-                        placeholder="Units"
-                        value={practiceAmount}
-                        onChange={(e) => setPracticeAmount(e.target.value)}
-                        className="px-2 py-1 rounded border text-black font-jersey w-20"
-                      />
-                      <span className="text-white font-jersey">units</span>
-                    </div>
-                    
-                    <div className="flex justify-center gap-4">
-                      <button
-                        onClick={() => handleCurrencyTransaction(currency.symbol, 'buy', currency.price)}
-                        className="bg-[#11942F] text-white font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                      >
-                        BUY
-                      </button>
-                      <button
-                        onClick={() => handleCurrencyTransaction(currency.symbol, 'sell', currency.price)}
-                        className="bg-[#11942F] text-white font-jersey px-4 py-2 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-                      >
-                        SELL
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-jersey" placeholder="Amount" />
+                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">BUY</button>
+                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">SELL</button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Complete Tutorial Button */}
         <div className="mt-8 text-center">
           <button
             onClick={handleCompleteTutorial}
@@ -963,51 +733,30 @@ export default function Tutorial() {
     );
   }
 
+  // --- RENDER SELECTION MENU ---
   return (
     <div className="min-h-screen bg-[#011D10] text-white font-mono p-6">
-      {/* Header */}
       <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-8">
-        <h1 className="text-5xl font-jersey text-[#B7FD5E] mx-8">
-          INVESTMENT TUTORIAL
-        </h1>
+        <h1 className="text-5xl font-jersey text-[#B7FD5E] mx-8">INVESTMENT TUTORIAL</h1>
         <nav className="flex gap-10 text-3xl font-jersey mr-3">
-          <button
-            onClick={() => navigate("/")}
-            className="text-[#B7FD5E] hover:text-white transition"
-          >
-            Home
-          </button>
+          <button onClick={() => navigate("/")} className="text-[#B7FD5E] hover:text-white transition">Home</button>
           {allTutorialsCompleted && (
-            <button
-              onClick={handleStartGame}
-              className="text-[#B7FD5E] hover:text-white transition bg-[#11942F] px-4 py-2 rounded"
-            >
-              Start Game
-            </button>
+            <button onClick={handleStartGame} className="text-[#B7FD5E] hover:text-white transition bg-[#11942F] px-4 py-2 rounded">Start Game</button>
           )}
         </nav>
       </header>
 
-      {/* Progress Indicator */}
       <div className="text-center mb-8">
         <h2 className="text-3xl font-jersey text-white mb-4">
-          Progress: {completedTutorials.size} / {Object.keys(TUTORIAL_TYPES).length} Completed
+          Progress: {completedTutorials.size} / {TUTORIAL_ORDER.length} Completed
         </h2>
         <div className="flex justify-center gap-2">
-          {Object.keys(TUTORIAL_TYPES).map((_, index) => (
-            <div
-              key={index}
-              className={`w-8 h-8 rounded-full border-2 ${
-                index < completedTutorials.size
-                  ? "bg-[#B7FD5E] border-[#B7FD5E]"
-                  : "bg-transparent border-gray-500"
-              }`}
-            ></div>
+          {TUTORIAL_ORDER.map((_, index) => (
+            <div key={index} className={`w-8 h-8 rounded-full border-2 ${index < completedTutorials.size ? "bg-[#B7FD5E] border-[#B7FD5E]" : "bg-transparent border-gray-500"}`}></div>
           ))}
         </div>
       </div>
 
-      {/* Tutorial Cards Grid */}
       {!activeTutorial && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {Object.entries(TUTORIAL_DATA).map(([type, data]) => {
@@ -1017,55 +766,32 @@ export default function Tutorial() {
             return (
               <div
                 key={type}
-                className={`relative p-6 text-center border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] transition-all duration-300 ${
-                  isCompleted 
-                    ? "opacity-100 cursor-default" 
-                    : isAvailable 
-                      ? "opacity-100 cursor-pointer hover:scale-105" 
-                      : "opacity-32 cursor-not-allowed"
+                className={`relative p-6 text-center border-4 border-[#11942F] transition-all duration-300 ${
+                  isCompleted ? "opacity-100 cursor-default" : isAvailable ? "opacity-100 cursor-pointer hover:scale-105" : "opacity-32 cursor-not-allowed"
                 }`}
                 onClick={() => isAvailable && !isCompleted && handleTutorialSelect(type)}
               >
-                {/* Completed Checkmark */}
                 {isCompleted && (
                   <div className="absolute top-2 right-2 w-8 h-8 bg-[#B7FD5E] rounded-full flex items-center justify-center">
                     <span className="text-black text-xl font-bold">✓</span>
                   </div>
                 )}
-
-                {/* Lock Icon for Unavailable */}
                 {!isAvailable && !isCompleted && (
                   <div className="absolute top-2 right-2 w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-lg">🔒</span>
                   </div>
                 )}
 
-                <h3 className="text-2xl font-jersey mb-4 text-[#B7FD5E]">
-                  {data.title}
-                </h3>
-
-                {data.icon && (
-                  <div className="flex justify-center mb-4">
-                    <img src={data.icon} alt={data.title} className="w-20 h-20" />
-                  </div>
-                )}
-
-                <p className="text-lg font-jersey text-white mb-4">
-                  {data.description}
-                </p>
+                <h3 className="text-2xl font-jersey mb-4 text-[#B7FD5E]">{data.title}</h3>
+                {data.icon && <div className="flex justify-center mb-4"><img src={data.icon} alt={data.title} className="w-20 h-20" /></div>}
+                <p className="text-lg font-jersey text-white mb-4">{data.description}</p>
 
                 {isCompleted ? (
-                  <div className="bg-[#11942F] text-[#B7FD5E] px-4 py-2 rounded font-jersey">
-                    COMPLETED
-                  </div>
+                  <div className="bg-[#11942F] text-[#B7FD5E] px-4 py-2 rounded font-jersey">COMPLETED</div>
                 ) : isAvailable ? (
-                  <div className="bg-[#11942F] text-white px-4 py-2 rounded font-jersey hover:bg-[#B7FD5E] hover:text-black transition-colors">
-                    START TUTORIAL
-                  </div>
+                  <div className="bg-[#11942F] text-white px-4 py-2 rounded font-jersey hover:bg-[#B7FD5E] hover:text-black">START TUTORIAL</div>
                 ) : (
-                  <div className="bg-gray-600 text-gray-400 px-4 py-2 rounded font-jersey">
-                    COMPLETE OTHER TUTORIALS FIRST
-                  </div>
+                  <div className="bg-gray-600 text-gray-400 px-4 py-2 rounded font-jersey">LOCKED</div>
                 )}
               </div>
             );
@@ -1073,73 +799,26 @@ export default function Tutorial() {
         </div>
       )}
 
-      {/* Active Tutorial Modal */}
-      {activeTutorial && (
+      {/* TUTORIAL POPUP */}
+      {activeTutorial && !showPracticeMode && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 max-w-2xl mx-4">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-4xl font-jersey text-[#B7FD5E]">
-                {TUTORIAL_DATA[activeTutorial].title}
-              </h2>
-              <button
-                onClick={handleCloseTutorial}
-                className="text-white text-2xl hover:text-red-400"
-              >
-                ✕
-              </button>
+              <h2 className="text-4xl font-jersey text-[#B7FD5E]">{TUTORIAL_DATA[activeTutorial].title}</h2>
+              <button onClick={handleCloseTutorial} className="text-white text-2xl">✕</button>
             </div>
-
-            {/* Tutorial Icon */}
-            {TUTORIAL_DATA[activeTutorial].icon && (
-              <div className="flex justify-center mb-6">
-                <img 
-                  src={TUTORIAL_DATA[activeTutorial].icon} 
-                  alt={TUTORIAL_DATA[activeTutorial].title} 
-                  className="w-24 h-24" 
-                />
-              </div>
-            )}
-
-            {/* Tutorial Content */}
-            <div className="mb-8">
-              <p className="text-xl font-jersey text-white leading-relaxed">
-                {TUTORIAL_DATA[activeTutorial].content[currentStep]}
-              </p>
+            <div className="mb-8 min-h-[100px]">
+              <p className="text-xl font-jersey text-white leading-relaxed">{TUTORIAL_DATA[activeTutorial].content[currentStep]}</p>
             </div>
-
-            {/* Step Indicator */}
             <div className="flex justify-center gap-2 mb-6">
               {TUTORIAL_DATA[activeTutorial].content.map((_, index) => (
-                <div
-                  key={index}
-                  className={`w-3 h-3 rounded-full ${
-                    index === currentStep ? "bg-[#B7FD5E]" : "bg-gray-600"
-                  }`}
-                ></div>
+                <div key={index} className={`w-3 h-3 rounded-full ${index === currentStep ? "bg-[#B7FD5E]" : "bg-gray-600"}`}></div>
               ))}
             </div>
-
-            {/* Navigation Buttons */}
             <div className="flex justify-between">
-              <button
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-                className={`text-xl font-jersey px-6 py-2 rounded transition-colors ${
-                  currentStep === 0
-                    ? "text-gray-500 cursor-not-allowed"
-                    : "text-white hover:text-[#B7FD5E]"
-                }`}
-              >
-                ← Previous
-              </button>
-
-              <button
-                onClick={handleNext}
-                className="bg-[#11942F] text-white text-xl font-jersey px-6 py-2 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
-              >
-                {currentStep === TUTORIAL_DATA[activeTutorial].content.length - 1 
-                  ? "Practice mode" 
-                  : "Next →"}
+              <button onClick={handlePrevious} disabled={currentStep === 0} className={`text-xl font-jersey px-6 py-2 rounded ${currentStep === 0 ? "text-gray-500" : "text-white"}`}>← Previous</button>
+              <button onClick={handleNext} className="bg-[#11942F] text-white text-xl font-jersey px-6 py-2 rounded hover:bg-[#B7FD5E] hover:text-black">
+                {currentStep === TUTORIAL_DATA[activeTutorial].content.length - 1 ? "Practice mode" : "Next →"}
               </button>
             </div>
           </div>

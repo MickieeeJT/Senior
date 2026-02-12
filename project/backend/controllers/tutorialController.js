@@ -1,103 +1,93 @@
 import db from "../config/db.js";
 
-// Get user's tutorial progress
-export const getTutorialProgress = (req, res) => {
-    const userId = req.user.id; // มาจาก middleware authentication
+// Map strings to integers (Strict Order)
+const TUTORIAL_MAP = {
+  'savings': 1,
+  'bonds': 2,
+  'indexFund': 3,
+  'stocks': 4,
+  'gold': 5,
+  'currency': 6
+};
 
-    const sql = `
-        SELECT tutorial_type, completed_at 
-        FROM tutorial_progress 
-        WHERE user_id = ?
-    `;
+// 1. GET PROGRESS
+export const getTutorialProgress = (req, res) => {
+    const userId = req.user.id;
+
+    // Get the HIGHEST level this user has achieved
+    const sql = "SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = ?";
     
     db.query(sql, [userId], (err, results) => {
         if (err) {
-            console.error(err);
+            console.error("DB Error:", err);
             return res.status(500).json({ success: false, message: "Database error" });
         }
 
-        // แปลง results เป็น object ที่ frontend ใช้งานง่าย
-        const completedTutorials = results.map(row => row.tutorial_type);
+        // If user has no progress, max_level will be null, so default to 0
+        const currentLevel = results[0].max_level || 0;
         
         res.json({
             success: true,
-            completedTutorials,
-            progress: results
+            tutorialLevel: currentLevel
         });
     });
 };
 
-// Mark tutorial as completed
+// 2. COMPLETE TUTORIAL
 export const completeTutorial = (req, res) => {
     const userId = req.user.id;
     const { tutorialType } = req.body;
 
-    if (!tutorialType) {
-        return res.status(400).json({ success: false, message: "Tutorial type is required" });
+    // Convert 'savings' -> 1
+    const level = TUTORIAL_MAP[tutorialType];
+
+    if (!level) {
+        return res.status(400).json({ success: false, message: "Invalid tutorial type" });
     }
 
-    // ตรวจสอบว่าผู้ใช้เคยทำ tutorial นี้แล้วหรือยัง
-    const checkSql = "SELECT * FROM tutorial_progress WHERE user_id = ? AND tutorial_type = ?";
+    // Insert the level. INSERT IGNORE prevents crashing if they did it already.
+    const sql = "INSERT IGNORE INTO tutorial_progress (user_id, tutorial_level) VALUES (?, ?)";
     
-    db.query(checkSql, [userId, tutorialType], (err, results) => {
+    db.query(sql, [userId, level], (err, result) => {
         if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, message: "Database error" });
+            console.error("DB Insert Error:", err);
+            return res.status(500).json({ success: false });
         }
-
-        if (results.length > 0) {
-            return res.json({ success: true, message: "Tutorial already completed" });
-        }
-
-        // บันทึกการทำ tutorial เสร็จ
-        const insertSql = `
-            INSERT INTO tutorial_progress (user_id, tutorial_type, completed_at) 
-            VALUES (?, ?, NOW())
-        `;
-        
-        db.query(insertSql, [userId, tutorialType], (err) => {
-            if (err) {
-                console.error(err);
-                return res.status(500).json({ success: false, message: "Error saving progress" });
-            }
-
-            res.json({ success: true, message: "Tutorial completed successfully" });
-        });
+        res.json({ success: true, message: "Tutorial completed" });
     });
 };
 
-// Reset tutorial progress (for testing)
+// 3. RESET PROGRESS (For testing or 'New Game')
 export const resetTutorialProgress = (req, res) => {
     const userId = req.user.id;
-
+    
     const sql = "DELETE FROM tutorial_progress WHERE user_id = ?";
     
     db.query(sql, [userId], (err) => {
         if (err) {
-            console.error(err);
+            console.error("DB Reset Error:", err);
             return res.status(500).json({ success: false, message: "Database error" });
         }
-
-        res.json({ success: true, message: "Tutorial progress reset successfully" });
+        res.json({ success: true, message: "Progress reset successfully" });
     });
 };
 
-// Get all completed tutorials count for leaderboard or stats
+// 4. GET STATS (Leaderboard/Analytics)
 export const getTutorialStats = (req, res) => {
     const sql = `
         SELECT 
             u.username,
-            COUNT(tp.tutorial_type) as completed_tutorials
+            MAX(tp.tutorial_level) as current_level
         FROM users u
         LEFT JOIN tutorial_progress tp ON u.id = tp.user_id
         GROUP BY u.id, u.username
-        ORDER BY completed_tutorials DESC
+        ORDER BY current_level DESC
         LIMIT 10
     `;
     
     db.query(sql, (err, results) => {
         if (err) {
-            console.error(err);
+            console.error("Stats Error:", err);
             return res.status(500).json({ success: false, message: "Database error" });
         }
 
