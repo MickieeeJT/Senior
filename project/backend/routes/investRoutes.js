@@ -324,8 +324,13 @@ router.post("/transaction", (req, res) => {
 router.post("/monthly-update", (req, res) => {
   const { sessionId, month, progress, indexData, goldData } = req.body;
   const gameState = gameSessions.get(sessionId);
+  
   if (!gameState) return res.status(404).json({ error: "Session not found" });
-  if (month <= gameState.lastProcessedMonth) return res.json({ success: true, message: "Already processed", gameState });
+  
+  // If already processed, just return state (but maybe update progress if needed)
+  if (month <= gameState.lastProcessedMonth) {
+      return res.json({ success: true, message: "Already processed", gameState });
+  }
 
   const interest = gameState.savingsBalance * 0.015;
   gameState.savingsBalance = roundToTwo(gameState.savingsBalance + interest);
@@ -339,9 +344,10 @@ router.post("/monthly-update", (req, res) => {
     gameState.totalInvested += 4000;
   }
 
-  gameState.lastProcessedMonth = month;
+  // IMPORTANT: Save position for resume
+  gameState.lastProcessedMonth = month; // Used for calculation logic
+  gameState.currentMonth = month;       // Used for UI resume
   
-  // Save current progress (time)
   if (progress !== undefined) {
       gameState.currentProgress = progress;
   }
@@ -349,7 +355,7 @@ router.post("/monthly-update", (req, res) => {
   // Save to Memory
   gameSessions.set(sessionId, gameState);
   
-  // Save to DB
+  // Save to DB (This ensures persistence if user exits)
   if (gameState.userId) {
       saveGameToDB(gameState.userId, sessionId, gameState);
   }
@@ -364,17 +370,20 @@ router.post("/bond-update", (req, res) => {
   if (!gameState) return res.status(404).json({ error: "Session not found" });
 
   const maturedBonds = [];
-  gameState.bondInvestments.forEach((inv) => {
-    // Only process interest if still active
-    if (inv.remaining > 0) {
-      const monthlyRate = gameState.bondInterestRates[inv.bondType] / 12;
-      const interest = inv.amount * monthlyRate;
-      inv.amount = roundToTwo(inv.amount + interest);
-      gameState.profit.bonds = roundToTwo(gameState.profit.bonds + interest);
-      inv.remaining = Math.max(0, inv.remaining - 1 / 12);
-    }
-
-  });
+  if (gameState.bondInvestments) {
+      gameState.bondInvestments.forEach((inv) => {
+        // Only process interest if still active
+        if (inv.remaining > 0) {
+          const monthlyRate = (gameState.bondInterestRates[inv.bondType] || 0.05) / 12;
+          const interest = inv.amount * monthlyRate;
+          inv.amount = roundToTwo(inv.amount + interest);
+          
+          if (!gameState.profit.bonds) gameState.profit.bonds = 0;
+          gameState.profit.bonds = roundToTwo(gameState.profit.bonds + interest);
+          inv.remaining = Math.max(0, inv.remaining - 1 / 12);
+        }
+      });
+  }
 
   gameSessions.set(sessionId, gameState);
 
@@ -392,12 +401,12 @@ router.post("/gold-update", (req, res) => {
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
 
-  if (goldData && gameState.goldShares > 0 && gameState.goldBalance > 0) {
+  if (goldData && gameState.goldShares > 0) {
       // Current Value = Shares * Current Price
       const currentValue = gameState.goldShares * goldData.close;
       gameState.goldBalance = roundToTwo(currentValue);
   }
-
+  
   gameSessions.set(sessionId, gameState);
   
   // Save to DB
@@ -405,7 +414,7 @@ router.post("/gold-update", (req, res) => {
       saveGameToDB(gameState.userId, sessionId, gameState);
   }
 
-  res.json({ success: true, gameState });
+  res.json({ success: true, updatedGameState: gameState });
 });
 
 // --- UPDATED BOND SELL: Handles Early Sell (90%) AND Collect (100%) ---

@@ -317,11 +317,18 @@ export default function Invest() {
             setSessionId(data.sessionId);
             setGameState(data.gameState);
             
-            // Resume Logic
-            if (data.gameState.currentMonth > 0) {
+            // Resume Logic: Restore Month and Progress
+            if (data.gameState.currentMonth > 1) {
+                // Ensure we use the exact progress from DB if available, otherwise estimate from month
+                // Adding a small buffer (0.1) prevents immediate month regression on start
+                const restoredProgress = data.gameState.currentProgress || ((data.gameState.currentMonth - 1) / 12) * 100 + 0.1;
+
                 setCurrentMonth(data.gameState.currentMonth);
-                // Approx progress for visual bar if user resumes mid-year
-                setProgress((data.gameState.currentMonth / 12) * 100);
+                setProgress(restoredProgress);
+            } else {
+                // New year or new game start
+                setCurrentMonth(1);
+                setProgress(0);
             }
         }
         
@@ -384,10 +391,21 @@ export default function Invest() {
             });
           return 100;
         }
-        const newProgress = prev + 1;
-        const newMonth = Math.floor((newProgress / 100) * 12) + 1;
-        setCurrentMonth(newMonth);
+        
+        // --- CHANGED LOGIC START ---
+        // Increment progress
+        const newProgress = prev + (100 / steps); // Ensure increment matches total duration steps
+        
+        // Calculate month based on 0-100 scale:
+        // 0-8.33 -> Month 1
+        // 8.33-16.66 -> Month 2
+        // ...
+        const rawMonth = (newProgress / 100) * 12;
+        const newMonth = Math.floor(rawMonth) + 1;
+        
+        setCurrentMonth(Math.min(12, newMonth)); // Clamp to 12
         return newProgress;
+        // --- CHANGED LOGIC END ---
       });
     }, interval);
 
@@ -432,16 +450,25 @@ export default function Invest() {
           goldData: currentGoldData,
         }),
       })
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) throw new Error("Monthly update failed");
+          return res.json();
+        })
         .then((data) => {
-          setGameState(data.gameState);
+          if (data.gameState) setGameState(data.gameState);
           return fetch(`${API_BASE_URL}/bond-update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sessionId }),
           });
         })
-        .then((res) => (res ? res.json() : null))
+        .then((res) => {
+          if (!res || !res.ok) {
+             console.warn("Bond update skipped or failed");
+             return null;
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data?.gameState) setGameState(data.gameState);
           return fetch(`${API_BASE_URL}/gold-update`, {
@@ -450,13 +477,29 @@ export default function Invest() {
             body: JSON.stringify({ sessionId, goldData: currentGoldData }),
           });
         })
-        .then((res) => (res ? res.json() : null))
+        .then((res) => {
+          if (!res || !res.ok) {
+             console.warn("Gold update skipped or failed");
+             return null;
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data?.gameState) setGameState(data.gameState);
         })
-        .catch((error) =>
-          console.error("Monthly, bond, or gold update failed:", error)
-        );
+        .catch((error) => {
+          console.error("Monthly, bond, or gold update failed:", error);
+          if (error.message.includes("Monthly update failed") && !loading) {
+              // verify if session is still valid
+              fetch(`${API_BASE_URL}/state/${sessionId}`)
+              .then(res => {
+                  if (res.status === 404) {
+                      alert("Session expired. Please start a new game.");
+                      navigate("/dashboard");
+                  }
+              });
+          }
+        });
     }
   }, [currentMonth, sessionId, gameState, selectedIndex, selectedGold]);
 
@@ -484,7 +527,11 @@ export default function Invest() {
         alert(data.error);
         return;
       }
-      setGameState(data.gameState);
+      if (data.updatedGameState) {
+          setGameState(data.updatedGameState);
+      } else if (data.gameState) {
+          setGameState(data.gameState);
+      }
       setAmount("");
       setActiveInput(null);
       setSelectedBond("");
@@ -559,6 +606,7 @@ export default function Invest() {
       }
       if (data.updatedGameState) setGameState(data.updatedGameState);
       else if (data.gameState) setGameState(data.gameState);
+      
       setActiveStockInput(null);
     } catch (error) {
       console.error("Stock transaction error:", error);
@@ -595,6 +643,7 @@ export default function Invest() {
       }
       if (data.updatedGameState) setGameState(data.updatedGameState);
       else if (data.gameState) setGameState(data.gameState);
+      
       setActiveCurrencyInput(null);
     } catch (error) {
       console.error("Currency transaction error:", error);
@@ -1481,7 +1530,7 @@ export default function Invest() {
                       await applyEventEffect({ amount: eventData.amount });
                       setShowEventModal(false);
                     }}
-                    className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-red-700 bg-red-400 px-4 font-poiret font-bold text-xl tracking-wide text-red-100 transition-all duration-150 [box-shadow:0px_6px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#550000] active:translate-y-[4px] active:shadow-none"
+                    className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-red-700 bg-red-400 px-4 font-poiret font-bold text-xl tracking-wide text-red-100 transition-all duration-150 [box-shadow:0px_4px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#550000] active:translate-y-[4px] active:shadow-none"
                   >
                     Pay with Pocket Cash (
                     {Math.abs(eventData.amount).toLocaleString()}$)
