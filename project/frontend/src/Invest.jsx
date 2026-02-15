@@ -296,13 +296,35 @@ export default function Invest() {
   useEffect(() => {
     const initGame = async () => {
       try {
+        const token = localStorage.getItem("token");
         const response = await fetch(`${API_BASE_URL}/init`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}` 
+          },
         });
+        
+        if (response.status === 401) {
+            alert("Please login first");
+            navigate("/login");
+            return;
+        }
+
         const data = await response.json();
-        setSessionId(data.sessionId);
-        setGameState(data.gameState);
+        
+        if (data.sessionId) {
+            setSessionId(data.sessionId);
+            setGameState(data.gameState);
+            
+            // Resume Logic
+            if (data.gameState.currentMonth > 0) {
+                setCurrentMonth(data.gameState.currentMonth);
+                // Approx progress for visual bar if user resumes mid-year
+                setProgress((data.gameState.currentMonth / 12) * 100);
+            }
+        }
+        
         setLoading(false);
       } catch (error) {
         console.error("Failed to initialize game:", error);

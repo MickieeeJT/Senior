@@ -5,6 +5,29 @@ import db from "../config/db.js";
 const router = express.Router();
 const gameSessions = new Map();
 
+// --- HELPER: Save State to DB ---
+const saveGameToDB = (userId, sessionId, gameState) => {
+    const jsonState = JSON.stringify(gameState);
+    const sql = `
+        INSERT INTO active_sessions (user_id, session_id, game_state) 
+        VALUES (?, ?, ?) 
+        ON DUPLICATE KEY UPDATE 
+        session_id = VALUES(session_id), 
+        game_state = VALUES(game_state)
+    `;
+    db.query(sql, [userId, sessionId, jsonState], (err) => {
+        if (err) console.error("Error saving game state:", err);
+    });
+};
+
+// --- HELPER: Delete State from DB ---
+const deleteGameFromDB = (userId) => {
+    const sql = "DELETE FROM active_sessions WHERE user_id = ?";
+    db.query(sql, [userId], (err) => {
+        if (err) console.error("Error deleting game state:", err);
+    });
+};
+
 // --- HELPERS ---
 
 const roundToTwo = (num) => {
@@ -107,37 +130,92 @@ const checkAchievements = (gameState, finalValue, totalReturn, maxDD, stockValue
 
 // --- ROUTES ---
 
-router.post("/init", (req, res) => {
-  const sessionId = Date.now().toString();
-  const baseRate = 0.03 + Math.random() * 0.02;
-  const bondInterestRates = {
-    "1 year": baseRate,
-    "5 years": baseRate + 0.015 + (Math.random() * 0.01),
-    "10 years": baseRate + 0.03 + (Math.random() * 0.015),
-  };
-  const initialCapital = 4000;
-  const gameState = {
-    sessionId,
-    pocket: initialCapital,
-    totalInvested: initialCapital,
-    portfolioHistory: [initialCapital],
-    savingsBalance: 0,
-    currentYear: 1,
-    currentMonth: 0,
-    fundBalance: 0,
-    goldBalance: 0,
-    indexShares: 0,
-    goldShares: 0,
-    indexAvgPrice: 0,
-    goldAvgPrice: 0,
-    profit: { savings: 0, bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
-    holdings: { bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
-    bondInvestments: [],
-    bondInterestRates,
-    lastProcessedMonth: 0,
-  };
-  gameSessions.set(sessionId, gameState);
-  res.json({ sessionId, gameState });
+router.post("/init", authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const { forceNew, duration } = req.body;
+
+  // Default duration if not specified
+  const maxYears = duration ? parseInt(duration) : 20;
+
+  // 1. Check if user already has an active session in DB
+  const checkSql = "SELECT session_id, game_state FROM active_sessions WHERE user_id = ?";
+  db.query(checkSql, [userId], (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    // RESUME EXISTING GAME
+    if (rows.length > 0 && !forceNew) {
+      const savedSession = rows[0];
+      const savedGameState = savedSession.game_state; // MySQL driver might parse JSON automatically, if not: JSON.parse()
+
+      // Ensure it's an object (depends on mysql driver configuration)
+      const parsedState = typeof savedGameState === 'string' ? JSON.parse(savedGameState) : savedGameState;
+
+      // Load into memory map for speed during gameplay
+      gameSessions.set(savedSession.session_id, parsedState);
+
+      // We also need to add userId to the in-memory state for saving logic later if it wasn't there
+      parsedState.userId = userId;
+
+      return res.json({ 
+        success: true, 
+        message: "Game Resumed", 
+        sessionId: savedSession.session_id, 
+        gameState: parsedState 
+      });
+    }
+
+    // START NEW GAME (Delete old if exists)
+    if (rows.length > 0 && forceNew) {
+         // The REPLACE/INSERT logic later handles DB, but we clear memory just in case
+         gameSessions.delete(rows[0].session_id);
+    }
+
+    const sessionId = Date.now().toString();
+    const baseRate = 0.03 + Math.random() * 0.02;
+
+    const bondInterestRates = {
+      "1 year": baseRate,
+      "5 years": baseRate + 0.015 + (Math.random() * 0.01),
+      "10 years": baseRate + 0.03 + (Math.random() * 0.015),
+    };
+    const initialCapital = 4000;
+    
+    const gameState = {
+      userId,
+      sessionId,
+      maxYears,
+      pocket: initialCapital,
+      totalInvested: initialCapital,
+      portfolioHistory: [initialCapital],
+      savingsBalance: 0,
+      currentYear: 1,
+      currentMonth: 0,
+      fundBalance: 0,
+      goldBalance: 0,
+      indexShares: 0,
+      goldShares: 0,
+      indexAvgPrice: 0,
+      goldAvgPrice: 0,
+      profit: { savings: 0, bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
+      holdings: { bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
+      bondInvestments: [],
+      bondInterestRates,
+      lastProcessedMonth: 0,
+    };
+
+    // Save to Memory
+    gameSessions.set(sessionId, gameState);
+    
+    // Save to DB
+    if (gameState.userId) {
+        saveGameToDB(gameState.userId, sessionId, gameState);
+    }
+    
+    res.json({ sessionId, gameState, message: "New Game Started" });
+  });
 });
 
 router.get("/state/:sessionId", (req, res) => {
@@ -234,11 +312,17 @@ router.post("/transaction", (req, res) => {
   }
 
   gameSessions.set(sessionId, gameState);
-  res.json({ success: true, gameState });
+  
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
+  res.json({ success: true, updatedGameState: gameState });
 });
 
 router.post("/monthly-update", (req, res) => {
-  const { sessionId, month, indexData, goldData } = req.body;
+  const { sessionId, month, progress, indexData, goldData } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
   if (month <= gameState.lastProcessedMonth) return res.json({ success: true, message: "Already processed", gameState });
@@ -256,7 +340,20 @@ router.post("/monthly-update", (req, res) => {
   }
 
   gameState.lastProcessedMonth = month;
+  
+  // Save current progress (time)
+  if (progress !== undefined) {
+      gameState.currentProgress = progress;
+  }
+  
+  // Save to Memory
   gameSessions.set(sessionId, gameState);
+  
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
   res.json({ success: true, gameState });
 });
 
@@ -277,13 +374,38 @@ router.post("/bond-update", (req, res) => {
       inv.remaining = Math.max(0, inv.remaining - 1 / 12);
     }
 
-    // NOTE: We do NOT remove the bond here. We just let it sit at remaining = 0.
-    // The user must click "Collect" which calls /bond-sell
   });
 
-  // We are not filtering the array anymore
   gameSessions.set(sessionId, gameState);
+
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+  
   res.json({ success: true, gameState, maturedBonds });
+});
+
+// --- GOLD UPDATE: Update gold value based on market ---
+router.post("/gold-update", (req, res) => {
+  const { sessionId, goldData } = req.body;
+  const gameState = gameSessions.get(sessionId);
+  if (!gameState) return res.status(404).json({ error: "Session not found" });
+
+  if (goldData && gameState.goldShares > 0 && gameState.goldBalance > 0) {
+      // Current Value = Shares * Current Price
+      const currentValue = gameState.goldShares * goldData.close;
+      gameState.goldBalance = roundToTwo(currentValue);
+  }
+
+  gameSessions.set(sessionId, gameState);
+  
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
+  res.json({ success: true, gameState });
 });
 
 // --- UPDATED BOND SELL: Handles Early Sell (90%) AND Collect (100%) ---
@@ -316,6 +438,12 @@ router.post("/bond-sell", (req, res) => {
 
   gameState.bondInvestments.splice(bondIndex, 1);
   gameSessions.set(sessionId, gameState);
+  
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+  
   res.json({ success: true, sellAmount, gameState, message });
 });
 
@@ -341,6 +469,12 @@ router.post("/stock-buy", (req, res) => {
   holding.shares = totalShares;
 
   gameSessions.set(sessionId, gameState);
+
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -370,6 +504,12 @@ router.post("/stock-sell", (req, res) => {
   if (holding.shares <= 0) delete gameState.holdings.stocks[symbol];
 
   gameSessions.set(sessionId, gameState);
+
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -395,6 +535,12 @@ router.post("/currency-buy", (req, res) => {
   holding.units = totalUnits;
 
   gameSessions.set(sessionId, gameState);
+
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -424,6 +570,12 @@ router.post("/currency-sell", (req, res) => {
   if (holding.units <= 0) delete gameState.holdings.currencies[symbol];
 
   gameSessions.set(sessionId, gameState);
+  
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -439,12 +591,19 @@ router.post("/year-increment", (req, res) => {
 
   gameState.currentYear += 1;
   gameState.lastProcessedMonth = 0;
+  gameState.currentProgress = 0;
 
   for (const key in gameState.bondInterestRates) {
     gameState.bondInterestRates[key] = Math.max(0.005, gameState.bondInterestRates[key] * 0.95);
   }
 
   gameSessions.set(sessionId, gameState);
+  
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
   res.json({ success: true, gameState });
 });
 
@@ -458,6 +617,12 @@ router.post("/apply-event", (req, res) => {
   if (gameState.pocket < 0) gameState.pocket = 0;
 
   gameSessions.set(sessionId, gameState);
+  
+  // Save to DB
+  if (gameState.userId) {
+      saveGameToDB(gameState.userId, sessionId, gameState);
+  }
+
   return res.json({ message: "Event applied", gameState });
 });
 
@@ -604,7 +769,12 @@ router.post("/end-game", authenticateToken, (req, res) => {
         });
       }
 
+      // Clear from Memory
       gameSessions.delete(sessionId);
+      
+      // Clear from DB
+      deleteGameFromDB(userId);
+
       res.json({
         success: true,
         score: roundedScore,
@@ -625,7 +795,7 @@ router.post("/end-game", authenticateToken, (req, res) => {
 router.get("/tutorial-progress", authenticateToken, (req, res) => {
   const userId = req.user.id;
 
-  const sql = `SELECT tutorial_level FROM tutorial_progress WHERE user_id = ?`;
+  const sql = `SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = ?`;
   
   db.query(sql, [userId], (err, results) => {
     if (err) {
@@ -637,8 +807,8 @@ router.get("/tutorial-progress", authenticateToken, (req, res) => {
     }
 
     let tutorialLevel = 0;
-    if (results.length > 0) {
-      tutorialLevel = results[0].tutorial_level;
+    if (results.length > 0 && results[0].max_level !== null) {
+      tutorialLevel = results[0].max_level;
     }
 
     // Define section unlock mapping
