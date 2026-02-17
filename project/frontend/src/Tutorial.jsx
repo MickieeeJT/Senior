@@ -563,7 +563,7 @@ export default function Tutorial() {
       <div className="min-h-screen bg-[#011D10] text-white font-mono flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl font-poiret text-[#B7FD5E] mb-4">Loading Tutorial...</div>
-          <div className="text-4xl font-jersey text-[#B7FD5E] mb-4">Loading Progress...</div>
+          <div className="text-4xl font-poiret text-[#B7FD5E] mb-4">Loading Progress...</div>
           <div className="animate-spin w-12 h-12 border-4 border-[#B7FD5E] border-t-transparent rounded-full mx-auto"></div>
         </div>
       </div>
@@ -602,9 +602,9 @@ export default function Tutorial() {
         <div className="max-w-4xl mx-auto">
           {config.type === 'savings' && (
             <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">SAVINGS ACCOUNT PRACTICE</h3>
+              <h3 className="text-3xl font-poiret mb-4 text-white">SAVINGS ACCOUNT PRACTICE</h3>
               <div className="flex justify-center mb-4"><img src={saving} className="w-[120px]" /></div>
-              <p className="text-2xl font-jersey text-white mb-2">
+              <p className="text-2xl font-poiret text-white mb-2">
                 Savings Balance: {practiceData.savingsBalance?.toFixed(2)} $
               </p>
               <div className="flex justify-center items-center gap-4 mb-6">
@@ -617,15 +617,15 @@ export default function Tutorial() {
                 />
               </div>
               <div className="flex justify-center gap-6">
-                <button onClick={() => handlePracticeTransaction('deposit')} className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">DEPOSIT</button>
-                <button onClick={() => handlePracticeTransaction('withdraw')} className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">WITHDRAW</button>
+                <button onClick={() => handlePracticeTransaction('deposit')} className="bg-[#11942F] text-white text-xl font-poiret px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">DEPOSIT</button>
+                <button onClick={() => handlePracticeTransaction('withdraw')} className="bg-[#11942F] text-white text-xl font-poiret px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">WITHDRAW</button>
               </div>
             </div>
           )}
 
           {config.type === 'bonds' && (
             <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">GOVERNMENT BONDS</h3>
+              <h3 className="text-3xl font-poiret mb-4 text-white">GOVERNMENT BONDS</h3>
               <div className="flex justify-center gap-4 mb-6">
                 {Object.entries(practiceData.bondRates || {}).map(([duration, rate]) => (
                   <div
@@ -651,7 +651,7 @@ export default function Tutorial() {
                 <button
                   onClick={() => handlePracticeTransaction('buy')}
                   disabled={!selectedBond}
-                  className={`text-xl font-jersey px-8 py-3 rounded ${selectedBond ? "bg-[#11942F] text-white" : "bg-gray-600 text-gray-400"}`}
+                  className={`text-xl font-poiret px-8 py-3 rounded ${selectedBond ? "bg-[#11942F] text-white" : "bg-gray-600 text-gray-400"}`}
                 >
                   BUY BOND
                 </button>
@@ -669,37 +669,37 @@ export default function Tutorial() {
 
           {config.type === 'indexFund' && (
             <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">INDEX FUND</h3>
+              <h3 className="text-3xl font-poiret mb-4 text-white">INDEX FUND</h3>
               <div className="flex justify-center mb-4"><img src={index} className="w-[120px]" /></div>
               <div className="flex justify-center gap-8 mb-4">
-                <p className="text-xl font-jersey">Price: {practiceData.price?.toFixed(2)}</p>
-                <p className={`text-xl font-jersey ${practiceData.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
+                <p className="text-xl font-poiret">Price: {practiceData.price?.toFixed(2)}</p>
+                <p className={`text-xl font-poiret ${practiceData.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {practiceData.priceChange >= 0 ? "▲" : "▼"} {Math.abs(practiceData.priceChange || 0)}%
                 </p>
               </div>
-              <p className="text-lg font-jersey text-[#B7FD5E] mb-6">Shares: {practiceData.shares?.toFixed(4) || 0}</p>
+              <p className="text-lg font-poiret text-[#B7FD5E] mb-6">Shares: {practiceData.shares?.toFixed(4) || 0}</p>
               <div className="flex justify-center gap-6">
-                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-jersey" placeholder="Amount" />
-                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">BUY</button>
-                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">SELL</button>
+                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-poiret" placeholder="Amount" />
+                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">BUY</button>
+                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">SELL</button>
               </div>
             </div>
           )}
 
           {(config.type === 'stocks' || config.type === 'currency') && (
              <div className="border-4 border-[#11942F] p-8 text-center">
-               <h3 className="text-3xl font-jersey mb-4 text-white uppercase">{config.type} PRACTICE</h3>
+               <h3 className="text-3xl font-poiret mb-4 text-white uppercase">{config.type} PRACTICE</h3>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {(config.mockStocks || config.currencies).map((item) => (
                    <div key={item.symbol} className="border border-white p-4 rounded">
-                     <h4 className="text-2xl font-jersey text-white">{item.symbol}</h4>
+                     <h4 className="text-2xl font-poiret text-white">{item.symbol}</h4>
                      <div className="flex justify-between mb-2">
                         <span className="text-white">${item.price.toFixed(2)}</span>
                         <span className={item.change >= 0 ? "text-green-400" : "text-red-400"}>{item.change}%</span>
                      </div>
                      <p className="text-[#B7FD5E] mb-4">Owned: {config.type === 'stocks' ? practiceData.stocks?.[item.symbol]?.shares : practiceData.currencies?.[item.symbol]?.units} {config.type === 'stocks' ? 'shares' : 'units'}</p>
                      <div className="flex items-center gap-2 mb-4 justify-center">
-                       <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="w-20 px-2 text-black font-jersey" placeholder="Qty" />
+                       <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="w-20 px-2 text-black font-poiret" placeholder="Qty" />
                      </div>
                      <div className="flex justify-center gap-4">
                        <button onClick={() => config.type === 'stocks' ? handleStockTransaction(item.symbol, 'buy', item.price) : handleCurrencyTransaction(item.symbol, 'buy', item.price)} className="bg-[#11942F] px-4 py-1 rounded">BUY</button>
@@ -713,13 +713,13 @@ export default function Tutorial() {
           
           {config.type === 'gold' && (
             <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-jersey mb-4 text-white">GOLD</h3>
+              <h3 className="text-3xl font-poiret mb-4 text-white">GOLD</h3>
               <div className="flex justify-center mb-4"><img src={gold} className="w-[120px]" /></div>
-              <p className="text-2xl font-jersey text-white mb-6">Gold Balance: {practiceData.goldBalance?.toFixed(2)} $</p>
+              <p className="text-2xl font-poiret text-white mb-6">Gold Balance: {practiceData.goldBalance?.toFixed(2)} $</p>
               <div className="flex justify-center gap-6">
-                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-jersey" placeholder="Amount" />
-                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">BUY</button>
-                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-jersey rounded">SELL</button>
+                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-poiret" placeholder="Amount" />
+                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">BUY</button>
+                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">SELL</button>
               </div>
             </div>
           )}
@@ -741,9 +741,9 @@ export default function Tutorial() {
   return (
     <div className="min-h-screen bg-[#011D10] text-white font-mono p-6">
       <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-8">
-        <h1 className="text-5xl font-jersey text-[#B7FD5E] mx-8">INVESTMENT TUTORIAL</h1>
-        <nav className="flex gap-10 text-3xl font-jersey mr-3">
-          <button onClick={() => navigate("/")} className="text-[#B7FD5E] hover:text-white transition">Home</button>
+        <h1 className="text-5xl font-poiret text-[#B7FD5E] mx-8">INVESTMENT TUTORIAL</h1>
+        <nav className="flex gap-10 text-3xl font-poiret mr-3">
+          <button onClick={() => navigate("/home")} className="text-[#B7FD5E] hover:text-white transition">Home</button>
           {allTutorialsCompleted && (
             <button onClick={handleStartGame} className="text-[#B7FD5E] hover:text-white transition bg-[#11942F] px-4 py-2 rounded">Start Game</button>
           )}
@@ -751,7 +751,7 @@ export default function Tutorial() {
       </header>
 
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-jersey text-white mb-4">
+        <h2 className="text-3xl font-poiret text-white mb-4">
           Progress: {completedTutorials.size} / {TUTORIAL_ORDER.length} Completed
         </h2>
         <div className="flex justify-center gap-2">
@@ -786,16 +786,16 @@ export default function Tutorial() {
                   </div>
                 )}
 
-                <h3 className="text-2xl font-jersey mb-4 text-[#B7FD5E]">{data.title}</h3>
+                <h3 className="text-2xl font-poiret mb-4 text-[#B7FD5E]">{data.title}</h3>
                 {data.icon && <div className="flex justify-center mb-4"><img src={data.icon} alt={data.title} className="w-20 h-20" /></div>}
-                <p className="text-lg font-jersey text-white mb-4">{data.description}</p>
+                <p className="text-lg font-poiret text-white mb-4">{data.description}</p>
 
                 {isCompleted ? (
-                  <div className="bg-[#11942F] text-[#B7FD5E] px-4 py-2 rounded font-jersey">COMPLETED</div>
+                  <div className="bg-[#11942F] text-[#B7FD5E] px-4 py-2 rounded font-poiret">COMPLETED</div>
                 ) : isAvailable ? (
-                  <div className="bg-[#11942F] text-white px-4 py-2 rounded font-jersey hover:bg-[#B7FD5E] hover:text-black">START TUTORIAL</div>
+                  <div className="bg-[#11942F] text-white px-4 py-2 rounded font-poiret hover:bg-[#B7FD5E] hover:text-black">START TUTORIAL</div>
                 ) : (
-                  <div className="bg-gray-600 text-gray-400 px-4 py-2 rounded font-jersey">LOCKED</div>
+                  <div className="bg-gray-600 text-gray-400 px-4 py-2 rounded font-poiret">LOCKED</div>
                 )}
               </div>
             );
@@ -808,11 +808,11 @@ export default function Tutorial() {
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
           <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 max-w-2xl mx-4">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-4xl font-jersey text-[#B7FD5E]">{TUTORIAL_DATA[activeTutorial].title}</h2>
+              <h2 className="text-4xl font-poiret text-[#B7FD5E]">{TUTORIAL_DATA[activeTutorial].title}</h2>
               <button onClick={handleCloseTutorial} className="text-white text-2xl">✕</button>
             </div>
             <div className="mb-8 min-h-[100px]">
-              <p className="text-xl font-jersey text-white leading-relaxed">{TUTORIAL_DATA[activeTutorial].content[currentStep]}</p>
+              <p className="text-xl font-poiret text-white leading-relaxed">{TUTORIAL_DATA[activeTutorial].content[currentStep]}</p>
             </div>
             <div className="flex justify-center gap-2 mb-6">
               {TUTORIAL_DATA[activeTutorial].content.map((_, index) => (
@@ -820,8 +820,8 @@ export default function Tutorial() {
               ))}
             </div>
             <div className="flex justify-between">
-              <button onClick={handlePrevious} disabled={currentStep === 0} className={`text-xl font-jersey px-6 py-2 rounded ${currentStep === 0 ? "text-gray-500" : "text-white"}`}>← Previous</button>
-              <button onClick={handleNext} className="bg-[#11942F] text-white text-xl font-jersey px-6 py-2 rounded hover:bg-[#B7FD5E] hover:text-black">
+              <button onClick={handlePrevious} disabled={currentStep === 0} className={`text-xl font-poiret px-6 py-2 rounded ${currentStep === 0 ? "text-gray-500" : "text-white"}`}>← Previous</button>
+              <button onClick={handleNext} className="bg-[#11942F] text-white text-xl font-poiret px-6 py-2 rounded hover:bg-[#B7FD5E] hover:text-black">
                 {currentStep === TUTORIAL_DATA[activeTutorial].content.length - 1 ? "Practice mode" : "Next →"}
               </button>
             </div>
