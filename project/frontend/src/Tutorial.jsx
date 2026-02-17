@@ -562,6 +562,7 @@ export default function Tutorial() {
     return (
       <div className="min-h-screen bg-[#011D10] text-white font-mono flex items-center justify-center">
         <div className="text-center">
+          <div className="text-4xl font-poiret text-[#B7FD5E] mb-4">Loading Tutorial...</div>
           <div className="text-4xl font-jersey text-[#B7FD5E] mb-4">Loading Progress...</div>
           <div className="animate-spin w-12 h-12 border-4 border-[#B7FD5E] border-t-transparent rounded-full mx-auto"></div>
         </div>
@@ -576,21 +577,24 @@ export default function Tutorial() {
     return (
       <div className="min-h-screen bg-[#011D10] text-white font-mono p-6">
         <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-8">
-          <h1 className="text-5xl font-jersey text-[#B7FD5E] mx-8">
+          <h1 className="text-5xl font-poiret text-[#B7FD5E] mx-8">
             PRACTICE: {TUTORIAL_DATA[activeTutorial].title}
           </h1>
-          <nav className="flex gap-10 text-3xl font-jersey mr-3">
-            <button onClick={handleCloseTutorial} className="text-[#B7FD5E] hover:text-white transition">
+          <nav className="flex gap-10 text-3xl font-poiret mr-3">
+            <button
+              onClick={handleCloseTutorial}
+              className="text-[#B7FD5E] hover:text-white transition"
+            >
               Back to Tutorials
             </button>
           </nav>
         </header>
 
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-jersey text-white mb-4">
+          <h2 className="text-3xl font-poiret text-white mb-4">
             Practice Mode - Try the buttons and see how it works!
           </h2>
-          <p className="text-2xl font-jersey text-[#B7FD5E]">
+          <p className="text-2xl font-poiret text-[#B7FD5E]">
             Pocket Money: {practiceData.pocket?.toFixed(2)} $
           </p>
         </div>
@@ -609,7 +613,7 @@ export default function Tutorial() {
                   placeholder="Enter amount"
                   value={practiceAmount}
                   onChange={(e) => setPracticeAmount(e.target.value)}
-                  className="px-4 py-2 rounded border text-black text-xl font-jersey w-48"
+                  className="px-4 py-2 rounded border text-black text-xl font-poiret w-48"
                 />
               </div>
               <div className="flex justify-center gap-6">
@@ -631,7 +635,7 @@ export default function Tutorial() {
                       selectedBond === duration ? "border-[#B7FD5E] bg-[#B7FD5E] text-black" : "border-white text-white"
                     }`}
                   >
-                    <div className="text-lg font-jersey">{duration}</div>
+                    <div className="text-lg font-poiret">{duration}</div>
                     <div className="text-sm">{(rate * 100).toFixed(1)}%</div>
                   </div>
                 ))}
@@ -642,7 +646,7 @@ export default function Tutorial() {
                   placeholder="Enter amount"
                   value={practiceAmount}
                   onChange={(e) => setPracticeAmount(e.target.value)}
-                  className="px-4 py-2 rounded border text-black text-xl font-jersey w-48"
+                  className="px-4 py-2 rounded border text-black text-xl font-poiret w-48"
                 />
                 <button
                   onClick={() => handlePracticeTransaction('buy')}
@@ -655,7 +659,7 @@ export default function Tutorial() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(practiceData.bondInvestments || []).map((bond) => (
                   <div key={bond.id} className="border border-white p-4 rounded">
-                    <div className="text-lg font-jersey text-white">{bond.duration}</div>
+                    <div className="text-lg font-poiret text-white">{bond.duration}</div>
                     <div className="text-sm text-[#B7FD5E]">${bond.amount.toFixed(2)}</div>
                   </div>
                 ))}
@@ -724,7 +728,7 @@ export default function Tutorial() {
         <div className="mt-8 text-center">
           <button
             onClick={handleCompleteTutorial}
-            className="bg-[#11942F] text-white text-xl font-jersey px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
+            className="bg-[#11942F] text-white text-xl font-poiret px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
           >
             Complete Tutorial
           </button>
