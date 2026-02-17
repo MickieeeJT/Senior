@@ -130,6 +130,55 @@ const checkAchievements = (gameState, finalValue, totalReturn, maxDD, stockValue
 
 // --- ROUTES ---
 
+
+router.get("/check-session", authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const sql = "SELECT session_id, game_state FROM active_sessions WHERE user_id = ?";
+  db.query(sql, [userId], (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (rows.length > 0) {
+      const savedSession = rows[0];
+      let parsedState;
+      try {
+        parsedState = typeof savedSession.game_state === 'string'
+          ? JSON.parse(savedSession.game_state)
+          : savedSession.game_state;
+      } catch (e) {
+        console.error("Error parsing game state:", e);
+        return res.json({ hasSession: false });
+      }
+
+      // Calculate total assets for preview
+      let totalAssets = (parsedState.pocket || 0) +
+        (parsedState.savingsBalance || 0) +
+        (parsedState.fundBalance || 0) +
+        (parsedState.goldBalance || 0) +
+        (parsedState.holdings?.bonds || 0);
+
+      // Add stocks value estimation if possible, simplified for preview
+      // We might skip complex calculation as we don't have current market data easily here without fetching it
+      // So just showing liquid assets + purchase value might be safer or just what we have
+
+      return res.json({
+        hasSession: true,
+        sessionId: savedSession.session_id,
+        preview: {
+          currentYear: parsedState.currentYear,
+          currentMonth: parsedState.currentMonth,
+          pocket: parsedState.pocket,
+          totalAssets: totalAssets
+        }
+      });
+    }
+
+    res.json({ hasSession: false });
+  });
+});
+
 router.post("/init", authenticateToken, (req, res) => {
   const userId = req.user.id;
   const { forceNew, duration } = req.body;

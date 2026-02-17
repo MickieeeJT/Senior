@@ -86,6 +86,8 @@ export default function Invest() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [debtAmount, setDebtAmount] = useState(0);
   const [inDebtMode, setInDebtMode] = useState(false);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [resumeSessionData, setResumeSessionData] = useState(null);
   const randomEvents = randomEvent;
   const timerRef = useRef(null);
   const processingRef = useRef(null);
@@ -293,52 +295,80 @@ export default function Invest() {
     setSelectedCurrency(randomCurrency);
   }, []);
 
+  const initGame = async (forceNew = false) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/init`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify({ forceNew })
+      });
+      
+      if (response.status === 401) {
+          alert("Please login first");
+          navigate("/login");
+          return;
+      }
+
+      const data = await response.json();
+      
+      if (data.sessionId) {
+          setSessionId(data.sessionId);
+          setGameState(data.gameState);
+          
+          // Resume Logic: Restore Month and Progress
+          if (data.gameState.currentMonth > 1) {
+              const restoredProgress = data.gameState.currentProgress || ((data.gameState.currentMonth - 1) / 12) * 100 + 0.1;
+
+              setCurrentMonth(data.gameState.currentMonth);
+              setProgress(restoredProgress);
+          } else {
+              // New year or new game start
+              setCurrentMonth(1);
+              setProgress(0);
+          }
+      }
+      
+      setLoading(false);
+      setShowResumeModal(false);
+    } catch (error) {
+      console.error("Failed to initialize game:", error);
+      alert("Failed to start game");
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const initGame = async () => {
+    const checkSession = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`${API_BASE_URL}/init`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}` 
-          },
+        if (!token) {
+           navigate("/login");
+           return;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/check-session`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
+        const data = await res.json();
         
-        if (response.status === 401) {
-            alert("Please login first");
-            navigate("/login");
-            return;
+        if (data.hasSession) {
+          setResumeSessionData(data);
+          setShowResumeModal(true);
+          setLoading(false); 
+        } else {
+          initGame(false);
         }
-
-        const data = await response.json();
-        
-        if (data.sessionId) {
-            setSessionId(data.sessionId);
-            setGameState(data.gameState);
-            
-            // Resume Logic: Restore Month and Progress
-            if (data.gameState.currentMonth > 1) {
-                // Ensure we use the exact progress from DB if available, otherwise estimate from month
-                // Adding a small buffer (0.1) prevents immediate month regression on start
-                const restoredProgress = data.gameState.currentProgress || ((data.gameState.currentMonth - 1) / 12) * 100 + 0.1;
-
-                setCurrentMonth(data.gameState.currentMonth);
-                setProgress(restoredProgress);
-            } else {
-                // New year or new game start
-                setCurrentMonth(1);
-                setProgress(0);
-            }
-        }
-        
-        setLoading(false);
-      } catch (error) {
-        console.error("Failed to initialize game:", error);
-        alert("Failed to start game");
+      } catch (err) {
+        console.error("Session check failed", err);
+        initGame(false);
       }
     };
-    initGame();
+    checkSession();
   }, []);
 
   // --- MAIN GAME TIMER ---
@@ -679,6 +709,56 @@ export default function Invest() {
   const handleExitConfirm = () => {
     navigate("/home");
   };
+
+  if (showResumeModal && resumeSessionData && resumeSessionData.preview) {
+      const { currentYear, currentMonth, pocket, totalAssets } = resumeSessionData.preview;
+      
+      const modalButtonStyle = "group relative inline-flex h-12 w-64 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none mb-3";
+
+      return (
+        <div className="h-screen w-screen bg-[#011D10] flex items-center justify-center font-poiret">
+          <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-10 text-center max-w-xl w-full shadow-[0_0_50px_rgba(0,255,0,0.2)]">
+            <h2 className="text-4xl font-bold text-[#B7FD5E] mb-8 tracking-widest uppercase">Resume Game?</h2>
+            
+            <div className="bg-[#022c19] border-2 border-[#11942F] p-6 rounded mb-8 text-left space-y-3">
+                <div className="flex justify-between items-center border-b border-[#11942F] pb-2">
+                    <span className="text-white text-xl">Year / Month</span>
+                    <span className="text-[#B7FD5E] font-bold text-2xl">{currentYear} / {Math.floor(currentMonth)}</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-[#11942F] py-2">
+                     <span className="text-white text-xl">Pocket Cash</span>
+                     <span className="text-[#B7FD5E] font-bold text-2xl">{pocket?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $</span>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                     <span className="text-white text-xl">Total Assets</span>
+                     <span className="text-[#B7FD5E] font-bold text-2xl">{totalAssets?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $</span>
+                </div>
+            </div>
+
+            <div className="flex flex-col items-center w-full">
+                <button 
+                    onClick={() => initGame(false)} 
+                    className={`${modalButtonStyle} bg-[#003300] hover:bg-[#004400]`}
+                >
+                    CONTINUE GAME
+                </button>
+                
+                <button 
+                    onClick={() => {
+                        if(window.confirm("Are you sure? Current progress will be lost.")) {
+                            initGame(true);
+                        }
+                    }} 
+                    className={`${modalButtonStyle} border-red-700 text-red-500 shadow-none hover:shadow-none hover:text-red-400 hover:border-red-500`}
+                    style={{boxShadow: 'none'}}
+                >
+                    START NEW GAME
+                </button>
+            </div>
+          </div>
+        </div>
+      );
+  }
 
   if (loading || !gameState) {
     return (
