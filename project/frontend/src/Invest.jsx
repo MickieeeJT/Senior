@@ -65,6 +65,7 @@ export default function Invest() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isProcessingYear, setIsProcessingYear] = useState(false);
   const [totalAssets, setTotalAssets] = useState(0);
+  const [gameSpeed, setGameSpeed] = useState(1); // Add game speed state
 
   // Asset States
   const [activeInput, setActiveInput] = useState(null);
@@ -376,9 +377,13 @@ export default function Invest() {
     if (!isRunning || !gameState || isProcessingYear) return;
     if (timerRef.current) return;
 
-    const duration = 60000;
+    // Clear any existing timer to restart with new speed
+    clearInterval(timerRef.current);
+
+    const duration = 60000; // 1 real minute per game year at 1x speed
     const steps = 100;
-    const interval = duration / steps;
+    const baseInterval = duration / steps;
+    const interval = baseInterval / gameSpeed; // Adjust interval by speed
 
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
@@ -440,10 +445,12 @@ export default function Invest() {
     }, interval);
 
     return () => {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [isRunning, sessionId, isProcessingYear, navigate, gameState]);
+  }, [isRunning, sessionId, isProcessingYear, navigate, gameState, gameSpeed]); // Add gameSpeed to dependencies
 
   // --- MONTHLY UPDATE EFFECT ---
   useEffect(() => {
@@ -861,6 +868,24 @@ export default function Invest() {
                 className="absolute top-0 h-full w-[3px] bg-[#188040]"
                 style={{ left: `${(i / 12) * 100}%` }}
               ></div>
+            ))}
+          </div>
+          
+          {/* Speed Controls */}
+          <div className="flex justify-center gap-2 mt-2">
+            {[1, 2, 3, 4].map((speed) => (
+              <button
+                key={speed}
+                onClick={() => setGameSpeed(speed)}
+                className={`
+                  w-8 h-6 flex items-center justify-center font-bold text-sm tracking-wide transition-all duration-150 rounded-sm border-2
+                  ${gameSpeed === speed 
+                    ? "bg-[#B7FD5E] text-black border-[#B7FD5E] shadow-[0_0_8px_#B7FD5E]" 
+                    : "bg-transparent text-[#33ff33] border-[#11942F] hover:bg-[#003300]"}
+                `}
+              >
+                {speed}x
+              </button>
             ))}
           </div>
         </div>
