@@ -8,6 +8,7 @@ import Tutorial from "./Tutorial.jsx";
 import Invest from "./Invest.jsx";
 // import Dashboard from "./Dashboard.jsx";
 import Dashboard from "./DashboardTemp.jsx";
+import SelectStrategy from "./SelectStrategy.jsx";
 
 
 export default function App() {
@@ -58,6 +59,14 @@ export default function App() {
             <Invest />
           </PrivateRoute>
         }
+      />
+      <Route 
+        path="/select-strategy" 
+        element={
+          <PrivateRoute>
+            <SelectStrategy />
+          </PrivateRoute>
+        } 
       />
     </Routes>
   );

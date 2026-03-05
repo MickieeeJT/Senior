@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import randomEvent from "./data/Event/event.json";
 import MiniChart from "./MiniChart";
@@ -13,6 +13,8 @@ const goldFiles = import.meta.glob("./data/Gold/*.json", { eager: true });
 const currencyFiles = import.meta.glob("./data/Currencies/*.json", {
   eager: true,
 });
+const location = useLocation();
+const { duration, targetAmount } = location.state || {};
 
 // --- HELPER FUNCTIONS ---
 const getRandomStocks = () => {
