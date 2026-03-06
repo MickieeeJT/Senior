@@ -1,52 +1,62 @@
 import { useRef, useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
-import randomEvent from "./data/Event/event.json";
 import MiniChart from "./MiniChart";
 
 const API_BASE_URL = "http://localhost:8000/api/invest";
 
-//Import all index fund data files
-const indexFiles = import.meta.glob("./data/IndexFund/*.json", { eager: true });
-const stockFiles = import.meta.glob("./data/Stocks/*.json", { eager: true });
-const goldFiles = import.meta.glob("./data/Gold/*.json", { eager: true });
-const currencyFiles = import.meta.glob("./data/Currencies/*.json", {
-  eager: true,
-});
-const location = useLocation();
-const { duration, targetAmount } = location.state || {};
+const allScenarioFiles = import.meta.glob("./data/Datas */*.json", { eager: true });
 
 // --- HELPER FUNCTIONS ---
-const getRandomStocks = () => {
-  const allStocks = Object.entries(stockFiles).map(([path, module]) => ({
-    symbol: path.split("/").pop().replace(".json", ""),
-    data: module.default || module,
-  }));
-  return allStocks.sort(() => Math.random() - 0.5).slice(0, 4);
-};
+const initializeRandomScenario = () => {
+  const scenarios = {};
 
-const getRandomIndex = () => {
-  const allIndexes = Object.entries(indexFiles).map(([path, module]) => ({
-    symbol: path.split("/").pop().replace(".json", ""),
-    data: module.default || module,
-  }));
-  return allIndexes[Math.floor(Math.random() * allIndexes.length)];
-};
+  for (const path in allScenarioFiles) {
+    const parts = path.split("/");
+    const folderName = parts[parts.length - 2];
+    const fileName = parts[parts.length - 1].replace(".json", "");
 
-const getRandomGold = () => {
-  const allGold = Object.entries(goldFiles).map(([path, module]) => ({
-    symbol: path.split("/").pop().replace(".json", ""),
-    data: module.default || module,
-  }));
-  return allGold[Math.floor(Math.random() * allGold.length)];
-};
+    if (!scenarios[folderName]) scenarios[folderName] = [];
+    scenarios[folderName].push({
+      name: fileName,
+      data: allScenarioFiles[path].default || allScenarioFiles[path]
+    });
+  }
 
-const getRandomCurrency = () => {
-  const allCurrencies = Object.entries(currencyFiles).map(([path, module]) => ({
-    symbol: path.split("/").pop().replace(".json", ""),
-    data: module.default || module,
-  }));
-  return allCurrencies.sort(() => Math.random() - 0.5).slice(0, 3);
+  const folderNames = Object.keys(scenarios);
+  if (folderNames.length === 0) {
+    console.error("No scenario folders found!");
+    return null;
+  }
+
+  const selectedFolder = folderNames[Math.floor(Math.random() * folderNames.length)];
+  const selectedFiles = scenarios[selectedFolder];
+
+  let stocks = [];
+  let currencies = [];
+  let index = null;
+  let gold = null;
+  let events = [];
+
+  selectedFiles.forEach(file => {
+    const upperName = file.name.toUpperCase();
+
+    if (upperName.includes("EVENT_CARD")) {
+      events = file.data;
+    } else if (upperName.includes("_THB") || ["USD", "EUR", "JPY"].includes(upperName)) {
+      currencies.push({ symbol: file.name, data: file.data });
+    } else if (upperName.includes("SET") || upperName.includes("INDEX")) {
+      index = { symbol: file.name, data: file.data };
+    } else if (upperName.includes("GLD") || upperName.includes("GOLD")) {
+      gold = { symbol: file.name, data: file.data };
+    } else if (upperName.includes("BOND") || upperName.includes(" Y")) {
+      // Skip bond
+    } else {
+      stocks.push({ symbol: file.name, data: file.data });
+    }
+  });
+
+  return { stocks, currencies, index, gold, events };
 };
 
 export default function Invest() {
@@ -67,7 +77,7 @@ export default function Invest() {
   const [showExitModal, setShowExitModal] = useState(false);
   const [isProcessingYear, setIsProcessingYear] = useState(false);
   const [totalAssets, setTotalAssets] = useState(0);
-  const [gameSpeed, setGameSpeed] = useState(1); // Add game speed state
+  const [gameSpeed, setGameSpeed] = useState(1);
 
   // Asset States
   const [activeInput, setActiveInput] = useState(null);
@@ -85,13 +95,14 @@ export default function Invest() {
   const [activeCurrencyInput, setActiveCurrencyInput] = useState(null);
 
   // Event & Timer
+  const [scenarioEvents, setScenarioEvents] = useState([]);
   const [eventData, setEventData] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [debtAmount, setDebtAmount] = useState(0);
   const [inDebtMode, setInDebtMode] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [resumeSessionData, setResumeSessionData] = useState(null);
-  const randomEvents = randomEvent;
+  
   const timerRef = useRef(null);
   const processingRef = useRef(null);
 
@@ -133,8 +144,6 @@ export default function Invest() {
           setUnlockedSections(data.unlockedSections);
         }
       } catch (error) {
-        console.error("Failed to fetch tutorial progress:", error);
-        // Default to no unlocks on error
         setTutorialLevel(0);
         setUnlockedSections([]);
       }
@@ -151,9 +160,7 @@ export default function Invest() {
   // Calculate Total Assets for UI
   useEffect(() => {
     if (!gameState) return;
-    const displayTotalMonths =
-      (gameState.currentYear - 1) * 12 +
-      Math.max(0, Math.floor(currentMonth) - 1);
+    const currentDataIndex = (gameState.currentYear - 1) * 52 + Math.min(51, Math.floor((progress / 100) * 52));
     let total =
       gameState.pocket +
       gameState.savingsBalance +
@@ -165,8 +172,8 @@ export default function Invest() {
       selectedStocks.forEach((stock) => {
         const holding = gameState.holdings.stocks[stock.symbol];
         if (holding && holding.shares > 0) {
-          const monthIndex = displayTotalMonths % stock.data.length;
-          total += holding.shares * stock.data[monthIndex].close;
+          const weekIndex = currentDataIndex % stock.data.length;
+          total += holding.shares * stock.data[weekIndex].close;
         }
       });
     }
@@ -174,23 +181,45 @@ export default function Invest() {
       selectedCurrency.forEach((curr) => {
         const holding = gameState.holdings.currencies[curr.symbol];
         if (holding && holding.units > 0) {
-          const monthIndex = displayTotalMonths % curr.data.length;
-          total += holding.units * curr.data[monthIndex].close;
+          const weekIndex = currentDataIndex % curr.data.length;
+          total += holding.units * curr.data[weekIndex].close;
         }
       });
     }
     setTotalAssets(total);
-  }, [gameState, currentMonth, selectedStocks, selectedCurrency]);
+  }, [gameState, progress, currentMonth, selectedStocks, selectedCurrency]);
 
   function getRandomEvent() {
-    return randomEvents[Math.floor(Math.random() * randomEvents.length)];
+    if (!scenarioEvents || scenarioEvents.length === 0) return null;
+    const rawEvent = scenarioEvents[Math.floor(Math.random() * scenarioEvents.length)];
+    
+    let calculatedAmount = 0;
+    let eventTitle = "Market Event";
+
+    if (rawEvent.type === "MAJOR_BOOM") {
+      calculatedAmount = rawEvent.severity * 1500;
+      eventTitle = "Economic Boom!";
+    } else if (rawEvent.type === "MAJOR_CRISIS") {
+      calculatedAmount = rawEvent.severity * -1000;
+      eventTitle = "Market Crisis!";
+    } else {
+      const isPositive = Math.random() > 0.5;
+      calculatedAmount = rawEvent.severity * (isPositive ? 500 : -500);
+      eventTitle = "Industry News";
+    }
+
+    return {
+      title: eventTitle,
+      message: rawEvent.title || "Unexpected market shift detected.", 
+      amount: calculatedAmount,
+      source: rawEvent.source
+    };
   }
 
   const calculateCurrentNetWorth = () => {
     const gs = gameStateRef.current;
     if (!gs) return 0;
-    const displayTotalMonths =
-      (gs.currentYear - 1) * 12 + Math.floor(currentMonthRef.current) - 1;
+    const currentDataIndex = (gs.currentYear - 1) * 52 + 51;
     let total =
       gs.pocket +
       gs.savingsBalance +
@@ -202,8 +231,8 @@ export default function Invest() {
       stocksRef.current.forEach((stock) => {
         const holding = gs.holdings.stocks[stock.symbol];
         if (holding && holding.shares > 0) {
-          const monthIndex = displayTotalMonths % stock.data.length;
-          total += holding.shares * stock.data[monthIndex].close;
+          const weekIndex = currentDataIndex % stock.data.length;
+          total += holding.shares * stock.data[weekIndex].close;
         }
       });
     }
@@ -211,8 +240,8 @@ export default function Invest() {
       currencyRef.current.forEach((curr) => {
         const holding = gs.holdings.currencies[curr.symbol];
         if (holding && holding.units > 0) {
-          const monthIndex = displayTotalMonths % curr.data.length;
-          total += holding.units * curr.data[monthIndex].close;
+          const weekIndex = currentDataIndex % curr.data.length;
+          total += holding.units * curr.data[weekIndex].close;
         }
       });
     }
@@ -224,27 +253,28 @@ export default function Invest() {
     if (!gs) return null;
 
     const finalStockPrices = {};
-    const totalMonthsPassed = Math.max(
+    const totalDataPassed = Math.max(
       0,
-      (gs.currentYear - 1) * 12 + Math.floor(currentMonthRef.current) - 1
+      (gs.currentYear - 1) * 52 + 51
     );
 
     stocksRef.current.forEach((stock) => {
-      const monthIndex = totalMonthsPassed % stock.data.length;
-      finalStockPrices[stock.symbol] = stock.data[monthIndex].close;
+      const weekIndex = totalDataPassed % stock.data.length;
+      finalStockPrices[stock.symbol] = stock.data[weekIndex].close;
     });
 
     const finalCurrencyPrices = {};
     currencyRef.current.forEach((curr) => {
-      const monthIndex = totalMonthsPassed % curr.data.length;
-      finalCurrencyPrices[curr.symbol] = curr.data[monthIndex].close;
+      const weekIndex = totalDataPassed % curr.data.length;
+      finalCurrencyPrices[curr.symbol] = curr.data[weekIndex].close;
     });
 
     const botIndexHistory = [];
     const idx = selectedIndexRef.current;
     if (idx && idx.data) {
       for (let m = 0; m <= 240; m += 6) {
-        const dataIndex = m % idx.data.length;
+        const weekIndex = Math.floor(m * (52 / 12));
+        const dataIndex = weekIndex % idx.data.length;
         botIndexHistory.push(idx.data[dataIndex].close);
       }
     }
@@ -276,26 +306,25 @@ export default function Invest() {
           newAchievements: data.newAchievements,
         };
       } else {
-        alert("Failed to save score.");
         return null;
       }
     } catch (error) {
-      console.error("Error:", error);
       return null;
     }
   };
 
   useEffect(() => {
-    const randomStocks = getRandomStocks();
-    const randomIndex = getRandomIndex();
-    const randomGold = getRandomGold();
-    const randomCurrency = getRandomCurrency();
-    setSelectedStocks(randomStocks);
-    setSelectedIndex(randomIndex);
-    setIndexValue(randomIndex.data[0].close);
-    setSelectedGold(randomGold);
-    setGoldValue(randomGold.data[0].close);
-    setSelectedCurrency(randomCurrency);
+    const scenarioData = initializeRandomScenario();
+    if (scenarioData) {
+      const { stocks, currencies, index, gold, events } = scenarioData;
+      setSelectedStocks(stocks);
+      setSelectedIndex(index);
+      if (index && index.data.length > 0) setIndexValue(index.data[0].close);
+      setSelectedGold(gold);
+      if (gold && gold.data.length > 0) setGoldValue(gold.data[0].close);
+      setSelectedCurrency(currencies);
+      setScenarioEvents(events);
+    }
   }, []);
 
   const initGame = async (forceNew = false) => {
@@ -312,7 +341,6 @@ export default function Invest() {
       });
       
       if (response.status === 401) {
-          alert("Please login first");
           navigate("/login");
           return;
       }
@@ -323,14 +351,12 @@ export default function Invest() {
           setSessionId(data.sessionId);
           setGameState(data.gameState);
           
-          // Resume Logic: Restore Month and Progress
           if (data.gameState.currentMonth > 1) {
               const restoredProgress = data.gameState.currentProgress || ((data.gameState.currentMonth - 1) / 12) * 100 + 0.1;
 
               setCurrentMonth(data.gameState.currentMonth);
               setProgress(restoredProgress);
           } else {
-              // New year or new game start
               setCurrentMonth(1);
               setProgress(0);
           }
@@ -339,8 +365,6 @@ export default function Invest() {
       setLoading(false);
       setShowResumeModal(false);
     } catch (error) {
-      console.error("Failed to initialize game:", error);
-      alert("Failed to start game");
       setLoading(false);
     }
   };
@@ -367,7 +391,6 @@ export default function Invest() {
           initGame(false);
         }
       } catch (err) {
-        console.error("Session check failed", err);
         initGame(false);
       }
     };
@@ -379,13 +402,12 @@ export default function Invest() {
     if (!isRunning || !gameState || isProcessingYear) return;
     if (timerRef.current) return;
 
-    // Clear any existing timer to restart with new speed
     clearInterval(timerRef.current);
 
-    const duration = 60000; // 1 real minute per game year at 1x speed
+    const duration = 60000;
     const steps = 100;
     const baseInterval = duration / steps;
-    const interval = baseInterval / gameSpeed; // Adjust interval by speed
+    const interval = baseInterval / gameSpeed;
 
     timerRef.current = setInterval(() => {
       setProgress((prev) => {
@@ -423,26 +445,18 @@ export default function Invest() {
               }
             })
             .catch((error) => {
-              console.error("Year increment failed:", error);
               setIsProcessingYear(false);
             });
           return 100;
         }
         
-        // --- CHANGED LOGIC START ---
-        // Increment progress
-        const newProgress = prev + (100 / steps); // Ensure increment matches total duration steps
+        const newProgress = prev + (100 / steps);
         
-        // Calculate month based on 0-100 scale:
-        // 0-8.33 -> Month 1
-        // 8.33-16.66 -> Month 2
-        // ...
         const rawMonth = (newProgress / 100) * 12;
         const newMonth = Math.floor(rawMonth) + 1;
         
-        setCurrentMonth(Math.min(12, newMonth)); // Clamp to 12
+        setCurrentMonth(Math.min(12, newMonth));
         return newProgress;
-        // --- CHANGED LOGIC END ---
       });
     }, interval);
 
@@ -452,7 +466,7 @@ export default function Invest() {
         timerRef.current = null;
       }
     };
-  }, [isRunning, sessionId, isProcessingYear, navigate, gameState, gameSpeed]); // Add gameSpeed to dependencies
+  }, [isRunning, sessionId, isProcessingYear, navigate, gameState, gameSpeed]);
 
   // --- MONTHLY UPDATE EFFECT ---
   useEffect(() => {
@@ -466,16 +480,19 @@ export default function Invest() {
 
       if (Math.random() < 0.05) {
         const event = getRandomEvent();
-        setEventData(event);
-        setShowEventModal(true);
+        if (event) {
+          setEventData(event);
+          setShowEventModal(true);
+        }
       }
 
-      const totalMonths = (gameState.currentYear - 1) * 12 + (month - 1);
-      const monthIndex = totalMonths % selectedIndex.data.length;
-      const currentIndexData = selectedIndex.data[monthIndex];
+      const currentDataIndexForMonth = (gameState.currentYear - 1) * 52 + Math.floor((month - 1) * (52 / 12));
+
+      const indexMonthIndex = currentDataIndexForMonth % selectedIndex.data.length;
+      const currentIndexData = selectedIndex.data[indexMonthIndex];
       setIndexValue(currentIndexData.close);
 
-      const goldMonthIndex = totalMonths % selectedGold.data.length;
+      const goldMonthIndex = currentDataIndexForMonth % selectedGold.data.length;
       const currentGoldData = selectedGold.data[goldMonthIndex];
       setGoldValue(currentGoldData.close);
 
@@ -503,7 +520,6 @@ export default function Invest() {
         })
         .then((res) => {
           if (!res || !res.ok) {
-             console.warn("Bond update skipped or failed");
              return null;
           }
           return res.json();
@@ -518,7 +534,6 @@ export default function Invest() {
         })
         .then((res) => {
           if (!res || !res.ok) {
-             console.warn("Gold update skipped or failed");
              return null;
           }
           return res.json();
@@ -527,13 +542,10 @@ export default function Invest() {
           if (data?.gameState) setGameState(data.gameState);
         })
         .catch((error) => {
-          console.error("Monthly, bond, or gold update failed:", error);
           if (error.message.includes("Monthly update failed") && !loading) {
-              // verify if session is still valid
               fetch(`${API_BASE_URL}/state/${sessionId}`)
               .then(res => {
                   if (res.status === 404) {
-                      alert("Session expired. Please start a new game.");
                       navigate("/dashboard");
                   }
               });
@@ -563,7 +575,6 @@ export default function Invest() {
       });
       const data = await response.json();
       if (!response.ok) {
-        alert(data.error);
         return;
       }
       if (data.updatedGameState) {
@@ -575,20 +586,16 @@ export default function Invest() {
       setActiveInput(null);
       setSelectedBond("");
     } catch (error) {
-      console.error("Transaction failed:", error);
-      alert("Transaction failed");
     }
   };
 
   const handleSubmit = () => {
     const value = parseFloat(amount);
     if (isNaN(value) || value <= 0) {
-      alert("Please enter a valid amount!");
       return;
     }
     if (activeInput === "bond-select") {
       if (!selectedBond) {
-        alert("Please select a bond duration!");
         return;
       }
       handleTransaction("bond-buy", value, selectedBond);
@@ -629,7 +636,6 @@ export default function Invest() {
       amount = parseInt(amountStr);
     }
     if (amount <= 0 || isNaN(amount)) {
-      alert("Please enter a valid share amount.");
       return;
     }
     try {
@@ -640,7 +646,6 @@ export default function Invest() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Transaction failed");
         return;
       }
       if (data.updatedGameState) setGameState(data.updatedGameState);
@@ -648,8 +653,6 @@ export default function Invest() {
       
       setActiveStockInput(null);
     } catch (error) {
-      console.error("Stock transaction error:", error);
-      alert("Failed to process stock transaction.");
     }
   };
 
@@ -666,7 +669,6 @@ export default function Invest() {
       amount = parseInt(amountStr);
     }
     if (amount <= 0 || isNaN(amount)) {
-      alert("Please enter a valid currency amount.");
       return;
     }
     try {
@@ -677,7 +679,6 @@ export default function Invest() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Transaction failed");
         return;
       }
       if (data.updatedGameState) setGameState(data.updatedGameState);
@@ -685,8 +686,6 @@ export default function Invest() {
       
       setActiveCurrencyInput(null);
     } catch (error) {
-      console.error("Currency transaction error:", error);
-      alert("Failed to process currency transaction.");
     }
   };
 
@@ -700,7 +699,6 @@ export default function Invest() {
       const data = await res.json();
       if (data?.gameState) setGameState(data.gameState);
     } catch (error) {
-      console.error("Error selling bond:", error);
     }
   };
 
@@ -780,9 +778,9 @@ export default function Invest() {
   const currentIndexValue = gameState.indexShares * indexValue;
   const indexUnrealizedProfit =
     gameState.fundBalance - gameState.holdings.index;
-  const displayTotalMonths =
-    (gameState.currentYear - 1) * 12 +
-    Math.max(0, Math.floor(currentMonth) - 1);
+  const currentDataIndex =
+    (gameState.currentYear - 1) * 52 +
+    Math.min(51, Math.floor((progress / 100) * 52));
 
   const buttonStyle =
     "group relative inline-flex h-10 w-24 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-3 font-poiret font-bold text-sm tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_4px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#005500] active:translate-y-[2px] active:shadow-none";
@@ -817,13 +815,12 @@ export default function Invest() {
       onClick={handleBackgroundClick}
     >
       <div className="h-screen w-screen flex flex-col font-poiret text-[#494a48]">
-        {/* HEADER - Fixed height */}
+        {/* HEADER */}
         <header className="flex justify-between items-end border-b-4 border-[#ffffff] mb-3 px-4 pb-1">
-        {/* LEFT SIDE: Group Title and Stats together */}
         <div className="flex items-end gap-10">
           <button
             onClick={(e) => {
-              e.stopPropagation(); // Stop propagation here too
+              e.stopPropagation();
               setShowExitModal(true);
             }}
             className="text-[#B7FD5E] text-5xl hover:text-white transition font-poiret font-bold leading-none"
@@ -831,7 +828,6 @@ export default function Invest() {
             Investment Game
           </button>
 
-          {/* Stats Container */}
           <div className="flex items-end gap-6 pb-1">
             <div className="flex items-baseline pr-8">
               <h2 className="text-2xl font-poiret font-bold text-white mr-3">
@@ -852,7 +848,6 @@ export default function Invest() {
           </div>
         </div>
 
-        {/* RIGHT SIDE: Progress Bar */}
         <div className="self-center mb-1 pt-1 w-1/4">
           <p className="text-xl font-poiret font-bold text-white mb-1 text-center">
             YEAR {gameState.currentYear} OF 20
@@ -873,7 +868,6 @@ export default function Invest() {
             ))}
           </div>
           
-          {/* Speed Controls */}
           <div className="flex justify-center gap-2 mt-2">
             {[1, 2, 3, 4].map((speed) => (
               <button
@@ -893,10 +887,10 @@ export default function Invest() {
         </div>
       </header>
 
-        {/* MAIN CONTENT - Flexible height */}
+        {/* MAIN CONTENT */}
         <div className="flex-1 overflow-hidden px-4 py-2">
           <div className="h-full grid grid-cols-3 grid-rows-3 gap-2">
-            {/* ROW 1: Savings, Bonds, Index */}
+            
             {/* Savings Account */}
             <div className="col-span-1 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col justify-between h-full relative">
               {!isSectionUnlocked('savings') && <LockedOverlay sectionName="SAVING ACCOUNT" />}
@@ -1113,7 +1107,7 @@ export default function Invest() {
                       data={selectedIndex?.data || []}
                       currentIndex={
                         selectedIndex?.data
-                          ? displayTotalMonths % selectedIndex.data.length
+                          ? currentDataIndex % selectedIndex.data.length
                           : 0
                       }
                     />
@@ -1127,20 +1121,20 @@ export default function Invest() {
                   <div
                     className={`text-sm font-poiret font-bold ${
                       selectedIndex?.data[
-                        displayTotalMonths % selectedIndex.data.length
+                        currentDataIndex % (selectedIndex?.data?.length || 1)
                       ]?.change >= 0
                         ? "text-green-400"
                         : "text-red-400"
                     }`}
                   >
                     {selectedIndex?.data[
-                      displayTotalMonths % selectedIndex.data.length
+                      currentDataIndex % (selectedIndex?.data?.length || 1)
                     ]?.change >= 0
                       ? "▲"
                       : "▼"}{" "}
                     {Math.abs(
                       selectedIndex?.data[
-                        displayTotalMonths % selectedIndex.data.length
+                        currentDataIndex % (selectedIndex?.data?.length || 1)
                       ]?.change || 0
                     ).toFixed(2)}%
                   </div>
@@ -1209,8 +1203,8 @@ export default function Invest() {
               <div className="flex-1 overflow-y-auto min-h-0">
                 <div className="grid grid-cols-4 gap-2">
                   {selectedStocks.map((stock) => {
-                    const monthIndex = displayTotalMonths % stock.data.length;
-                    const currentStockData = stock.data[monthIndex];
+                    const weekIndex = currentDataIndex % stock.data.length;
+                    const currentStockData = stock.data[weekIndex];
                     const stockId = stock.symbol;
                     const holding = gameState.holdings?.stocks?.[stockId];
                     const unrealizedStockProfit = holding
@@ -1235,7 +1229,7 @@ export default function Invest() {
                                 data={stock?.data || []}
                                 currentIndex={
                                   stock?.data
-                                    ? displayTotalMonths % stock.data.length
+                                    ? currentDataIndex % stock.data.length
                                     : 0
                                 }
                               />
@@ -1355,7 +1349,7 @@ export default function Invest() {
                       data={selectedGold?.data || []}
                       currentIndex={
                         selectedGold?.data
-                          ? displayTotalMonths % selectedGold.data.length
+                          ? currentDataIndex % selectedGold.data.length
                           : 0
                       }
                     />
@@ -1369,20 +1363,20 @@ export default function Invest() {
                   <p
                     className={`text-sm font-poiret font-bold ${
                       selectedGold?.data[
-                        displayTotalMonths % selectedGold.data.length
+                        currentDataIndex % (selectedGold?.data?.length || 1)
                       ]?.change >= 0
                         ? "text-green-400"
                         : "text-red-400"
                     }`}
                   >
                     {selectedGold?.data[
-                      displayTotalMonths % selectedGold.data.length
+                      currentDataIndex % (selectedGold?.data?.length || 1)
                     ]?.change >= 0
                       ? "▲"
                       : "▼"}{" "}
                     {Math.abs(
                       selectedGold?.data[
-                        displayTotalMonths % selectedGold.data.length
+                        currentDataIndex % (selectedGold?.data?.length || 1)
                       ]?.change || 0
                     ).toFixed(2)}%
                   </p>
@@ -1447,9 +1441,8 @@ export default function Invest() {
               <div className="flex-1 overflow-y-auto min-h-0">
                 <div className="grid grid-cols-3 gap-2">
                   {selectedCurrency.map((currency) => {
-                    const monthIndex =
-                      displayTotalMonths % currency.data.length;
-                    const currentCurrencyData = currency.data[monthIndex];
+                    const weekIndex = currentDataIndex % currency.data.length;
+                    const currentCurrencyData = currency.data[weekIndex];
                     const currencyId = currency.symbol;
                     const holding =
                       gameState.holdings?.currencies?.[currencyId];
@@ -1475,7 +1468,7 @@ export default function Invest() {
                                 data={currency?.data || []}
                                 currentIndex={
                                   currency?.data
-                                    ? displayTotalMonths % currency.data.length
+                                    ? currentDataIndex % currency.data.length
                                     : 0
                                 }
                               />
