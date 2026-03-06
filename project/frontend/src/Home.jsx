@@ -46,7 +46,7 @@ export default function Home() {
     if (tutorialLevel < 1) {
       setShowModal(true);
     } else {
-      navigate("/invest");
+      navigate("/select-strategy");
     }
   };
 

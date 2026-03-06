@@ -34,11 +34,15 @@ const TUTORIAL_DATA = {
     icon: saving,
     description: "Safe Haven for Your Money",
     content: [
-      "Savings accounts offer the lowest risk investment option with guaranteed returns.",
-      "Interest Rate: Typically 1.5% monthly (18% annually) in this game.",
-      "Liquidity: You can deposit and withdraw money anytime without penalties.",
-      "Best For: Emergency funds and short-term savings goals.",
-      "Risk Level: Very Low - Your principal is always protected."
+      "Savings accounts offer the lowest risk investment option with guaranteed returns and full capital protection.",
+      "Interest Rate: Typically 1.5% monthly (18% annually) in this game, compounded automatically at the end of each month.",
+      "Capital Safety: Your principal is always protected and cannot decrease in value under normal conditions.",
+      "Liquidity: You can deposit and withdraw money anytime without penalties, making it highly flexible.",
+      "Predictability: Returns are stable and do not fluctuate with market events or economic crises.",
+      "Inflation Impact: While safe, returns may not always outpace inflation over long periods.",
+      "Best For: Emergency funds, short-term savings goals, and players who prioritize safety over growth.",
+      "Strategy Tip: Ideal for storing cash while waiting for better investment opportunities.",
+      "Risk Level: Very Low - Minimal growth but maximum stability."
     ],
     practiceConfig: {
       type: 'savings',
@@ -51,11 +55,16 @@ const TUTORIAL_DATA = {
     title: "GOVERNMENT BONDS",
     description: "Steady Returns from Government Securities",
     content: [
-      "Government bonds are loans you give to the government for fixed periods.",
-      "Duration Options: 1 year, 5 years, or 10 years with increasing interest rates.",
-      "Interest Rates: Longer duration = Higher returns (3-7% annually).",
-      "Early Withdrawal: Available but comes with a 10% penalty fee.",
-      "Risk Level: Low - Government-backed security with predictable returns."
+      "Government bonds are loans you give to the government for fixed periods in exchange for regular interest payments.",
+      "Duration Options: 1 year, 5 years, or 10 years with increasing interest rates for longer commitments.",
+      "Interest Rates: Typically range between 3–7% annually depending on duration.",
+      "Fixed Income: You receive predictable interest payments at scheduled intervals.",
+      "Capital Return: Your full principal is returned at maturity if held until the end of the term.",
+      "Early Withdrawal: Available but comes with a 10% penalty fee on earned interest.",
+      "Market Sensitivity: Bond values may fluctuate if interest rates change in the broader economy.",
+      "Stability Factor: Government-backed securities are considered one of the safest long-term investments.",
+      "Best For: Players seeking steady income with moderate growth and low uncertainty.",
+      "Risk Level: Low - Stable and predictable, but less flexible than savings accounts."
     ],
     practiceConfig: {
       type: 'bonds',
@@ -72,11 +81,16 @@ const TUTORIAL_DATA = {
     icon: index,
     description: "Diversified Market Investment",
     content: [
-      "Index funds track stock market performance automatically.",
-      "Diversification: Spreads risk across multiple companies and sectors.",
-      "Market Exposure: Returns mirror overall market performance (can be positive or negative).",
-      "Professional Management: No need to pick individual stocks.",
-      "Risk Level: Medium - Subject to market volatility but historically reliable."
+      "Index funds track overall stock market performance automatically by investing in a wide range of companies.",
+      "Diversification: Spreads risk across multiple companies and sectors to reduce individual company impact.",
+      "Market Exposure: Returns mirror overall market performance and can be positive or negative.",
+      "Historical Trend: Markets tend to grow over long periods despite short-term volatility.",
+      "Automatic Rebalancing: The fund adjusts holdings to match the underlying index.",
+      "Cost Efficiency: Typically lower fees compared to actively managed funds.",
+      "Volatility: Value may fluctuate significantly during economic booms or recessions.",
+      "Long-Term Focus: Designed for players willing to hold investments for 5+ years.",
+      "Best For: Balanced growth strategies and passive investors.",
+      "Risk Level: Medium - Subject to market swings but historically reliable over time."
     ],
     practiceConfig: {
       type: 'indexFund',
@@ -90,10 +104,16 @@ const TUTORIAL_DATA = {
     description: "High-Risk, High-Reward Investments",
     content: [
       "Individual stocks represent ownership shares in specific companies.",
-      "Price Volatility: Stock prices can fluctuate dramatically month by month.",
-      "Research Required: Success depends on company performance and market conditions.",
+      "Ownership Advantage: Shareholders may benefit from company growth and dividend payments.",
+      "Price Volatility: Stock prices can fluctuate dramatically month by month based on news and earnings reports.",
+      "Research Required: Success depends on analyzing company performance, leadership, industry trends, and financial reports.",
+      "Market Sentiment: Prices are influenced by investor confidence and global events.",
       "Share Trading: Buy/sell in quantities (1, 10, 25 shares, or MAX available).",
-      "Risk Level: High - Potential for significant gains or losses."
+      "Potential Returns: High growth stocks may generate significant gains over short periods.",
+      "Downside Risk: Poor performance or scandals can cause sharp price drops.",
+      "Portfolio Impact: Holding too much of one stock increases concentration risk.",
+      "Best For: Experienced players willing to monitor markets actively.",
+      "Risk Level: High - High reward potential but significant downside risk."
     ],
     practiceConfig: {
       type: 'stocks',
@@ -109,11 +129,16 @@ const TUTORIAL_DATA = {
     icon: gold,
     description: "Precious Metal as Inflation Hedge",
     content: [
-      "Gold is a traditional store of value during economic uncertainty.",
-      "Inflation Protection: Historically maintains purchasing power over time.",
-      "Price Measured: Traded by grams with prices fluctuating based on global demand.",
-      "Portfolio Diversification: Often moves independently from stocks and bonds.",
-      "Risk Level: Medium - Less volatile than stocks but can have periods of decline."
+      "Gold is a traditional store of value during economic uncertainty and financial instability.",
+      "Safe Haven Asset: Often increases in value during recessions or geopolitical crises.",
+      "Inflation Protection: Historically maintains purchasing power over long periods.",
+      "Price Measurement: Traded by grams with prices fluctuating based on global demand and supply.",
+      "No Passive Income: Gold does not generate interest or dividends.",
+      "Currency Hedge: Often rises when fiat currencies weaken.",
+      "Diversification Benefit: Frequently moves independently from stocks and bonds.",
+      "Market Cycles: Can experience long periods of slow growth or stagnation.",
+      "Best For: Risk hedging and portfolio balance.",
+      "Risk Level: Medium - More stable than stocks but still subject to global demand fluctuations."
     ],
     practiceConfig: {
       type: 'gold',
@@ -126,11 +151,16 @@ const TUTORIAL_DATA = {
     title: "CURRENCY EXCHANGE",
     description: "Foreign Exchange Trading",
     content: [
-      "Currency trading involves buying and selling foreign currencies (USD, EUR, JPY).",
-      "Exchange Rates: Currency values fluctuate based on economic and political factors.",
-      "Global Markets: Affected by international trade, interest rates, and geopolitical events.",
-      "Speculation: Profits come from correctly predicting currency value changes.",
-      "Risk Level: High - Currency markets are extremely volatile and unpredictable."
+      "Currency trading involves buying and selling foreign currencies (USD, EUR, JPY) in global markets.",
+      "Exchange Rates: Currency values fluctuate based on economic performance, inflation, and interest rates.",
+      "Central Bank Influence: Policy decisions can cause rapid currency appreciation or depreciation.",
+      "Global Factors: International trade, geopolitical tensions, and economic reports impact exchange rates.",
+      "Speculation Strategy: Profits come from correctly predicting short-term value changes.",
+      "Leverage Option (if enabled in game): Can amplify gains but also magnify losses.",
+      "High Liquidity: Currency markets operate 24 hours a day in real-world conditions.",
+      "Rapid Movements: Prices can change within minutes during major announcements.",
+      "Best For: Advanced players who monitor global economic trends.",
+      "Risk Level: High - Extremely volatile and unpredictable."
     ],
     practiceConfig: {
       type: 'currency',
