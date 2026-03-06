@@ -1,0 +1,378 @@
+[
+    {
+        "event_id": "EVT_MAJOR_001",
+        "type": "MAJOR_CRISIS",
+        "title": "Delta becomes country biggest listed firm",
+        "source": "News Media",
+        "url": "https://www.bangkokpost.com/business/2475139/delta-becomes-countrys-biggest-listed-firm",
+        "start_week": 368,
+        "end_week": 386,
+        "affected_assets": [
+            "EGCO",
+            "SET100",
+            "Bond 5 Y",
+            "USD_THB",
+            "JPY_THB",
+            "GLD",
+            "Bond 10 Y",
+            "AOT",
+            "Bond 1 Y",
+            "EUR_THB"
+        ],
+        "severity": 5
+    },
+    {
+        "event_id": "EVT_MAJOR_002",
+        "type": "MAJOR_CRISIS",
+        "title": "The rise of Thailand biggest company - Delta Electronics",
+        "source": "News Media",
+        "url": "https://thethaiger.com/hot-news/technology/the-rise-of-thailands-biggest-company-delta-electronics",
+        "start_week": 604,
+        "end_week": 618,
+        "affected_assets": [
+            "SET100",
+            "USD_THB",
+            "CPALL",
+            "JPY_THB",
+            "EUR_THB",
+            "Bond 1 Y",
+            "EGCO",
+            "GLD"
+        ],
+        "severity": 5
+    },
+    {
+        "event_id": "EVT_MAJOR_003",
+        "type": "MAJOR_BOOM",
+        "title": "Thai economy down in 2019",
+        "source": "News Media",
+        "url": "https://www.prensa-latina.cu/index.php?o=rn&id=331173&SEO=a-la-baja-economia-tailandesa-en-2019",
+        "start_week": 723,
+        "end_week": 739,
+        "affected_assets": [
+            "JPY_THB",
+            "EUR_THB",
+            "Bond 5 Y",
+            "USD_THB",
+            "CPALL",
+            "Bond 1 Y",
+            "GLD",
+            "AOT",
+            "SET100"
+        ],
+        "severity": 4
+    },
+    {
+        "event_id": "EVT_NORM_004",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand TICA helps nearby countries in Covid - 19 battle",
+        "source": "News Media",
+        "url": "https://www.phnompenhpost.com/international/thailands-tica-helps-nearby-countries-covid-19-battle",
+        "start_week": 880,
+        "end_week": 887,
+        "affected_assets": [
+            "EUR_THB",
+            "Bond 10 Y",
+            "SET100"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_005",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 846,
+        "end_week": 856,
+        "affected_assets": [
+            "CPALL",
+            "Bond 5 Y",
+            "Bond 1 Y"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_006",
+        "type": "INDUSTRY_NEWS",
+        "title": "Border market closed amid outbreak",
+        "source": "News Media",
+        "url": "https://www.thestar.com.my/aseanplus/aseanplus-news/2021/01/10/border-market-closed-amid-outbreak",
+        "start_week": 90,
+        "end_week": 98,
+        "affected_assets": [
+            "EGCO"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_007",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand TICA helps nearby countries in Covid - 19 battle",
+        "source": "News Media",
+        "url": "https://www.phnompenhpost.com/international/thailands-tica-helps-nearby-countries-covid-19-battle",
+        "start_week": 504,
+        "end_week": 516,
+        "affected_assets": [
+            "GLD",
+            "Bond 10 Y",
+            "USD_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_008",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand Skips Lockdown to Save Economy , But GDP to Take Hit",
+        "source": "News Media",
+        "url": "https://www.msn.com/en-us/money/markets/thailand-skips-lockdown-to-save-economy-but-gdp-to-take-hit/ar-BB1cz3qJ",
+        "start_week": 478,
+        "end_week": 488,
+        "affected_assets": [
+            "SET100"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_009",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand TICA helps nearby countries in Covid - 19 battle",
+        "source": "News Media",
+        "url": "https://www.phnompenhpost.com/international/thailands-tica-helps-nearby-countries-covid-19-battle",
+        "start_week": 221,
+        "end_week": 233,
+        "affected_assets": [
+            "EGCO"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_010",
+        "type": "INDUSTRY_NEWS",
+        "title": "Border market closed amid outbreak",
+        "source": "News Media",
+        "url": "https://www.thestar.com.my/aseanplus/aseanplus-news/2021/01/10/border-market-closed-amid-outbreak",
+        "start_week": 43,
+        "end_week": 48,
+        "affected_assets": [
+            "GLD",
+            "CPALL"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_011",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 409,
+        "end_week": 419,
+        "affected_assets": [
+            "SET100",
+            "CPALL"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_012",
+        "type": "INDUSTRY_NEWS",
+        "title": "Border market closed amid outbreak",
+        "source": "News Media",
+        "url": "https://www.thestar.com.my/aseanplus/aseanplus-news/2021/01/10/border-market-closed-amid-outbreak",
+        "start_week": 827,
+        "end_week": 839,
+        "affected_assets": [
+            "Bond 10 Y",
+            "USD_THB",
+            "AOT"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_013",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand TICA helps nearby countries in Covid - 19 battle",
+        "source": "News Media",
+        "url": "https://www.phnompenhpost.com/international/thailands-tica-helps-nearby-countries-covid-19-battle",
+        "start_week": 133,
+        "end_week": 137,
+        "affected_assets": [
+            "SET100",
+            "Bond 1 Y",
+            "GLD"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_014",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand Skips Lockdown to Save Economy , But GDP to Take Hit",
+        "source": "News Media",
+        "url": "https://www.msn.com/en-us/money/markets/thailand-skips-lockdown-to-save-economy-but-gdp-to-take-hit/ar-BB1cz3qJ",
+        "start_week": 651,
+        "end_week": 661,
+        "affected_assets": [
+            "Bond 10 Y",
+            "EUR_THB",
+            "USD_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_015",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 306,
+        "end_week": 310,
+        "affected_assets": [
+            "JPY_THB",
+            "EUR_THB",
+            "Bond 10 Y"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_016",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 81,
+        "end_week": 86,
+        "affected_assets": [
+            "EGCO"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_017",
+        "type": "INDUSTRY_NEWS",
+        "title": "Border market closed amid outbreak",
+        "source": "News Media",
+        "url": "https://www.thestar.com.my/aseanplus/aseanplus-news/2021/01/10/border-market-closed-amid-outbreak",
+        "start_week": 288,
+        "end_week": 300,
+        "affected_assets": [
+            "JPY_THB",
+            "CPALL"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_018",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 38,
+        "end_week": 48,
+        "affected_assets": [
+            "GLD",
+            "CPALL",
+            "Bond 1 Y"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_019",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand Skips Lockdown to Save Economy , But GDP to Take Hit",
+        "source": "News Media",
+        "url": "https://www.msn.com/en-us/money/markets/thailand-skips-lockdown-to-save-economy-but-gdp-to-take-hit/ar-BB1cz3qJ",
+        "start_week": 903,
+        "end_week": 915,
+        "affected_assets": [
+            "Bond 1 Y"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_020",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 734,
+        "end_week": 740,
+        "affected_assets": [
+            "GLD",
+            "EGCO"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_021",
+        "type": "INDUSTRY_NEWS",
+        "title": "Thailand Skips Lockdown to Save Economy , But GDP to Take Hit",
+        "source": "News Media",
+        "url": "https://www.msn.com/en-us/money/markets/thailand-skips-lockdown-to-save-economy-but-gdp-to-take-hit/ar-BB1cz3qJ",
+        "start_week": 978,
+        "end_week": 984,
+        "affected_assets": [
+            "Bond 1 Y",
+            "Bond 10 Y",
+            "USD_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_022",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 14,
+        "end_week": 20,
+        "affected_assets": [
+            "AOT",
+            "EGCO",
+            "Bond 10 Y"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_023",
+        "type": "INDUSTRY_NEWS",
+        "title": "Border market closed amid outbreak",
+        "source": "News Media",
+        "url": "https://www.thestar.com.my/aseanplus/aseanplus-news/2021/01/10/border-market-closed-amid-outbreak",
+        "start_week": 282,
+        "end_week": 287,
+        "affected_assets": [
+            "Bond 1 Y"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_024",
+        "type": "INDUSTRY_NEWS",
+        "title": "Border market closed amid outbreak",
+        "source": "News Media",
+        "url": "https://www.thestar.com.my/aseanplus/aseanplus-news/2021/01/10/border-market-closed-amid-outbreak",
+        "start_week": 931,
+        "end_week": 940,
+        "affected_assets": [
+            "JPY_THB",
+            "Bond 1 Y",
+            "AOT"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_025",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 843,
+        "end_week": 848,
+        "affected_assets": [
+            "SET100",
+            "AOT"
+        ],
+        "severity": 3
+    }
+]

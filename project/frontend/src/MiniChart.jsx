@@ -20,13 +20,12 @@ export default function MiniChart({ data = [], currentIndex = 0 }) {
     data.length - 1
   );
 
-  // Window size that chart show month
-  const windowSize = 24;
+  const windowSize = 52;
 
   const startIndex = Math.max(0, safeIndex - windowSize + 1);
   const slicedData = data.slice(startIndex, safeIndex + 1);
 
-  const labels = slicedData.map((d) => d.month || "");
+  const labels = slicedData.map((d) => d.week || d.month || "");
   const values = slicedData.map((d) => d.close || 0);
 
   const min = Math.min(...values);
