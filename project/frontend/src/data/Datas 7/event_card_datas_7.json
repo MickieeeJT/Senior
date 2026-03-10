@@ -1,0 +1,409 @@
+[
+    {
+        "event_id": "EVT_MAJOR_001",
+        "type": "MAJOR_CRISIS",
+        "title": "US-China Trade War Escalates, Heavily Impacting Exports",
+        "source": "Trade Monitor",
+        "url": "",
+        "start_week": 697,
+        "end_week": 710,
+        "affected_assets": [
+            "GLD",
+            "AOT",
+            "EGCO",
+            "DELTA",
+            "JPY_THB",
+            "Bond 5 Y",
+            "Bond 10 Y",
+            "SET50",
+            "USD_THB",
+            "EUR_THB",
+            "Bond 1 Y"
+        ],
+        "severity": 4
+    },
+    {
+        "event_id": "EVT_MAJOR_002",
+        "type": "MAJOR_CRISIS",
+        "title": "Global Pandemic Outbreak Forces Mass Lockdowns",
+        "source": "World Health Report",
+        "url": "",
+        "start_week": 866,
+        "end_week": 883,
+        "affected_assets": [
+            "EGCO",
+            "CPALL",
+            "Bond 10 Y",
+            "Bond 5 Y",
+            "EUR_THB",
+            "JPY_THB",
+            "AOT",
+            "Bond 1 Y",
+            "GLD"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_MAJOR_003",
+        "type": "MAJOR_CRISIS",
+        "title": "Global Pandemic Outbreak Forces Mass Lockdowns",
+        "source": "World Health Report",
+        "url": "",
+        "start_week": 925,
+        "end_week": 947,
+        "affected_assets": [
+            "EUR_THB",
+            "GLD",
+            "CPALL",
+            "Bond 5 Y",
+            "SET50",
+            "Bond 1 Y",
+            "EGCO",
+            "USD_THB",
+            "Bond 10 Y"
+        ],
+        "severity": 5
+    },
+    {
+        "event_id": "EVT_MAJOR_004",
+        "type": "MAJOR_BOOM",
+        "title": "New Year economic wishfulness",
+        "source": "News Media",
+        "url": "https://www.bangkokpost.com/opinion/opinion/1827194/new-year-economic-wishfulness",
+        "start_week": 721,
+        "end_week": 738,
+        "affected_assets": [
+            "Bond 5 Y",
+            "EGCO",
+            "GLD",
+            "DELTA",
+            "AOT",
+            "USD_THB",
+            "Bond 10 Y",
+            "EUR_THB",
+            "SET50",
+            "JPY_THB"
+        ],
+        "severity": 4
+    },
+    {
+        "event_id": "EVT_NORM_005",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 200,
+        "end_week": 211,
+        "affected_assets": [
+            "AOT",
+            "SET50",
+            "USD_THB"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_006",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 700,
+        "end_week": 704,
+        "affected_assets": [
+            "Bond 5 Y"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_007",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 50,
+        "end_week": 56,
+        "affected_assets": [
+            "JPY_THB",
+            "GLD",
+            "USD_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_008",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 89,
+        "end_week": 100,
+        "affected_assets": [
+            "Bond 10 Y",
+            "EGCO",
+            "JPY_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_009",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 787,
+        "end_week": 794,
+        "affected_assets": [
+            "CPALL"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_010",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 734,
+        "end_week": 742,
+        "affected_assets": [
+            "DELTA",
+            "CPALL"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_011",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 0,
+        "end_week": 5,
+        "affected_assets": [
+            "AOT",
+            "EGCO"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_012",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 824,
+        "end_week": 832,
+        "affected_assets": [
+            "JPY_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_013",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 979,
+        "end_week": 988,
+        "affected_assets": [
+            "JPY_THB"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_014",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 49,
+        "end_week": 57,
+        "affected_assets": [
+            "AOT",
+            "CPALL"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_015",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 555,
+        "end_week": 565,
+        "affected_assets": [
+            "JPY_THB"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_016",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 493,
+        "end_week": 498,
+        "affected_assets": [
+            "GLD",
+            "Bond 10 Y"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_017",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 371,
+        "end_week": 378,
+        "affected_assets": [
+            "CPALL",
+            "EGCO",
+            "Bond 5 Y"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_018",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 861,
+        "end_week": 873,
+        "affected_assets": [
+            "EUR_THB",
+            "USD_THB",
+            "JPY_THB"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_019",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 231,
+        "end_week": 237,
+        "affected_assets": [
+            "AOT"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_020",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 763,
+        "end_week": 775,
+        "affected_assets": [
+            "Bond 5 Y",
+            "EUR_THB",
+            "CPALL"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_021",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 243,
+        "end_week": 254,
+        "affected_assets": [
+            "AOT",
+            "GLD",
+            "DELTA"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_022",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 475,
+        "end_week": 486,
+        "affected_assets": [
+            "EUR_THB",
+            "Bond 10 Y"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_023",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 215,
+        "end_week": 227,
+        "affected_assets": [
+            "JPY_THB",
+            "Bond 10 Y"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_024",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 552,
+        "end_week": 562,
+        "affected_assets": [
+            "EUR_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_025",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 38,
+        "end_week": 45,
+        "affected_assets": [
+            "EGCO",
+            "DELTA"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_026",
+        "type": "INDUSTRY_NEWS",
+        "title": "Tech Giant Announces Expansion of Thai Data Centers",
+        "source": "Tech News Asia",
+        "url": "",
+        "start_week": 911,
+        "end_week": 917,
+        "affected_assets": [
+            "EUR_THB"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_027",
+        "type": "INDUSTRY_NEWS",
+        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
+        "source": "Ministry of Commerce",
+        "url": "",
+        "start_week": 301,
+        "end_week": 309,
+        "affected_assets": [
+            "Bond 5 Y"
+        ],
+        "severity": 1
+    }
+]
