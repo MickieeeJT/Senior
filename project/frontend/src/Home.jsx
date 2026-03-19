@@ -8,6 +8,8 @@ export default function Home() {
   const [tutorialLevel, setTutorialLevel] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [resumeSessionData, setResumeSessionData] = useState(null);
 
   // Fetch tutorial progress on mount
   useEffect(() => {
@@ -39,13 +41,34 @@ export default function Home() {
     fetchTutorialProgress();
   }, []);
 
-  const handleStartInvest = (e) => {
+  const handleStartInvest = async (e) => {
     e.preventDefault();
     
     // Check if user has completed at least tutorial level 1
     if (tutorialLevel < 1) {
       setShowModal(true);
-    } else {
+      return;
+    } 
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/select-strategy");
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/check-session`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.hasSession) {
+        setResumeSessionData(data);
+        setShowResumeModal(true); 
+      } else {
+        navigate("/select-strategy"); 
+      }
+    } catch (err) {
       navigate("/select-strategy");
     }
   };
@@ -121,11 +144,9 @@ export default function Home() {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
           <div className="relative border-4 border-[#33ff33] bg-[#001a0a] p-8 rounded-lg shadow-[0_0_30px_rgba(51,255,51,0.3)] max-w-md">
-            {/* CRT effect on modal */}
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_2px] opacity-20"></div>
             
             <div className="relative z-10">
-              {/* Warning Icon */}
               <div className="text-center mb-6">
                 <div className="text-6xl text-[#33ff33] animate-pulse mb-4">⚠️</div>
                 <h2 className="text-4xl font-jersey text-[#33ff33] tracking-wider mb-2 drop-shadow-[0_0_10px_#33ff33]">
@@ -134,7 +155,6 @@ export default function Home() {
                 <div className="h-1 w-full bg-[#33ff33] shadow-[0_0_10px_#33ff33]"></div>
               </div>
 
-              {/* Message */}
               <div className="text-center mb-8">
                 <p className="text-xl font-jersey text-[#00aa00] mb-4 tracking-wide">
                   TUTORIAL NOT COMPLETED
@@ -147,7 +167,6 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* Buttons */}
               <div className="flex flex-col gap-4">
                 <button
                   onClick={() => {
@@ -170,6 +189,60 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {showResumeModal && resumeSessionData && resumeSessionData.preview && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+          <div className="relative border-4 border-[#33ff33] bg-[#001a0a] p-8 rounded-lg shadow-[0_0_30px_rgba(51,255,51,0.3)] max-w-xl w-full">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_2px] opacity-20"></div>
+            
+            <div className="relative z-10 text-center">
+              <h2 className="text-4xl font-jersey text-[#33ff33] tracking-wider mb-2 drop-shadow-[0_0_10px_#33ff33]">
+                RESUME GAME?
+              </h2>
+              <div className="h-1 w-full bg-[#33ff33] shadow-[0_0_10px_#33ff33] mb-6"></div>
+
+              <div className="bg-[#022c19] border-2 border-[#11942F] p-6 rounded mb-8 text-left space-y-3 font-jersey">
+                <div className="flex justify-between items-center border-b border-[#11942F] pb-2">
+                    <span className="text-[#00aa00] text-2xl">Year / Month</span>
+                    <span className="text-[#33ff33] text-3xl">{resumeSessionData.preview?.currentYear} / {Math.floor(resumeSessionData.preview?.currentMonth)}</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-[#11942F] py-2">
+                     <span className="text-[#00aa00] text-2xl">Pocket Cash</span>
+                     <span className="text-[#33ff33] text-3xl">{resumeSessionData.preview?.pocket?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $</span>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                     <span className="text-[#00aa00] text-2xl">Total Assets</span>
+                     <span className="text-[#33ff33] text-3xl">{resumeSessionData.preview?.totalAssets?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={() => navigate('/invest', { state: { forceNew: false } })}
+                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-[#003300] px-6 font-jersey text-2xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_4px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#005500] active:translate-y-[2px] active:shadow-none"
+                >
+                  CONTINUE GAME
+                </button>
+
+                <button
+                  onClick={() => navigate('/select-strategy')}
+                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#550000] text-red-500 bg-[#1a0000] hover:border-red-500 hover:text-red-400 font-jersey text-2xl tracking-wide transition-all duration-150 shadow-none"
+                >
+                  START NEW GAME
+                </button>
+                
+                <button
+                  onClick={() => setShowResumeModal(false)}
+                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#005500] bg-transparent px-6 font-jersey text-2xl tracking-wide text-[#005500] transition-all duration-150 mt-2 hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#003300] active:translate-y-[2px] active:shadow-none"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

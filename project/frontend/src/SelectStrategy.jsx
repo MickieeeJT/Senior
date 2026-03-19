@@ -19,6 +19,7 @@ export default function SelectStrategy() {
       state: {
         duration,
         targetAmount: Number(targetAmount),
+        forceNew: true,
       },
     });
   };
