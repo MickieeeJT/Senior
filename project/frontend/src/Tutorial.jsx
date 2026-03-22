@@ -5,7 +5,6 @@ import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
 
 // --- CONFIGURATION ---
-// CHECK YOUR BACKEND CONSOLE: If it says "Server running on port 8080", change this to 8080.
 const API_BASE_URL = "http://localhost:8000/api/tutorial"; 
 
 const TUTORIAL_TYPES = {
@@ -30,7 +29,7 @@ const TUTORIAL_ORDER = [
 
 const TUTORIAL_DATA = {
   [TUTORIAL_TYPES.SAVINGS]: {
-    title: "SAVINGS ACCOUNT",
+    title: "Savings Account",
     icon: saving,
     description: "Safe Haven for Your Money",
     content: [
@@ -52,7 +51,7 @@ const TUTORIAL_DATA = {
     }
   },
   [TUTORIAL_TYPES.BONDS]: {
-    title: "GOVERNMENT BONDS",
+    title: "Government bonds",
     description: "Steady Returns from Government Securities",
     content: [
       "Government bonds are loans you give to the government for fixed periods in exchange for regular interest payments.",
@@ -77,7 +76,7 @@ const TUTORIAL_DATA = {
     }
   },
   [TUTORIAL_TYPES.INDEX_FUND]: {
-    title: "INDEX FUND",
+    title: "Index Fund",
     icon: index,
     description: "Diversified Market Investment",
     content: [
@@ -100,7 +99,7 @@ const TUTORIAL_DATA = {
     }
   },
   [TUTORIAL_TYPES.STOCKS]: {
-    title: "INDIVIDUAL STOCKS",
+    title: "Individual Stocks",
     description: "High-Risk, High-Reward Investments",
     content: [
       "Individual stocks represent ownership shares in specific companies.",
@@ -125,7 +124,7 @@ const TUTORIAL_DATA = {
     }
   },
   [TUTORIAL_TYPES.GOLD]: {
-    title: "GOLD INVESTMENT",
+    title: "Gold Investment",
     icon: gold,
     description: "Precious Metal as Inflation Hedge",
     content: [
@@ -148,7 +147,7 @@ const TUTORIAL_DATA = {
     }
   },
   [TUTORIAL_TYPES.CURRENCY]: {
-    title: "CURRENCY EXCHANGE",
+    title: "Currency Exchange",
     description: "Foreign Exchange Trading",
     content: [
       "Currency trading involves buying and selling foreign currencies (USD, EUR, JPY) in global markets.",
@@ -364,14 +363,13 @@ export default function Tutorial() {
       return;
     }
 
+    // Always start with tutorial interface, even if completed
+    setActiveTutorial(type);
+    setCurrentStep(0);
+    setShowGameInterface(true);
+    // Reset practice data when starting a tutorial
     if (!completedTutorials.has(type)) {
-      setActiveTutorial(type);
-      setCurrentStep(0);
-      setShowGameInterface(true);
-    } else {
-      setActiveTutorial(type);
-      initializePracticeMode(type);
-      setShowPracticeMode(true);
+       // Only needed if strictly new, but harmless to leave out as handleNext/End will init it
     }
   };
 
@@ -406,6 +404,12 @@ export default function Tutorial() {
   };
 
   const handleCompleteTutorial = async () => {
+    // If already learned/completed, just close without API call
+    if (completedTutorials.has(activeTutorial)) {
+      handleCloseTutorial();
+      return;
+    }
+
     try {
       await markTutorialComplete(activeTutorial);
       handleCloseTutorial();
@@ -588,9 +592,21 @@ export default function Tutorial() {
 
   const allTutorialsCompleted = completedTutorials.size === TUTORIAL_ORDER.length;
 
+  const buttonStyle =
+    "group relative inline-flex h-10 w-24 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-3 font-poiret font-bold text-sm tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_4px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#005500] active:translate-y-[2px] active:shadow-none";
+  const InputStyle =
+    "group relative inline-flex h-10 w-32 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-white px-3 font-poiret font-bold text-sm tracking-wide text-black";
+    
+  // Helper for wider buttons if needed
+  const wideButtonStyle = buttonStyle.replace("w-24", "w-auto px-6");
+  
+  // Invest.jsx Card Style
+  const investCardStyle = "p-4 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col justify-between relative bg-transparent min-h-[300px]";
+  const titleStyle = "text-xl font-poiret font-bold mb-2 text-white";
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#011D10] text-white font-mono flex items-center justify-center">
+      <div className="min-h-screen bg-[#011D10] text-white font-poiret flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl font-poiret text-[#B7FD5E] mb-4">Loading Tutorial...</div>
           <div className="text-4xl font-poiret text-[#B7FD5E] mb-4">Loading Progress...</div>
@@ -605,15 +621,15 @@ export default function Tutorial() {
     const config = TUTORIAL_DATA[activeTutorial].practiceConfig;
     
     return (
-      <div className="min-h-screen bg-[#011D10] text-white font-mono p-6">
-        <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-8">
-          <h1 className="text-5xl font-poiret text-[#B7FD5E] mx-8">
-            PRACTICE: {TUTORIAL_DATA[activeTutorial].title}
+      <div className="min-h-screen bg-[#011D10] text-white font-poiret p-6 flex flex-col items-center">
+        <header className="w-full flex justify-between items-center border-b-4 border-[#ffffff] mb-8 pb-2 max-w-6xl">
+          <h1 className="text-5xl font-poiret font-bold text-[#B7FD5E]">
+            Practice: {TUTORIAL_DATA[activeTutorial].title}
           </h1>
-          <nav className="flex gap-10 text-3xl font-poiret mr-3">
+          <nav className="flex gap-6 text-3xl font-poiret">
             <button
               onClick={handleCloseTutorial}
-              className="text-[#B7FD5E] hover:text-white transition"
+              className="text-[#B7FD5E] hover:text-white transition font-bold"
             >
               Back to Tutorials
             </button>
@@ -621,119 +637,211 @@ export default function Tutorial() {
         </header>
 
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-poiret text-white mb-4">
+          <h2 className="text-3xl font-poiret font-bold text-white mb-2">
             Practice Mode - Try the buttons and see how it works!
           </h2>
-          <p className="text-2xl font-poiret text-[#B7FD5E]">
+          <p className="text-2xl font-poiret font-bold text-[#B7FD5E]">
             Pocket Money: {practiceData.pocket?.toFixed(2)} $
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto">
+        <div className="w-full max-w-4xl">
           {config.type === 'savings' && (
-            <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-poiret mb-4 text-white">SAVINGS ACCOUNT PRACTICE</h3>
-              <div className="flex justify-center mb-4"><img src={saving} className="w-[120px]" /></div>
-              <p className="text-2xl font-poiret text-white mb-2">
-                Savings Balance: {practiceData.savingsBalance?.toFixed(2)} $
-              </p>
-              <div className="flex justify-center items-center gap-4 mb-6">
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={practiceAmount}
-                  onChange={(e) => setPracticeAmount(e.target.value)}
-                  className="px-4 py-2 rounded border text-black text-xl font-poiret w-48"
-                />
+            <div className={`${investCardStyle} max-w-md mx-auto`}>
+              <div>
+                <h3 className={titleStyle}>Saving Account</h3>
+                <div className="flex justify-center mb-2">
+                  <img src={saving} alt="saving icon" className="w-20 h-20" />
+                </div>
+                <div className="flex justify-between px-4 mt-2 mb-4">
+                  <p className="text-white text-base font-poiret font-bold">
+                    Balance: {practiceData.savingsBalance?.toFixed(2)} $
+                  </p>
+                  <p className="text-white text-base font-poiret font-bold">
+                    Profit: 0.00 $
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-center gap-6">
-                <button onClick={() => handlePracticeTransaction('deposit')} className="bg-[#11942F] text-white text-xl font-poiret px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">DEPOSIT</button>
-                <button onClick={() => handlePracticeTransaction('withdraw')} className="bg-[#11942F] text-white text-xl font-poiret px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black">WITHDRAW</button>
+              <div className="pb-2">
+                <div className="flex justify-center items-center gap-2">
+                  <input
+                    type="number"
+                    placeholder="Amount"
+                    value={practiceAmount}
+                    onChange={(e) => setPracticeAmount(e.target.value)}
+                    className={InputStyle}
+                  />
+                  <div className="flex gap-1">
+                    <button onClick={() => handlePracticeTransaction('deposit')} className={buttonStyle}>DEPOSIT</button>
+                    <button onClick={() => handlePracticeTransaction('withdraw')} className={buttonStyle}>WITHDRAW</button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {config.type === 'bonds' && (
-            <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-poiret mb-4 text-white">GOVERNMENT BONDS</h3>
-              <div className="flex justify-center gap-4 mb-6">
-                {Object.entries(practiceData.bondRates || {}).map(([duration, rate]) => (
-                  <div
-                    key={duration}
-                    onClick={() => setSelectedBond(duration)}
-                    className={`cursor-pointer p-4 rounded border-2 transition-colors ${
-                      selectedBond === duration ? "border-[#B7FD5E] bg-[#B7FD5E] text-black" : "border-white text-white"
-                    }`}
+            <div className={`${investCardStyle} h-auto`}>
+              <div className="flex-1">
+                <h3 className={titleStyle}>GOVERNMENT BONDS</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-4 px-4 overflow-y-auto max-h-[200px]">
+                   {(practiceData.bondInvestments || []).length === 0 ? (
+                      <div className="col-span-3 text-gray-500 font-bold py-4">No Active Bonds</div>
+                   ) : (
+                     practiceData.bondInvestments.map((bond) => (
+                      <div key={bond.id} className="flex flex-col items-center mb-1">
+                        <div className="relative w-12 h-12">
+                          <svg viewBox="0 0 36 36" className="w-full h-full rounded-full transform -rotate-90">
+                            <path className="text-gray-700" strokeWidth="30" fill="none" stroke="currentColor" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path className="text-[#B7FD5E]" strokeWidth="30" strokeDasharray={`10, 100`} fill="none" stroke="currentColor" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <div className="text-xs font-poiret font-bold text-white">${bond.amount.toFixed(0)}</div>
+                          </div>
+                        </div>
+                        <div className="text-white text-xs font-poiret font-bold mt-1">{bond.duration}</div>
+                      </div>
+                     ))
+                   )}
+                </div>
+              </div>
+
+              <div className="pb-2 flex flex-col items-center border-t border-gray-700 pt-4">
+                 <div className="flex justify-center gap-4 mb-3">
+                  {Object.entries(practiceData.bondRates || {}).map(([duration, rate]) => (
+                    <div
+                      key={duration}
+                      onClick={() => setSelectedBond(duration)}
+                      className="flex flex-col items-center cursor-pointer group"
+                    >
+                       <div
+                          className={`font-bold rounded-full w-12 h-12 flex items-center justify-center transition-all text-sm ${
+                            selectedBond === duration
+                              ? "bg-[#B7FD5E] text-black scale-105 shadow-[0_0_10px_#00FF00]"
+                              : "bg-gray-100 text-black group-hover:bg-gray-300"
+                          }`}
+                        >
+                          {duration.split(" ")[0]}Y
+                        </div>
+                        <div className="text-sm font-poiret font-bold text-[#B7FD5E] mt-1">
+                          {(rate * 100).toFixed(1)}%
+                        </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    placeholder="Amount"
+                    value={practiceAmount}
+                    onChange={(e) => setPracticeAmount(e.target.value)}
+                    className={InputStyle}
+                  />
+                  <button
+                    onClick={() => handlePracticeTransaction('buy')}
+                    disabled={!selectedBond}
+                    className={`${buttonStyle} ${!selectedBond ? "opacity-50 cursor-not-allowed border-gray-500 text-gray-500 shadow-none hover:translate-y-0" : ""}`}
                   >
-                    <div className="text-lg font-poiret">{duration}</div>
-                    <div className="text-sm">{(rate * 100).toFixed(1)}%</div>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-center items-center gap-4 mb-6">
-                <input
-                  type="number"
-                  placeholder="Enter amount"
-                  value={practiceAmount}
-                  onChange={(e) => setPracticeAmount(e.target.value)}
-                  className="px-4 py-2 rounded border text-black text-xl font-poiret w-48"
-                />
-                <button
-                  onClick={() => handlePracticeTransaction('buy')}
-                  disabled={!selectedBond}
-                  className={`text-xl font-poiret px-8 py-3 rounded ${selectedBond ? "bg-[#11942F] text-white" : "bg-gray-600 text-gray-400"}`}
-                >
-                  BUY BOND
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(practiceData.bondInvestments || []).map((bond) => (
-                  <div key={bond.id} className="border border-white p-4 rounded">
-                    <div className="text-lg font-poiret text-white">{bond.duration}</div>
-                    <div className="text-sm text-[#B7FD5E]">${bond.amount.toFixed(2)}</div>
-                  </div>
-                ))}
+                    BUY
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
           {config.type === 'indexFund' && (
-            <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-poiret mb-4 text-white">INDEX FUND</h3>
-              <div className="flex justify-center mb-4"><img src={index} className="w-[120px]" /></div>
-              <div className="flex justify-center gap-8 mb-4">
-                <p className="text-xl font-poiret">Price: {practiceData.price?.toFixed(2)}</p>
-                <p className={`text-xl font-poiret ${practiceData.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
-                  {practiceData.priceChange >= 0 ? "▲" : "▼"} {Math.abs(practiceData.priceChange || 0)}%
-                </p>
+            <div className={`${investCardStyle} max-w-md mx-auto`}>
+              <div>
+                <h3 className={titleStyle}>INDEX FUND</h3>
+                {/* Simulated Chart Area */}
+                <div className="w-full flex justify-center mb-2">
+                   <div className="w-[85%] h-12 border-b border-l border-gray-600 relative overflow-hidden">
+                      <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
+                         <polyline points="0,40 20,35 40,45 60,20 80,25 100,10" fill="none" stroke={practiceData.priceChange >= 0 ? "#4ade80" : "#f87171"} strokeWidth="2" />
+                      </svg>
+                   </div>
+                </div>
+
+                <div className="flex justify-between px-4 mt-2">
+                  <p className="text-white text-base font-poiret font-bold">
+                    {practiceData.price?.toFixed(2)} $
+                  </p>
+                  <p className={`text-base font-poiret font-bold ${practiceData.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {practiceData.priceChange >= 0 ? "▲" : "▼"} {Math.abs(practiceData.priceChange || 0)}%
+                  </p>
+                </div>
+                 <div className="flex justify-between px-4 mt-2 mb-4">
+                  <p className="text-white text-base font-poiret font-bold">
+                    Shares: {practiceData.shares?.toFixed(4) || 0}
+                  </p>
+                  <p className="text-white text-base font-poiret font-bold">
+                    Balance: {practiceData.fundBalance?.toFixed(2) || 0} $
+                  </p>
+                </div>
               </div>
-              <p className="text-lg font-poiret text-[#B7FD5E] mb-6">Shares: {practiceData.shares?.toFixed(4) || 0}</p>
-              <div className="flex justify-center gap-6">
-                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-poiret" placeholder="Amount" />
-                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">BUY</button>
-                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">SELL</button>
+              
+              <div className="pb-2">
+                 <div className="flex justify-center items-center gap-2">
+                  <input 
+                    type="number" 
+                    value={practiceAmount} 
+                    onChange={(e) => setPracticeAmount(e.target.value)} 
+                    className={InputStyle}
+                    placeholder="Amount" 
+                  />
+                  <button onClick={() => handlePracticeTransaction('buy')} className={buttonStyle}>BUY</button>
+                  <button onClick={() => handlePracticeTransaction('sell')} className={buttonStyle}>SELL</button>
+                </div>
               </div>
             </div>
           )}
 
           {(config.type === 'stocks' || config.type === 'currency') && (
-             <div className="border-4 border-[#11942F] p-8 text-center">
-               <h3 className="text-3xl font-poiret mb-4 text-white uppercase">{config.type} PRACTICE</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className={`${investCardStyle} h-auto`}>
+               <h3 className={titleStyle}>{config.type === 'stocks' ? "INDIVIDUAL STOCKS" : "CURRENCY EXCHANGE"}</h3>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                  {(config.mockStocks || config.currencies).map((item) => (
-                   <div key={item.symbol} className="border border-white p-4 rounded">
-                     <h4 className="text-2xl font-poiret text-white">{item.symbol}</h4>
-                     <div className="flex justify-between mb-2">
-                        <span className="text-white">${item.price.toFixed(2)}</span>
-                        <span className={item.change >= 0 ? "text-green-400" : "text-red-400"}>{item.change}%</span>
+                   <div key={item.symbol} className="border-r border-dashed border-white last:border-r-0 px-2 pt-2 flex flex-col justify-between">
+                     <div>
+                       <p className="text-white text-lg font-poiret font-bold">{item.symbol}</p>
+                        {/* Simulated Mini Chart */}
+                        <div className="w-full flex justify-center mb-1">
+                          <div className="w-[85%] h-10 border-b border-l border-gray-600">
+                             <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
+                                <polyline points="0,30 25,10 50,25 75,5 100,20" fill="none" stroke={item.change >= 0 ? "#4ade80" : "#f87171"} strokeWidth="1.5" />
+                             </svg>
+                          </div>
+                        </div>
+
+                       <div className="flex justify-between px-2">
+                          <span className="text-white font-bold">${item.price.toFixed(2)}</span>
+                          <span className={`font-bold ${item.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                             {item.change >= 0 ? "▲" : "▼"} {Math.abs(item.change)}%
+                          </span>
+                       </div>
+                       <div className="flex justify-between px-2 mt-1 mb-2">
+                          <span className="text-[#B7FD5E] font-bold text-sm">
+                             Held: {config.type === 'stocks' ? practiceData.stocks?.[item.symbol]?.shares : practiceData.currencies?.[item.symbol]?.units}
+                          </span>
+                          <span className="text-gray-400 text-xs">Profit: 0.00</span>
+                       </div>
                      </div>
-                     <p className="text-[#B7FD5E] mb-4">Owned: {config.type === 'stocks' ? practiceData.stocks?.[item.symbol]?.shares : practiceData.currencies?.[item.symbol]?.units} {config.type === 'stocks' ? 'shares' : 'units'}</p>
-                     <div className="flex items-center gap-2 mb-4 justify-center">
-                       <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="w-20 px-2 text-black font-poiret" placeholder="Qty" />
-                     </div>
-                     <div className="flex justify-center gap-4">
-                       <button onClick={() => config.type === 'stocks' ? handleStockTransaction(item.symbol, 'buy', item.price) : handleCurrencyTransaction(item.symbol, 'buy', item.price)} className="bg-[#11942F] px-4 py-1 rounded">BUY</button>
-                       <button onClick={() => config.type === 'stocks' ? handleStockTransaction(item.symbol, 'sell', item.price) : handleCurrencyTransaction(item.symbol, 'sell', item.price)} className="bg-[#11942F] px-4 py-1 rounded">SELL</button>
+
+                     <div className="pb-1">
+                       <div className="flex items-center gap-2 mb-2 justify-center">
+                         <input 
+                            type="number" 
+                            value={practiceAmount} 
+                            onChange={(e) => setPracticeAmount(e.target.value)} 
+                            className={`${InputStyle} w-24`}
+                            placeholder="Qty" 
+                          />
+                       </div>
+                       <div className="flex justify-center gap-2">
+                         <button onClick={() => config.type === 'stocks' ? handleStockTransaction(item.symbol, 'buy', item.price) : handleCurrencyTransaction(item.symbol, 'buy', item.price)} className={buttonStyle}>BUY</button>
+                         <button onClick={() => config.type === 'stocks' ? handleStockTransaction(item.symbol, 'sell', item.price) : handleCurrencyTransaction(item.symbol, 'sell', item.price)} className={buttonStyle}>SELL</button>
+                       </div>
                      </div>
                    </div>
                  ))}
@@ -742,25 +850,59 @@ export default function Tutorial() {
           )}
           
           {config.type === 'gold' && (
-            <div className="border-4 border-[#11942F] p-8 text-center">
-              <h3 className="text-3xl font-poiret mb-4 text-white">GOLD</h3>
-              <div className="flex justify-center mb-4"><img src={gold} className="w-[120px]" /></div>
-              <p className="text-2xl font-poiret text-white mb-6">Gold Balance: {practiceData.goldBalance?.toFixed(2)} $</p>
-              <div className="flex justify-center gap-6">
-                <input type="number" value={practiceAmount} onChange={(e) => setPracticeAmount(e.target.value)} className="px-4 py-2 text-black w-48 font-poiret" placeholder="Amount" />
-                <button onClick={() => handlePracticeTransaction('buy')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">BUY</button>
-                <button onClick={() => handlePracticeTransaction('sell')} className="bg-[#11942F] text-white px-8 py-2 font-poiret rounded">SELL</button>
+            <div className={`${investCardStyle} max-w-md mx-auto`}>
+              <div>
+                 <h3 className={titleStyle}>GOLD</h3>
+                 {/* Simulated Chart Area */}
+                <div className="w-full flex justify-center mb-2">
+                   <div className="w-[85%] h-12 border-b border-l border-gray-600 relative overflow-hidden">
+                      <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
+                         <polyline points="0,40 20,38 40,42 60,30 80,32 100,25" fill="none" stroke="#fbbf24" strokeWidth="2" />
+                      </svg>
+                   </div>
+                </div>
+
+                 <div className="flex justify-between px-4 mt-2">
+                    <p className="text-white text-base font-poiret font-bold">
+                       {practiceData.goldPrice?.toFixed(2)} $
+                    </p>
+                     <p className={`text-base font-poiret font-bold ${practiceData.priceChange >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        {practiceData.priceChange >= 0 ? "▲" : "▼"} {Math.abs(practiceData.priceChange || 0.8)}%
+                     </p>
+                 </div>
+                 <div className="flex justify-between px-4 mt-2 mb-4">
+                    <p className="text-white text-base font-poiret font-bold">
+                      Balance: {practiceData.goldBalance?.toFixed(2)} $
+                    </p>
+                    <p className="text-white text-base font-poiret font-bold">
+                       Profit: 0.00 $
+                    </p>
+                 </div>
+              </div>
+
+              <div className="pb-2">
+                 <div className="flex justify-center items-center gap-2">
+                   <input 
+                    type="number" 
+                    value={practiceAmount} 
+                    onChange={(e) => setPracticeAmount(e.target.value)} 
+                    className={InputStyle}
+                    placeholder="Amount" 
+                  />
+                  <button onClick={() => handlePracticeTransaction('buy')} className={buttonStyle}>BUY</button>
+                  <button onClick={() => handlePracticeTransaction('sell')} className={buttonStyle}>SELL</button>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center pb-8">
           <button
             onClick={handleCompleteTutorial}
-            className="bg-[#11942F] text-white text-xl font-poiret px-8 py-3 rounded hover:bg-[#B7FD5E] hover:text-black transition-colors"
+            className={`${wideButtonStyle} h-12 text-lg`}
           >
-            Complete Tutorial
+            COMPLETE TUTORIAL
           </button>
         </div>
       </div>
@@ -769,19 +911,29 @@ export default function Tutorial() {
 
   // --- RENDER SELECTION MENU ---
   return (
-    <div className="min-h-screen bg-[#011D10] text-white font-mono p-6">
-      <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-8">
-        <h1 className="text-5xl font-poiret text-[#B7FD5E] mx-8">INVESTMENT TUTORIAL</h1>
+    <div className="min-h-screen bg-[#011D10] text-white font-poiret p-6">
+      <header className="flex justify-between items-center border-b-4 border-[#ffffff] mb-8 pb-2">
+        <h1 className="text-5xl font-poiret font-bold text-[#B7FD5E] mx-8">Investment Tutorial</h1>
         <nav className="flex gap-10 text-3xl font-poiret mr-3">
-          <button onClick={() => navigate("/home")} className="text-[#B7FD5E] hover:text-white transition">Home</button>
+          <button 
+            onClick={() => navigate("/home")} 
+            className="text-[#B7FD5E] hover:text-white transition font-bold"
+          >
+            Home
+          </button>
           {allTutorialsCompleted && (
-            <button onClick={handleStartGame} className="text-[#B7FD5E] hover:text-white transition bg-[#11942F] px-4 py-2 rounded">Start Game</button>
+            <button 
+              onClick={handleStartGame} 
+              className="text-[#B7FD5E] hover:text-white transition font-bold"
+            >
+              Start Game
+            </button>
           )}
         </nav>
       </header>
 
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-poiret text-white mb-4">
+        <h2 className="text-3xl font-poiret font-bold text-white mb-4">
           Progress: {completedTutorials.size} / {TUTORIAL_ORDER.length} Completed
         </h2>
         <div className="flex justify-center gap-2">
@@ -800,10 +952,10 @@ export default function Tutorial() {
             return (
               <div
                 key={type}
-                className={`relative p-6 text-center border-4 border-[#11942F] transition-all duration-300 ${
-                  isCompleted ? "opacity-100 cursor-default" : isAvailable ? "opacity-100 cursor-pointer hover:scale-105" : "opacity-32 cursor-not-allowed"
+                className={`relative p-6 text-center border-4 border-[#11942F] transition-all duration-300 bg-[#011D10] shadow-[0_0_15px_rgba(17,148,47,0.3)] flex flex-col items-center ${
+                  isAvailable ? "opacity-100 cursor-pointer hover:scale-105 hover:shadow-[0_0_25px_rgba(17,148,47,0.6)]" : "opacity-50 cursor-not-allowed"
                 }`}
-                onClick={() => isAvailable && !isCompleted && handleTutorialSelect(type)}
+                onClick={() => isAvailable && handleTutorialSelect(type)}
               >
                 {isCompleted && (
                   <div className="absolute top-2 right-2 w-8 h-8 bg-[#B7FD5E] rounded-full flex items-center justify-center">
@@ -816,17 +968,19 @@ export default function Tutorial() {
                   </div>
                 )}
 
-                <h3 className="text-2xl font-poiret mb-4 text-[#B7FD5E]">{data.title}</h3>
+                <h3 className="text-2xl font-poiret font-bold mb-4 text-[#B7FD5E] tracking-wide">{data.title}</h3>
                 {data.icon && <div className="flex justify-center mb-4"><img src={data.icon} alt={data.title} className="w-20 h-20" /></div>}
-                <p className="text-lg font-poiret text-white mb-4">{data.description}</p>
+                <p className="text-lg font-poiret font-bold text-white mb-6 min-h-[3rem]">{data.description}</p>
 
-                {isCompleted ? (
-                  <div className="bg-[#11942F] text-[#B7FD5E] px-4 py-2 rounded font-poiret">COMPLETED</div>
-                ) : isAvailable ? (
-                  <div className="bg-[#11942F] text-white px-4 py-2 rounded font-poiret hover:bg-[#B7FD5E] hover:text-black">START TUTORIAL</div>
-                ) : (
-                  <div className="bg-gray-600 text-gray-400 px-4 py-2 rounded font-poiret">LOCKED</div>
-                )}
+                <div className="mt-auto w-full flex justify-center">
+                  {isCompleted ? (
+                     <button className={wideButtonStyle}>RELEARN</button>
+                  ) : isAvailable ? (
+                    <button className={wideButtonStyle}>START TUTORIAL</button>
+                  ) : (
+                    <div className="inline-flex h-10 px-6 items-center justify-center rounded-sm border-2 border-gray-600 bg-transparent font-poiret font-bold text-sm tracking-wide text-gray-400">LOCKED</div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -835,24 +989,33 @@ export default function Tutorial() {
 
       {/* TUTORIAL POPUP */}
       {activeTutorial && !showPracticeMode && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 max-w-2xl mx-4">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-4xl font-poiret text-[#B7FD5E]">{TUTORIAL_DATA[activeTutorial].title}</h2>
-              <button onClick={handleCloseTutorial} className="text-white text-2xl">✕</button>
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-[#011D10] border-4 border-[#11942F] rounded-sm p-8 max-w-2xl mx-4 shadow-[0_0_30px_rgba(17,148,47,0.5)]">
+            <div className="flex justify-between items-center mb-6 border-b-2 border-[#11942F] pb-4">
+              <h2 className="text-4xl font-poiret font-bold text-[#B7FD5E]">{TUTORIAL_DATA[activeTutorial].title}</h2>
+              <button onClick={handleCloseTutorial} className="text-white text-2xl hover:text-[#B7FD5E] transition">✕</button>
             </div>
-            <div className="mb-8 min-h-[100px]">
-              <p className="text-xl font-poiret text-white leading-relaxed">{TUTORIAL_DATA[activeTutorial].content[currentStep]}</p>
+            <div className="mb-8 min-h-[150px]">
+              <p className="text-xl font-poiret font-bold text-white leading-relaxed">{TUTORIAL_DATA[activeTutorial].content[currentStep]}</p>
             </div>
-            <div className="flex justify-center gap-2 mb-6">
+            <div className="flex justify-center gap-2 mb-8">
               {TUTORIAL_DATA[activeTutorial].content.map((_, index) => (
-                <div key={index} className={`w-3 h-3 rounded-full ${index === currentStep ? "bg-[#B7FD5E]" : "bg-gray-600"}`}></div>
+                <div key={index} className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentStep ? "bg-[#B7FD5E] scale-125 shadow-[0_0_8px_#B7FD5E]" : "bg-gray-600"}`}></div>
               ))}
             </div>
             <div className="flex justify-between">
-              <button onClick={handlePrevious} disabled={currentStep === 0} className={`text-xl font-poiret px-6 py-2 rounded ${currentStep === 0 ? "text-gray-500" : "text-white"}`}>← Previous</button>
-              <button onClick={handleNext} className="bg-[#11942F] text-white text-xl font-poiret px-6 py-2 rounded hover:bg-[#B7FD5E] hover:text-black">
-                {currentStep === TUTORIAL_DATA[activeTutorial].content.length - 1 ? "Practice mode" : "Next →"}
+              <button 
+                onClick={handlePrevious} 
+                disabled={currentStep === 0} 
+                className={`${wideButtonStyle} ${currentStep === 0 ? "opacity-50 cursor-not-allowed border-gray-600 text-gray-500 shadow-none hover:translate-y-0" : ""}`}
+              >
+                PREVIOUS
+              </button>
+              <button 
+                onClick={handleNext} 
+                className={wideButtonStyle}
+              >
+                {currentStep === TUTORIAL_DATA[activeTutorial].content.length - 1 ? "PRACTICE MODE" : "NEXT"}
               </button>
             </div>
           </div>
