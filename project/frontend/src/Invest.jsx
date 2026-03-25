@@ -79,6 +79,10 @@ export default function Invest() {
   const [isProcessingYear, setIsProcessingYear] = useState(false);
   const [totalAssets, setTotalAssets] = useState(0);
   const [gameSpeed, setGameSpeed] = useState(1);
+  
+  // Target amount for win condition
+  const [targetAmount, setTargetAmount] = useState(null);
+  const [showWinModal, setShowWinModal] = useState(false);
 
   // Asset States
   const [activeInput, setActiveInput] = useState(null);
@@ -186,7 +190,23 @@ export default function Invest() {
       });
     }
     setTotalAssets(total);
-  }, [gameState, progress, currentMonth, selectedStocks, selectedCurrency]);
+
+    // Check win condition with enhanced protection
+    if (targetAmount && total >= targetAmount && !showWinModal && isRunning) {
+      // Immediately stop everything
+      setIsRunning(false);
+      setShowWinModal(true);
+      
+      // Force clear all timers
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      // Stop any processing
+      setIsProcessingYear(false);
+    }
+  }, [gameState, progress, currentMonth, selectedStocks, selectedCurrency, targetAmount, showWinModal, isRunning]);
 
   function getRandomEvent() {
     if (!scenarioEvents || scenarioEvents.length === 0) return null;
@@ -330,13 +350,22 @@ export default function Invest() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
+      
+      // Get target amount from location state if available
+      const targetAmountFromState = location.state?.targetAmount;
+      const durationFromState = location.state?.duration;
+      
       const response = await fetch(`${API_BASE_URL}/init`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}` 
         },
-        body: JSON.stringify({ forceNew })
+        body: JSON.stringify({ 
+          forceNew,
+          targetAmount: targetAmountFromState,
+          duration: durationFromState
+        })
       });
       
       if (response.status === 401) {
@@ -359,6 +388,11 @@ export default function Invest() {
               setCurrentMonth(1);
               setProgress(0);
           }
+
+          // Set target amount from response or game state
+          if (data.targetAmount || data.gameState.targetAmount) {
+            setTargetAmount(data.targetAmount || data.gameState.targetAmount);
+          }
       }
       
       setLoading(false);
@@ -380,7 +414,8 @@ export default function Invest() {
 
   // --- MAIN GAME TIMER ---
   useEffect(() => {
-    if (!isRunning || !gameState || isProcessingYear) return;
+    // Stop timer if win condition is met
+    if (showWinModal || !isRunning || !gameState || isProcessingYear) return;
     if (timerRef.current) return;
 
     clearInterval(timerRef.current);
@@ -391,6 +426,13 @@ export default function Invest() {
     const interval = baseInterval / gameSpeed;
 
     timerRef.current = setInterval(() => {
+      // Double-check win condition before each timer tick
+      if (!isRunning || showWinModal) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+        return;
+      }
+
       setProgress((prev) => {
         if (prev >= 100) {
           setIsProcessingYear(true);
@@ -447,7 +489,7 @@ export default function Invest() {
         timerRef.current = null;
       }
     };
-  }, [isRunning, sessionId, isProcessingYear, navigate, gameState, gameSpeed]);
+  }, [isRunning, sessionId, isProcessingYear, navigate, gameState, gameSpeed, showWinModal]);
 
   // --- MONTHLY UPDATE EFFECT ---
   useEffect(() => {
@@ -775,7 +817,7 @@ export default function Invest() {
               <p className="text-2xl font-poiret text-[#B7FD5E]">
                 {totalAssets.toLocaleString()} $
               </p>
-            </div>
+              </div>
           </div>
         </div>
 
@@ -1633,6 +1675,45 @@ export default function Invest() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Win Modal */}
+      {showWinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 text-center">
+            <h2 className="text-2xl font-poiret font-bold mb-4 text-white">
+              Congratulations!
+            </h2>
+            <p className="text-xl font-poiret font-bold mb-2 text-[#B7FD5E]">
+              You've reached your target amount!
+            </p>
+            <p className="text-lg font-poiret mb-4 text-white">
+              Target: {targetAmount?.toLocaleString()}$ 
+            </p>
+            <p className="text-lg font-poiret mb-4 text-[#B7FD5E]">
+              Final Amount: {totalAssets.toLocaleString()}$
+            </p>
+            <p className="text-sm font-poiret mb-6 text-gray-300">
+              Game completed in Year {gameState.currentYear}
+            </p>
+            <button
+              onClick={async () => {
+                const saved = await saveScore();
+                navigate("/dashboard", {
+                  state: {
+                    finalGameState: gameState,
+                    gameComplete: true,
+                    targetReached: true,
+                    scoreData: saved,
+                  },
+                });
+              }}
+              className={`${buttonStyle} whitespace-nowrap w-64`}
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

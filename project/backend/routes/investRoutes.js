@@ -181,7 +181,7 @@ router.get("/check-session", authenticateToken, (req, res) => {
 
 router.post("/init", authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const { forceNew, duration } = req.body;
+  const { forceNew, duration, targetAmount } = req.body;
 
   // Default duration if not specified
   const maxYears = duration ? parseInt(duration) : 20;
@@ -212,7 +212,8 @@ router.post("/init", authenticateToken, (req, res) => {
         success: true, 
         message: "Game Resumed", 
         sessionId: savedSession.session_id, 
-        gameState: parsedState 
+        gameState: parsedState,
+        targetAmount: parsedState.targetAmount || null
       });
     }
 
@@ -236,6 +237,7 @@ router.post("/init", authenticateToken, (req, res) => {
       userId,
       sessionId,
       maxYears,
+      targetAmount: targetAmount || null,
       pocket: initialCapital,
       totalInvested: initialCapital,
       portfolioHistory: [initialCapital],
@@ -263,7 +265,7 @@ router.post("/init", authenticateToken, (req, res) => {
         saveGameToDB(gameState.userId, sessionId, gameState);
     }
     
-    res.json({ sessionId, gameState, message: "New Game Started" });
+    res.json({ sessionId, gameState, targetAmount, message: "New Game Started" });
   });
 });
 
