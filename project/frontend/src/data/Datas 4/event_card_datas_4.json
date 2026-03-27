@@ -1,222 +1,409 @@
 [
     {
         "event_id": "EVT_MAJOR_001",
-        "type": "MAJOR_CRISIS",
-        "title": "Severe Flooding Hits Major Industrial Estates in Thailand",
-        "source": "Local Weather",
+        "type": "TECH_INNOVATION",
+        "title": "Massive Data Breach Exposes Millions of Financial Records",
+        "source": "Cyber Alert",
         "url": "",
-        "start_week": 677,
-        "end_week": 700,
-        "severity": 5
+        "start_week": 459,
+        "end_week": 479,
+        "affected_assets": [
+            "Bond 1 Y",
+            "EGCO",
+            "Bond 10 Y",
+            "SET50",
+            "USD_THB",
+            "KTB",
+            "JPY_THB",
+            "EUR_THB"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_MAJOR_002",
-        "type": "MAJOR_BOOM",
-        "title": "2020 kicks off with conflict",
+        "type": "CLIMATE_DISASTER",
+        "title": "Brokerages looking ahead to new growth engines , global markets",
         "source": "News Media",
-        "url": "https://www.bangkokpost.com/business/1833269/2020-kicks-off-with-conflict",
-        "start_week": 132,
-        "end_week": 152,
-        "severity": 4
+        "url": "http://www.koreaherald.com/view.php?ud=20200102000785",
+        "start_week": 943,
+        "end_week": 955,
+        "affected_assets": [
+            "Bond 5 Y",
+            "SET50",
+            "Bond 10 Y",
+            "Bond 1 Y",
+            "JPY_THB",
+            "DELTA",
+            "EUR_THB",
+            "USD_THB",
+            "GLD",
+            "KTB",
+            "AOT"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_MAJOR_003",
-        "type": "MAJOR_BOOM",
-        "title": "2020 kicks off with conflict",
-        "source": "News Media",
-        "url": "https://www.bangkokpost.com/business/1833269/2020-kicks-off-with-conflict",
-        "start_week": 564,
-        "end_week": 577,
-        "severity": 4
+        "type": "MACRO_ECONOMY",
+        "title": "Retail Investors Force Massive Short Squeeze on Hedge Funds",
+        "source": "Trading Desk",
+        "url": "",
+        "start_week": 258,
+        "end_week": 277,
+        "affected_assets": [
+            "Bond 1 Y",
+            "Bond 10 Y",
+            "DELTA",
+            "EGCO",
+            "Bond 5 Y",
+            "JPY_THB",
+            "GLD",
+            "SET50",
+            "KTB",
+            "AOT"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_MAJOR_004",
-        "type": "MAJOR_BOOM",
-        "title": "SET Index ends up at 1 , 586 . 16 points",
-        "source": "News Media",
-        "url": "https://www.nationthailand.com/news/30380499",
-        "start_week": 724,
-        "end_week": 738,
-        "severity": 3
-    },
-    {
-        "event_id": "EVT_MAJOR_005",
-        "type": "MAJOR_BOOM",
-        "title": "SET Index ends up at 1 , 586 . 16 points",
-        "source": "News Media",
-        "url": "https://www.nationthailand.com/news/30380499",
-        "start_week": 744,
-        "end_week": 766,
-        "severity": 3
-    },
-    {
-        "event_id": "EVT_MAJOR_006",
-        "type": "MAJOR_BOOM",
-        "title": "Tisco predicts SET will see more activity in first quarter",
-        "source": "News Media",
-        "url": "https://www.nationthailand.com/news/30380276",
-        "start_week": 490,
-        "end_week": 507,
+        "type": "MACRO_ECONOMY",
+        "title": "Consumer Confidence Hits 10-Year Low Amidst Recession Fears",
+        "source": "Macro Economics Daily",
+        "url": "",
+        "start_week": 35,
+        "end_week": 54,
+        "affected_assets": [
+            "Bond 10 Y",
+            "USD_THB",
+            "JPY_THB",
+            "AOT",
+            "DELTA",
+            "Bond 1 Y",
+            "GLD",
+            "EUR_THB"
+        ],
         "severity": 5
     },
     {
-        "event_id": "EVT_NORM_007",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "event_id": "EVT_NORM_005",
+        "type": "COMMODITY_SHOCK",
+        "title": "Uranium Prices Skyrocket as Nuclear Power Expansion Approved",
+        "source": "Nuclear Energy News",
         "url": "",
-        "start_week": 481,
-        "end_week": 486,
-        "severity": 2
-    },
-    {
-        "event_id": "EVT_NORM_008",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
-        "url": "",
-        "start_week": 142,
-        "end_week": 148,
+        "start_week": 937,
+        "end_week": 946,
+        "affected_assets": [
+            "GLD"
+        ],
         "severity": 3
     },
     {
-        "event_id": "EVT_NORM_009",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "event_id": "EVT_NORM_006",
+        "type": "GEOPOLITICS",
+        "title": "Historic Peace Treaty Signed, Reopening Blocked Trade Routes",
+        "source": "World Politics",
         "url": "",
-        "start_week": 908,
-        "end_week": 917,
+        "start_week": 476,
+        "end_week": 483,
+        "affected_assets": [
+            "SET50",
+            "EGCO",
+            "Bond 1 Y"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_007",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Airlines Report Record Profits as Travel Demand Surpasses Pre-Pandemic Levels",
+        "source": "Aviation Watch",
+        "url": "",
+        "start_week": 336,
+        "end_week": 346,
+        "affected_assets": [
+            "EUR_THB"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_008",
+        "type": "MACRO_ECONOMY",
+        "title": "Consumer Confidence Hits 10-Year Low Amidst Recession Fears",
+        "source": "Macro Economics Daily",
+        "url": "",
+        "start_week": 108,
+        "end_week": 118,
+        "affected_assets": [
+            "EUR_THB"
+        ],
         "severity": 2
     },
     {
-        "event_id": "EVT_NORM_010",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "event_id": "EVT_NORM_009",
+        "type": "GEOPOLITICS",
+        "title": "Key Maritime Canal Blocked Indefinitely, Freights Delayed",
+        "source": "Maritime Logistics",
         "url": "",
-        "start_week": 412,
-        "end_week": 423,
+        "start_week": 561,
+        "end_week": 572,
+        "affected_assets": [
+            "EGCO",
+            "GLD",
+            "SET50"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_010",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "E-commerce Sales Overtake Brick-and-Mortar for the First Time",
+        "source": "Retail Analytics",
+        "url": "",
+        "start_week": 990,
+        "end_week": 1002,
+        "affected_assets": [
+            "SET50",
+            "JPY_THB",
+            "DELTA"
+        ],
         "severity": 1
     },
     {
         "event_id": "EVT_NORM_011",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "COMMODITY_SHOCK",
+        "title": "Sugar and Cocoa Prices Hit 20-Year High on Poor Harvests",
+        "source": "Agri Trading",
         "url": "",
-        "start_week": 372,
-        "end_week": 376,
+        "start_week": 697,
+        "end_week": 706,
+        "affected_assets": [
+            "Bond 1 Y",
+            "Bond 5 Y"
+        ],
         "severity": 2
     },
     {
         "event_id": "EVT_NORM_012",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "CLIMATE_DISASTER",
+        "title": "Invasive Pest Destroys 30% of Global Coffee Harvest",
+        "source": "AgriBiz Daily",
         "url": "",
-        "start_week": 137,
-        "end_week": 147,
-        "severity": 1
+        "start_week": 300,
+        "end_week": 310,
+        "affected_assets": [
+            "Bond 10 Y",
+            "GLD"
+        ],
+        "severity": 2
     },
     {
         "event_id": "EVT_NORM_013",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "COMMODITY_SHOCK",
+        "title": "Massive New Gold Deposit Discovered, Pressuring Precious Metal Prices",
+        "source": "Mining Weekly",
         "url": "",
-        "start_week": 235,
-        "end_week": 240,
+        "start_week": 896,
+        "end_week": 908,
+        "affected_assets": [
+            "SET50",
+            "AOT"
+        ],
         "severity": 1
     },
     {
         "event_id": "EVT_NORM_014",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "COMMODITY_SHOCK",
+        "title": "Global Wheat Shortage Feared Following Export Bans",
+        "source": "Commodity Watch",
         "url": "",
-        "start_week": 566,
-        "end_week": 575,
-        "severity": 1
+        "start_week": 143,
+        "end_week": 148,
+        "affected_assets": [
+            "GLD"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_NORM_015",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "TECH_INNOVATION",
+        "title": "Solid-State Battery Commercialization Revolutionizes EV Industry",
+        "source": "Auto Future",
         "url": "",
-        "start_week": 583,
-        "end_week": 592,
+        "start_week": 541,
+        "end_week": 545,
+        "affected_assets": [
+            "EUR_THB"
+        ],
         "severity": 2
     },
     {
         "event_id": "EVT_NORM_016",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "COMMODITY_SHOCK",
+        "title": "Major Pipeline Explosion Halts Natural Gas Deliveries to Europe",
+        "source": "Energy Security",
         "url": "",
-        "start_week": 437,
-        "end_week": 447,
-        "severity": 2
+        "start_week": 792,
+        "end_week": 801,
+        "affected_assets": [
+            "AOT",
+            "KTB",
+            "USD_THB"
+        ],
+        "severity": 1
     },
     {
         "event_id": "EVT_NORM_017",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "COMMODITY_SHOCK",
+        "title": "Sugar and Cocoa Prices Hit 20-Year High on Poor Harvests",
+        "source": "Agri Trading",
         "url": "",
-        "start_week": 896,
-        "end_week": 901,
-        "severity": 3
+        "start_week": 443,
+        "end_week": 450,
+        "affected_assets": [
+            "EGCO",
+            "Bond 10 Y"
+        ],
+        "severity": 2
     },
     {
         "event_id": "EVT_NORM_018",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "MACRO_ECONOMY",
+        "title": "Currency Crisis: Major Asian Currency Loses 15% Value Overnight",
+        "source": "Forex News",
         "url": "",
-        "start_week": 414,
-        "end_week": 426,
+        "start_week": 467,
+        "end_week": 479,
+        "affected_assets": [
+            "EGCO",
+            "Bond 10 Y"
+        ],
         "severity": 2
     },
     {
         "event_id": "EVT_NORM_019",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Major Automaker Recalls Millions of Vehicles Over Safety Defect",
+        "source": "Auto Weekly",
         "url": "",
-        "start_week": 802,
-        "end_week": 811,
+        "start_week": 2,
+        "end_week": 7,
+        "affected_assets": [
+            "Bond 5 Y"
+        ],
         "severity": 2
     },
     {
         "event_id": "EVT_NORM_020",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "GEOPOLITICS",
+        "title": "Key Maritime Canal Blocked Indefinitely, Freights Delayed",
+        "source": "Maritime Logistics",
         "url": "",
-        "start_week": 184,
-        "end_week": 191,
-        "severity": 2
+        "start_week": 864,
+        "end_week": 871,
+        "affected_assets": [
+            "Bond 1 Y",
+            "AOT",
+            "JPY_THB"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_NORM_021",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "TECH_INNOVATION",
+        "title": "AGI Breakthrough Announced, Drastically Shifting Labor Markets",
+        "source": "Tech Innovator",
         "url": "",
-        "start_week": 626,
-        "end_week": 638,
-        "severity": 1
+        "start_week": 245,
+        "end_week": 254,
+        "affected_assets": [
+            "SET50",
+            "USD_THB",
+            "EGCO"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_NORM_022",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "CLIMATE_DISASTER",
+        "title": "Severe Flooding Disrupts Mining Operations in South America",
+        "source": "Resource Mining",
         "url": "",
-        "start_week": 437,
-        "end_week": 442,
+        "start_week": 772,
+        "end_week": 782,
+        "affected_assets": [
+            "JPY_THB",
+            "EGCO",
+            "KTB"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_023",
+        "type": "DOMESTIC_POLICY",
+        "title": "Corporate Tax Cut Spark Reshoring of Manufacturing Jobs",
+        "source": "Business Weekly",
+        "url": "",
+        "start_week": 363,
+        "end_week": 373,
+        "affected_assets": [
+            "AOT",
+            "Bond 1 Y",
+            "EGCO"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_024",
+        "type": "TECH_INNOVATION",
+        "title": "Massive Data Breach Exposes Millions of Financial Records",
+        "source": "Cyber Alert",
+        "url": "",
+        "start_week": 36,
+        "end_week": 43,
+        "affected_assets": [
+            "EGCO",
+            "JPY_THB",
+            "GLD"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_025",
+        "type": "MACRO_ECONOMY",
+        "title": "Massive Quantitative Easing Program Announced to Stimulate Growth",
+        "source": "Central Bank Watch",
+        "url": "",
+        "start_week": 380,
+        "end_week": 391,
+        "affected_assets": [
+            "DELTA"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_026",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Major Automaker Recalls Millions of Vehicles Over Safety Defect",
+        "source": "Auto Weekly",
+        "url": "",
+        "start_week": 888,
+        "end_week": 897,
+        "affected_assets": [
+            "JPY_THB"
+        ],
+        "severity": 1
+    },
+    {
+        "event_id": "EVT_NORM_027",
+        "type": "GEOPOLITICS",
+        "title": "Military Coup in Resource-Rich Nation Shocks Global Markets",
+        "source": "Global Alert",
+        "url": "",
+        "start_week": 979,
+        "end_week": 991,
+        "affected_assets": [
+            "Bond 10 Y"
+        ],
         "severity": 3
     }
 ]

@@ -1,282 +1,350 @@
 [
     {
         "event_id": "EVT_MAJOR_001",
-        "type": "MAJOR_BOOM",
-        "title": "SET Index ends up at 1 , 586 . 16 points",
-        "source": "News Media",
-        "url": "https://www.nationthailand.com/news/30380499",
-        "start_week": 202,
-        "end_week": 219,
-        "severity": 5
+        "type": "GEOPOLITICS",
+        "title": "Diplomatic Tensions Rise Over Semiconductor Export Controls",
+        "source": "Tech Policy Weekly",
+        "url": "",
+        "start_week": 604,
+        "end_week": 621,
+        "affected_assets": [
+            "EUR_THB",
+            "Bond 1 Y",
+            "JPY_THB",
+            "DELTA",
+            "SET100",
+            "KKP",
+            "Bond 10 Y",
+            "Bond 5 Y",
+            "CPALL",
+            "GLD"
+        ],
+        "severity": 4
     },
     {
         "event_id": "EVT_MAJOR_002",
-        "type": "MAJOR_CRISIS",
-        "title": "US-China Trade War Escalates, Heavily Impacting Exports",
-        "source": "Trade Monitor",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Logistics Giants Invest Heavily in AI and Warehouse Automation",
+        "source": "Supply Chain Today",
         "url": "",
-        "start_week": 240,
-        "end_week": 253,
-        "severity": 5
+        "start_week": 181,
+        "end_week": 197,
+        "affected_assets": [
+            "AOT",
+            "SET100",
+            "DELTA",
+            "Bond 5 Y",
+            "CPALL",
+            "JPY_THB",
+            "Bond 1 Y",
+            "EUR_THB",
+            "USD_THB"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_MAJOR_003",
-        "type": "MAJOR_CRISIS",
-        "title": "Global Pandemic Outbreak Forces Mass Lockdowns",
-        "source": "World Health Report",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Airlines Report Record Profits as Travel Demand Surpasses Pre-Pandemic Levels",
+        "source": "Aviation Watch",
         "url": "",
-        "start_week": 659,
-        "end_week": 672,
+        "start_week": 701,
+        "end_week": 723,
+        "affected_assets": [
+            "Bond 10 Y",
+            "Bond 5 Y",
+            "Bond 1 Y",
+            "DELTA",
+            "CPALL",
+            "SET100",
+            "AOT",
+            "USD_THB",
+            "EUR_THB"
+        ],
         "severity": 3
     },
     {
         "event_id": "EVT_MAJOR_004",
-        "type": "MAJOR_BOOM",
-        "title": "2020 kicks off with conflict",
+        "type": "CLIMATE_DISASTER",
+        "title": "Brokerages looking ahead to new growth engines , global markets",
         "source": "News Media",
-        "url": "https://www.bangkokpost.com/business/1833269/2020-kicks-off-with-conflict",
-        "start_week": 335,
-        "end_week": 352,
-        "severity": 4
+        "url": "http://www.koreaherald.com/view.php?ud=20200102000785",
+        "start_week": 849,
+        "end_week": 871,
+        "affected_assets": [
+            "Bond 5 Y",
+            "Bond 10 Y",
+            "AOT",
+            "EUR_THB",
+            "CPALL",
+            "SET100",
+            "JPY_THB",
+            "USD_THB",
+            "DELTA"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_MAJOR_005",
-        "type": "MAJOR_CRISIS",
-        "title": "US-China Trade War Escalates, Heavily Impacting Exports",
-        "source": "Trade Monitor",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Healthcare Sector Sees Influx of Venture Capital for Telemedicine",
+        "source": "Health & Wealth",
         "url": "",
-        "start_week": 36,
-        "end_week": 51,
-        "severity": 4
+        "start_week": 964,
+        "end_week": 984,
+        "affected_assets": [
+            "JPY_THB",
+            "CPALL",
+            "Bond 10 Y",
+            "GLD",
+            "Bond 5 Y",
+            "Bond 1 Y",
+            "SET100",
+            "USD_THB"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_NORM_006",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "MACRO_ECONOMY",
+        "title": "Housing Bubble Bursts in Major Metropolitan Areas",
+        "source": "Property Insider",
         "url": "",
-        "start_week": 161,
-        "end_week": 172,
+        "start_week": 274,
+        "end_week": 281,
+        "affected_assets": [
+            "CPALL"
+        ],
         "severity": 1
     },
     {
         "event_id": "EVT_NORM_007",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "TECH_INNOVATION",
+        "title": "Autonomous Trucking Fleet Deployed Nationwide, Slashing Logistics Costs",
+        "source": "Supply Chain Today",
         "url": "",
-        "start_week": 831,
-        "end_week": 842,
+        "start_week": 308,
+        "end_week": 319,
+        "affected_assets": [
+            "JPY_THB",
+            "Bond 1 Y"
+        ],
         "severity": 2
     },
     {
         "event_id": "EVT_NORM_008",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "GEOPOLITICS",
+        "title": "Major Trade Pact Signed Between ASEAN and European Union",
+        "source": "Asia Business",
         "url": "",
-        "start_week": 17,
-        "end_week": 23,
-        "severity": 1
+        "start_week": 13,
+        "end_week": 20,
+        "affected_assets": [
+            "SET100",
+            "KKP"
+        ],
+        "severity": 2
     },
     {
         "event_id": "EVT_NORM_009",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "GEOPOLITICS",
+        "title": "New Alliance Formed to Control Rare Earth Mineral Exports",
+        "source": "Geopolitics Daily",
         "url": "",
-        "start_week": 1026,
-        "end_week": 1032,
-        "severity": 3
+        "start_week": 442,
+        "end_week": 452,
+        "affected_assets": [
+            "CPALL",
+            "Bond 1 Y"
+        ],
+        "severity": 2
     },
     {
         "event_id": "EVT_NORM_010",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "DOMESTIC_POLICY",
+        "title": "Government Approves Trillion-Baht Infrastructure Megaproject",
+        "source": "National News",
         "url": "",
-        "start_week": 276,
-        "end_week": 285,
-        "severity": 1
+        "start_week": 789,
+        "end_week": 796,
+        "affected_assets": [
+            "JPY_THB",
+            "Bond 1 Y"
+        ],
+        "severity": 2
     },
     {
         "event_id": "EVT_NORM_011",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "MACRO_ECONOMY",
+        "title": "Housing Bubble Bursts in Major Metropolitan Areas",
+        "source": "Property Insider",
         "url": "",
-        "start_week": 135,
-        "end_week": 141,
+        "start_week": 567,
+        "end_week": 576,
+        "affected_assets": [
+            "GLD",
+            "JPY_THB"
+        ],
         "severity": 3
     },
     {
         "event_id": "EVT_NORM_012",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "DOMESTIC_POLICY",
+        "title": "Digital Wallet Stimulus Handout Officially Launched",
+        "source": "National Treasury",
         "url": "",
-        "start_week": 675,
-        "end_week": 679,
-        "severity": 2
-    },
-    {
-        "event_id": "EVT_NORM_013",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
-        "url": "",
-        "start_week": 430,
-        "end_week": 435,
+        "start_week": 995,
+        "end_week": 1007,
+        "affected_assets": [
+            "Bond 10 Y",
+            "EUR_THB",
+            "SET100"
+        ],
         "severity": 1
     },
     {
-        "event_id": "EVT_NORM_014",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "event_id": "EVT_NORM_013",
+        "type": "CLIMATE_DISASTER",
+        "title": "El Niño Weather Pattern Triggers Extreme Drought Warnings",
+        "source": "Climate Watch",
         "url": "",
-        "start_week": 889,
-        "end_week": 899,
-        "severity": 2
+        "start_week": 623,
+        "end_week": 631,
+        "affected_assets": [
+            "GLD",
+            "EUR_THB",
+            "JPY_THB"
+        ],
+        "severity": 3
+    },
+    {
+        "event_id": "EVT_NORM_014",
+        "type": "GEOPOLITICS",
+        "title": "UN Imposes Heavy Economic Sanctions on Major Oil Exporter",
+        "source": "International News",
+        "url": "",
+        "start_week": 985,
+        "end_week": 992,
+        "affected_assets": [
+            "DELTA",
+            "GLD"
+        ],
+        "severity": 3
     },
     {
         "event_id": "EVT_NORM_015",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "DOMESTIC_POLICY",
+        "title": "New Data Privacy Law Levies Heavy Fines on Tech Firms",
+        "source": "Legal Tech Watch",
         "url": "",
-        "start_week": 196,
-        "end_week": 204,
+        "start_week": 595,
+        "end_week": 605,
+        "affected_assets": [
+            "DELTA",
+            "AOT"
+        ],
         "severity": 3
     },
     {
         "event_id": "EVT_NORM_016",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "MACRO_ECONOMY",
+        "title": "Unexpected Spike in Core Inflation Spooks Bond Markets",
+        "source": "Wall Street Journal",
         "url": "",
-        "start_week": 464,
-        "end_week": 476,
-        "severity": 1
+        "start_week": 449,
+        "end_week": 458,
+        "affected_assets": [
+            "KKP",
+            "AOT",
+            "EUR_THB"
+        ],
+        "severity": 2
     },
     {
         "event_id": "EVT_NORM_017",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "GEOPOLITICS",
+        "title": "Widespread Political Protests Shut Down Capital's Business District",
+        "source": "Local News Agency",
         "url": "",
-        "start_week": 254,
-        "end_week": 265,
-        "severity": 3
-    },
-    {
-        "event_id": "EVT_NORM_018",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
-        "url": "",
-        "start_week": 691,
-        "end_week": 696,
+        "start_week": 169,
+        "end_week": 174,
+        "affected_assets": [
+            "Bond 1 Y",
+            "CPALL"
+        ],
         "severity": 1
     },
     {
-        "event_id": "EVT_NORM_019",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "event_id": "EVT_NORM_018",
+        "type": "GEOPOLITICS",
+        "title": "Trade War Escalates: New 25% Tariffs Imposed on Tech Imports",
+        "source": "Trade Monitor",
         "url": "",
-        "start_week": 708,
-        "end_week": 715,
-        "severity": 3
+        "start_week": 30,
+        "end_week": 35,
+        "affected_assets": [
+            "USD_THB",
+            "DELTA",
+            "AOT"
+        ],
+        "severity": 2
+    },
+    {
+        "event_id": "EVT_NORM_019",
+        "type": "MACRO_ECONOMY",
+        "title": "Consumer Confidence Hits 10-Year Low Amidst Recession Fears",
+        "source": "Macro Economics Daily",
+        "url": "",
+        "start_week": 59,
+        "end_week": 67,
+        "affected_assets": [
+            "SET100",
+            "DELTA",
+            "Bond 1 Y"
+        ],
+        "severity": 2
     },
     {
         "event_id": "EVT_NORM_020",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "COMMODITY_SHOCK",
+        "title": "Silver Squeeze: Industrial Demand Outstrips Global Supply",
+        "source": "Precious Metals Report",
         "url": "",
-        "start_week": 85,
-        "end_week": 97,
+        "start_week": 52,
+        "end_week": 63,
+        "affected_assets": [
+            "JPY_THB",
+            "Bond 10 Y"
+        ],
         "severity": 1
     },
     {
         "event_id": "EVT_NORM_021",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Retail Apocalypse: Historic Department Store Chain Liquidates",
+        "source": "Retail Insights",
         "url": "",
-        "start_week": 560,
-        "end_week": 564,
+        "start_week": 285,
+        "end_week": 295,
+        "affected_assets": [
+            "KKP",
+            "CPALL",
+            "USD_THB"
+        ],
         "severity": 1
     },
     {
         "event_id": "EVT_NORM_022",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
+        "type": "INDUSTRY_SPECIFIC",
+        "title": "Logistics Giants Invest Heavily in AI and Warehouse Automation",
+        "source": "Supply Chain Today",
         "url": "",
-        "start_week": 859,
-        "end_week": 866,
-        "severity": 3
-    },
-    {
-        "event_id": "EVT_NORM_023",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
-        "url": "",
-        "start_week": 926,
-        "end_week": 938,
+        "start_week": 357,
+        "end_week": 366,
+        "affected_assets": [
+            "JPY_THB",
+            "Bond 10 Y"
+        ],
         "severity": 1
-    },
-    {
-        "event_id": "EVT_NORM_024",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
-        "url": "",
-        "start_week": 369,
-        "end_week": 373,
-        "severity": 1
-    },
-    {
-        "event_id": "EVT_NORM_025",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
-        "url": "",
-        "start_week": 891,
-        "end_week": 901,
-        "severity": 3
-    },
-    {
-        "event_id": "EVT_NORM_026",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
-        "url": "",
-        "start_week": 768,
-        "end_week": 778,
-        "severity": 3
-    },
-    {
-        "event_id": "EVT_NORM_027",
-        "type": "INDUSTRY_NEWS",
-        "title": "Tech Giant Announces Expansion of Thai Data Centers",
-        "source": "Tech News Asia",
-        "url": "",
-        "start_week": 201,
-        "end_week": 213,
-        "severity": 2
-    },
-    {
-        "event_id": "EVT_NORM_028",
-        "type": "INDUSTRY_NEWS",
-        "title": "Sudden Changes in Import Tariffs Rattle Local Markets",
-        "source": "Ministry of Commerce",
-        "url": "",
-        "start_week": 249,
-        "end_week": 256,
-        "severity": 2
     }
 ]
