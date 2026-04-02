@@ -622,7 +622,7 @@ export default function Tutorial() {
     
     return (
       <div className="min-h-screen bg-[#011D10] text-white font-poiret p-6 flex flex-col items-center">
-        <header className="w-full flex justify-between items-center border-b-4 border-[#ffffff] mb-8 pb-2 max-w-6xl">
+        <header className="w-full flex justify-between items-center border-b-4 border-[#ffffff] mb-8 pb-2 ">
           <h1 className="text-5xl font-poiret font-bold text-[#B7FD5E]">
             Practice: {TUTORIAL_DATA[activeTutorial].title}
           </h1>

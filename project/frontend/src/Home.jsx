@@ -1,16 +1,39 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation} from "react-router-dom";
 import { useState, useEffect } from "react";
 
 const API_BASE_URL = "http://localhost:8000/api/invest";
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [tutorialLevel, setTutorialLevel] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [resumeSessionData, setResumeSessionData] = useState(null);
 
+  useEffect(() => {
+    if (location.state?.showResumeModal) {
+      const loadAndShow = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) return;
+          const res = await fetch(`${API_BASE_URL}/check-session`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+          if (data.hasSession) {
+            setResumeSessionData(data);
+            setShowResumeModal(true);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      loadAndShow();
+    }
+  }, []);
+  
   // Fetch tutorial progress on mount
   useEffect(() => {
     const fetchTutorialProgress = async () => {
@@ -84,8 +107,8 @@ export default function Home() {
           localStorage.removeItem("token");
           navigate("/login");
         }}
-        className="absolute top-8 right-8 z-50 group inline-flex h-8 items-center justify-center rounded-sm border border-[#33ff33]/30 bg-transparent px-4 font-jersey text-base tracking-wide text-[#33ff33]/60 transition-all duration-150 hover:border-[#33ff33] hover:text-[#33ff33] hover:bg-[#33ff33]/10 uppercase"
-      >
+        className="absolute top-8 right-8 z-50 group inline-flex h-12 items-center justify-center rounded-sm border border-[#33ff33]/30 bg-transparent px-8 font-jersey text-2xl tracking-wide text-[#33ff33]/60 transition-all duration-150 hover:border-[#33ff33] hover:text-[#33ff33] hover:bg-[#33ff33]/10 uppercase"
+        >
         Logout
       </button>
 
@@ -205,75 +228,69 @@ export default function Home() {
         </div>
       )}
 
-      {showResumeModal && resumeSessionData && resumeSessionData.preview && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-          <div className="relative border-4 border-[#33ff33] bg-[#001a0a] p-8 rounded-lg shadow-[0_0_30px_rgba(51,255,51,0.3)] max-w-xl w-full">
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_2px] opacity-20"></div>
+    {showResumeModal && resumeSessionData && resumeSessionData.preview && (
+      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <div className="relative border-2 border-[#33ff33] bg-[#032F14] p-8 rounded-sm max-w-xl w-full">
 
-            <div className="relative z-10 text-center">
-              <h2 className="text-4xl font-jersey text-[#33ff33] tracking-wider mb-2 drop-shadow-[0_0_10px_#33ff33]">
-                RESUME GAME?
-              </h2>
-              <div className="h-1 w-full bg-[#33ff33] shadow-[0_0_10px_#33ff33] mb-6"></div>
+          {/* CRT Scanline Overlay */}
+          <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-20 rounded-sm"></div>
 
-              <div className="bg-[#022c19] border-2 border-[#11942F] p-6 rounded mb-8 text-left space-y-3 font-jersey">
-                <div className="flex justify-between items-center border-b border-[#11942F] pb-2">
-                  <span className="text-[#00aa00] text-2xl">Year / Month</span>
-                  <span className="text-[#33ff33] text-3xl">
-                    {resumeSessionData.preview?.currentYear} /{" "}
-                    {Math.floor(resumeSessionData.preview?.currentMonth)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center border-b border-[#11942F] py-2">
-                  <span className="text-[#00aa00] text-2xl">Pocket Cash</span>
-                  <span className="text-[#33ff33] text-3xl">
-                    {resumeSessionData.preview?.pocket?.toLocaleString(
-                      undefined,
-                      { maximumFractionDigits: 0 },
-                    )}{" "}
-                    $
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-[#00aa00] text-2xl">Total Assets</span>
-                  <span className="text-[#33ff33] text-3xl">
-                    {resumeSessionData.preview?.totalAssets?.toLocaleString(
-                      undefined,
-                      { maximumFractionDigits: 0 },
-                    )}{" "}
-                    $
-                  </span>
-                </div>
+          <div className="relative z-10 text-center">
+            <h2 className="text-5xl font-jersey tracking-widest text-[#33ff33] mb-2">
+              RESUME GAME?
+            </h2>
+            <div className="h-1 w-full bg-[#33ff33] mt-3 mb-2"></div>
+            <p className="mb-6 text-sm tracking-[0.5em] text-[#33ff33] font-jersey opacity-70">
+              LOAD SAVE DATA
+            </p>
+
+            <div className="bg-[#021a0a] border border-[#1a5c2a] p-6 rounded-sm mb-8 text-left space-y-4 font-jersey">
+              <div className="flex justify-between items-center border-b border-[#1a5c2a] pb-4">
+                <span className="text-[#33ff33] text-xl opacity-80">Year / Month</span>
+                <span className="text-[#33ff33] text-2xl">
+                  {resumeSessionData.preview?.currentYear} / {Math.floor(resumeSessionData.preview?.currentMonth)}
+                </span>
               </div>
-
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={() =>
-                    navigate("/invest", { state: { forceNew: false } })
-                  }
-                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-[#003300] px-6 font-jersey text-2xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_4px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#005500] active:translate-y-[2px] active:shadow-none"
-                >
-                  CONTINUE GAME
-                </button>
-
-                <button
-                  onClick={() => navigate("/select-strategy")}
-                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#550000] text-red-500 bg-[#1a0000] hover:border-red-500 hover:text-red-400 font-jersey text-2xl tracking-wide transition-all duration-150 shadow-none"
-                >
-                  START NEW GAME
-                </button>
-
-                <button
-                  onClick={() => setShowResumeModal(false)}
-                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#005500] bg-transparent px-6 font-jersey text-2xl tracking-wide text-[#005500] transition-all duration-150 mt-2 hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#003300] active:translate-y-[2px] active:shadow-none"
-                >
-                  CANCEL
-                </button>
+              <div className="flex justify-between items-center border-b border-[#1a5c2a] py-4">
+                <span className="text-[#33ff33] text-xl opacity-80">Pocket Cash</span>
+                <span className="text-[#33ff33] text-2xl">
+                  {resumeSessionData.preview?.pocket?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $
+                </span>
               </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-[#33ff33] text-xl opacity-80">Total Assets</span>
+                <span className="text-[#33ff33] text-2xl">
+                  {resumeSessionData.preview?.totalAssets?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-5">
+              <button
+                onClick={() => navigate("/invest", { state: { forceNew: false } })}
+                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-jersey text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
+              >
+                CONTINUE GAME
+              </button>
+
+              <button
+                onClick={() => navigate("/select-strategy", { state: { from: "resume" } })}
+                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-red-800 bg-[#1a0000] font-jersey text-xl tracking-widest text-red-600 transition-all duration-150 hover:bg-[#2a0000] active:scale-95"
+              >
+                START NEW GAME
+              </button>
+
+              <button
+                onClick={() => setShowResumeModal(false)}
+                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-jersey text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
+              >
+                CANCEL
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
     </div>
   );
 }
