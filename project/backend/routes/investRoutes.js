@@ -184,7 +184,7 @@ router.post("/init", authenticateToken, (req, res) => {
   const userId = req.user.id;
   const { forceNew, duration, targetAmount } = req.body;
 
-  const maxYears = duration ? parseInt(duration) : 30;
+  const maxYears = duration ? parseInt(duration) : 40;
   const finalTargetAmount = targetAmount ? parseFloat(targetAmount) : 1000000;
 
   const checkSql = "SELECT session_id, game_state, scenario_data FROM active_sessions WHERE user_id = ?";

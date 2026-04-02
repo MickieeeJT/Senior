@@ -1,13 +1,13 @@
 import mysql from "mysql2";
 
-const db = mysql.createConnection({
+const db = mysql.createPool({
     host: "localhost",
     user: "root",
     password: "",
     database: "InvestGame"
 });
 
-db.connect(err => {
+db.getConnection((err, connection) => {
     if (err) {
         console.error("❌ Database connection failed:", err);
         return;
