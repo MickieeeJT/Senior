@@ -5,60 +5,6 @@ import MiniChart from "./MiniChart";
 
 const API_BASE_URL = "http://localhost:8000/api/invest";
 
-const allScenarioFiles = import.meta.glob("./data/Datas */*.json", { eager: true });
-
-// --- HELPER FUNCTIONS ---
-const initializeRandomScenario = () => {
-  const scenarios = {};
-
-  for (const path in allScenarioFiles) {
-    const parts = path.split("/");
-    const folderName = parts[parts.length - 2];
-    const fileName = parts[parts.length - 1].replace(".json", "");
-
-    if (!scenarios[folderName]) scenarios[folderName] = [];
-    scenarios[folderName].push({
-      name: fileName,
-      data: allScenarioFiles[path].default || allScenarioFiles[path]
-    });
-  }
-
-  const folderNames = Object.keys(scenarios);
-  if (folderNames.length === 0) {
-    console.error("No scenario folders found!");
-    return null;
-  }
-
-  const selectedFolder = folderNames[Math.floor(Math.random() * folderNames.length)];
-  const selectedFiles = scenarios[selectedFolder];
-
-  let stocks = [];
-  let currencies = [];
-  let index = null;
-  let gold = null;
-  let events = [];
-
-  selectedFiles.forEach(file => {
-    const upperName = file.name.toUpperCase();
-
-    if (upperName.includes("EVENT_CARD")) {
-      events = file.data;
-    } else if (upperName.includes("_THB") || ["USD", "EUR", "JPY"].includes(upperName)) {
-      currencies.push({ symbol: file.name, data: file.data });
-    } else if (upperName.includes("SET") || upperName.includes("INDEX")) {
-      index = { symbol: file.name, data: file.data };
-    } else if (upperName.includes("GLD") || upperName.includes("GOLD")) {
-      gold = { symbol: file.name, data: file.data };
-    } else if (upperName.includes("BOND") || upperName.includes(" Y")) {
-      // Skip bond
-    } else {
-      stocks.push({ symbol: file.name, data: file.data });
-    }
-  });
-
-  return { stocks, currencies, index, gold, events };
-};
-
 export default function Invest() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,6 +13,7 @@ export default function Invest() {
   const [sessionId, setSessionId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(true);
   
   // Tutorial progress state
   const [tutorialLevel, setTutorialLevel] = useState(0);
@@ -106,6 +53,9 @@ export default function Invest() {
   const [debtAmount, setDebtAmount] = useState(0);
   const [inDebtMode, setInDebtMode] = useState(false);
   
+  const [totalWeeks, setTotalWeeks] = useState(1560); 
+  const durationYears = totalWeeks / 52; 
+
   const timerRef = useRef(null);
   const processingRef = useRef(null);
 
@@ -332,29 +282,20 @@ export default function Invest() {
     }
   };
 
-  useEffect(() => {
-    const scenarioData = initializeRandomScenario();
-    if (scenarioData) {
-      const { stocks, currencies, index, gold, events } = scenarioData;
-      setSelectedStocks(stocks);
-      setSelectedIndex(index);
-      if (index && index.data.length > 0) setIndexValue(index.data[0].close);
-      setSelectedGold(gold);
-      if (gold && gold.data.length > 0) setGoldValue(gold.data[0].close);
-      setSelectedCurrency(currencies);
-      setScenarioEvents(events);
-    }
-  }, []);
-
-  const initGame = async (forceNew = false) => {
+const initGame = async (forceNew = false) => {
     try {
       setLoading(true);
+      setIsGenerating(true);
+      
       const token = localStorage.getItem("token");
       
-      // Get target amount from location state if available
-      const targetAmountFromState = location.state?.targetAmount;
-      const durationFromState = location.state?.duration;
+      const { duration, targetAmount } = location.state || {};
+      const selectedDuration = duration || 30;
+      const selectedTarget = targetAmount || 1000000;
       
+      console.log(`[Client Init] Requesting ${forceNew ? 'NEW' : 'EXISTING'} game...`);
+
+      // วิ่งไปที่เส้นทางเดียว ไม่ว่าจะเริ่มเกมใหม่หรือโหลดเซฟ
       const response = await fetch(`${API_BASE_URL}/init`, {
         method: "POST",
         headers: { 
@@ -363,8 +304,8 @@ export default function Invest() {
         },
         body: JSON.stringify({ 
           forceNew,
-          targetAmount: targetAmountFromState,
-          duration: durationFromState
+          duration: selectedDuration,
+          targetAmount: selectedTarget
         })
       });
       
@@ -376,28 +317,64 @@ export default function Invest() {
       const data = await response.json();
       
       if (data.sessionId) {
-          setSessionId(data.sessionId);
-          setGameState(data.gameState);
-          
-          if (data.gameState.currentMonth > 1) {
-              const restoredProgress = data.gameState.currentProgress || ((data.gameState.currentMonth - 1) / 12) * 100 + 0.1;
-
-              setCurrentMonth(data.gameState.currentMonth);
-              setProgress(restoredProgress);
-          } else {
-              setCurrentMonth(1);
-              setProgress(0);
-          }
-
-          // Set target amount from response or game state
-          if (data.targetAmount || data.gameState.targetAmount) {
-            setTargetAmount(data.targetAmount || data.gameState.targetAmount);
-          }
+          processGameData(data);
       }
       
       setLoading(false);
+      setIsGenerating(false);
+      
     } catch (error) {
+      console.error("[Client Init] Error:", error);
       setLoading(false);
+      setIsGenerating(false);
+    }
+  };
+    
+  // Helper function to handle data processing to keep the main code clean
+  const processGameData = (data) => {
+    setSessionId(data.sessionId);
+    setGameState(data.gameState);
+    
+    if (data.gameState.currentMonth > 1) {
+        const restoredProgress = data.gameState.currentProgress || ((data.gameState.currentMonth - 1) / 12) * 100 + 0.1;
+        setCurrentMonth(data.gameState.currentMonth);
+        setProgress(restoredProgress);
+    } else {
+        setCurrentMonth(1);
+        setProgress(0);
+    }
+
+    if (data.gameState.targetAmount) {
+      setTargetAmount(data.gameState.targetAmount);
+    }
+
+    if (data.scenarioData) {
+        let stocks = [];
+        let currencies = [];
+        let index = null;
+        let gold = null;
+
+        Object.values(data.scenarioData.assets).forEach(assetObj => {
+          const formattedAsset = { symbol: assetObj.name, data: assetObj.data };
+          if (assetObj.category === "stocks") stocks.push(formattedAsset);
+          else if (assetObj.category === "currencies") currencies.push(formattedAsset);
+          else if (assetObj.category === "index") index = formattedAsset;
+          else if (assetObj.category === "gold") gold = formattedAsset;
+        });
+
+        setSelectedStocks(stocks);
+        setSelectedIndex(index);
+        if (index && index.data.length > 0) setIndexValue(index.data[0].close);
+        
+        setSelectedGold(gold);
+        if (gold && gold.data.length > 0) setGoldValue(gold.data[0].close);
+        
+        setSelectedCurrency(currencies);
+        setScenarioEvents(data.scenarioData.events);
+        
+        // Set total weeks based on the generated scenario or calculate from duration_years
+        const finalWeeks = data.scenarioData.totalWeeks || (data.gameState.duration_years || 30) * 52;
+        setTotalWeeks(finalWeeks);
     }
   };
 
@@ -740,6 +717,18 @@ export default function Invest() {
     navigate("/home");
   };
 
+  // --- Generating Screen ---
+  if (isGenerating) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black">
+        <div className="w-16 h-16 border-4 border-[#33ff33] border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-6 font-poiret text-2xl text-[#33ff33]">
+          Loading Market Scenarios...
+        </p>
+      </div>
+    );
+  }
+
   if (loading || !gameState) {
     return (
       <div className="h-screen w-screen bg-[#011D10] flex items-center justify-center">
@@ -823,7 +812,7 @@ export default function Invest() {
 
         <div className="self-center mb-1 pt-1 w-1/4">
           <p className="text-xl font-poiret font-bold text-white mb-1 text-center">
-            YEAR {gameState.currentYear} OF 20
+            YEAR {gameState.currentYear} OF {durationYears}
           </p>
 
           <div className="relative h-4 w-full mb-1 bg-white border border-t-[4px] border-t-[#5EBD50] border-l-[4px] border-l-[#5EBD50] border-b-[4px] border-b-[#11942F] border-r-[4px] border-r-[#11942F] overflow-hidden">

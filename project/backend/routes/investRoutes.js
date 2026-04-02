@@ -1,5 +1,6 @@
 import express from "express";
 import { authenticateToken } from "../middleware/authMiddleware.js";
+import { generateScenario } from "../utils/scenarioGenerator.js";
 import db from "../config/db.js";
 
 const router = express.Router();
@@ -183,29 +184,20 @@ router.post("/init", authenticateToken, (req, res) => {
   const userId = req.user.id;
   const { forceNew, duration, targetAmount } = req.body;
 
-  // Default duration if not specified
-  const maxYears = duration ? parseInt(duration) : 20;
+  const maxYears = duration ? parseInt(duration) : 30;
+  const finalTargetAmount = targetAmount ? parseFloat(targetAmount) : 1000000;
 
-  // 1. Check if user already has an active session in DB
-  const checkSql = "SELECT session_id, game_state FROM active_sessions WHERE user_id = ?";
+  const checkSql = "SELECT session_id, game_state, scenario_data FROM active_sessions WHERE user_id = ?";
   db.query(checkSql, [userId], (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Database error" });
-    }
+    if (err) return res.status(500).json({ error: "Database error" });
 
     // RESUME EXISTING GAME
     if (rows.length > 0 && !forceNew) {
       const savedSession = rows[0];
-      const savedGameState = savedSession.game_state; // MySQL driver might parse JSON automatically, if not: JSON.parse()
+      const parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
+      const parsedScenario = typeof savedSession.scenario_data === 'string' ? JSON.parse(savedSession.scenario_data) : savedSession.scenario_data;
 
-      // Ensure it's an object (depends on mysql driver configuration)
-      const parsedState = typeof savedGameState === 'string' ? JSON.parse(savedGameState) : savedGameState;
-
-      // Load into memory map for speed during gameplay
       gameSessions.set(savedSession.session_id, parsedState);
-
-      // We also need to add userId to the in-memory state for saving logic later if it wasn't there
       parsedState.userId = userId;
 
       return res.json({ 
@@ -213,14 +205,15 @@ router.post("/init", authenticateToken, (req, res) => {
         message: "Game Resumed", 
         sessionId: savedSession.session_id, 
         gameState: parsedState,
-        targetAmount: parsedState.targetAmount || null
+        scenarioData: parsedScenario,
+        // targetAmount: parsedState.targetAmount || null
       });
     }
 
-    // START NEW GAME (Delete old if exists)
+    // START NEW GAME
     if (rows.length > 0 && forceNew) {
-         // The REPLACE/INSERT logic later handles DB, but we clear memory just in case
          gameSessions.delete(rows[0].session_id);
+         deleteGameFromDB(userId);
     }
 
     const sessionId = Date.now().toString();
@@ -233,17 +226,20 @@ router.post("/init", authenticateToken, (req, res) => {
     };
     const initialCapital = 4000;
     
+    // --- Generate Scenario Graph (e.g., 40 Years) ---
+    const newScenario = generateScenario(maxYears);
+    
     const gameState = {
       userId,
       sessionId,
       maxYears,
-      targetAmount: targetAmount || null,
+      targetAmount: finalTargetAmount,
       pocket: initialCapital,
       totalInvested: initialCapital,
       portfolioHistory: [initialCapital],
       savingsBalance: 0,
       currentYear: 1,
-      currentMonth: 0,
+      currentMonth: 1, // Start at month 1
       fundBalance: 0,
       goldBalance: 0,
       indexShares: 0,
@@ -261,11 +257,22 @@ router.post("/init", authenticateToken, (req, res) => {
     gameSessions.set(sessionId, gameState);
     
     // Save to DB
-    if (gameState.userId) {
-        saveGameToDB(gameState.userId, sessionId, gameState);
-    }
-    
-    res.json({ sessionId, gameState, targetAmount, message: "New Game Started" });
+    const jsonState = JSON.stringify(gameState);
+    const jsonScenario = JSON.stringify(newScenario);
+    const sqlInsert = `
+        INSERT INTO active_sessions (user_id, session_id, game_state, scenario_data) 
+        VALUES (?, ?, ?, ?)
+    `;
+    db.query(sqlInsert, [userId, sessionId, jsonState, jsonScenario], (insertErr) => {
+        if (insertErr) console.error("Error creating new game:", insertErr);
+        
+        res.json({ 
+            sessionId, 
+            gameState, 
+            scenarioData: newScenario,
+            message: "New Game Started" 
+        });
+    });
   });
 });
 
@@ -647,7 +654,7 @@ router.post("/year-increment", (req, res) => {
   const val = currentNetWorth ? parseFloat(currentNetWorth) : gameState.pocket;
   gameState.portfolioHistory.push(val);
 
-  if (gameState.currentYear >= 20) return res.json({ success: true, gameComplete: true, gameState });
+  if (gameState.currentYear >= (gameState.maxYears || 20)) return res.json({ success: true, gameComplete: true, gameState });
 
   gameState.currentYear += 1;
   gameState.lastProcessedMonth = 0;

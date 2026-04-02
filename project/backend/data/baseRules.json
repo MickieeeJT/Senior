@@ -1,0 +1,122 @@
+{
+  "AOT": {
+    "asset": "AOT",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.08472842305018047,
+    "startPrice": 59.5
+  },
+  "AP": {
+    "asset": "AP",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.11112751874255998,
+    "startPrice": 8.1
+  },
+  "BBL": {
+    "asset": "BBL",
+    "baseReturn": 0.0039231895987927685,
+    "baseVolatility": 0.06288357767959409,
+    "startPrice": 151
+  },
+  "Bond 1 Y": {
+    "asset": "Bond 1 Y",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.1494011685527693,
+    "startPrice": 2.4
+  },
+  "Bond 10 Y": {
+    "asset": "Bond 10 Y",
+    "baseReturn": 0.0013727576375379333,
+    "baseVolatility": 0.09500010237044243,
+    "startPrice": 2.27
+  },
+  "Bond 5 Y": {
+    "asset": "Bond 5 Y",
+    "baseReturn": 0.004798284445751585,
+    "baseVolatility": 0.11030388711467963,
+    "startPrice": 2.08
+  },
+  "CENTEL": {
+    "asset": "CENTEL",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.10398810781618688,
+    "startPrice": 34.5
+  },
+  "CPALL": {
+    "asset": "CPALL",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.08174732280223233,
+    "startPrice": 55.75
+  },
+  "DELTA": {
+    "asset": "DELTA",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.16746646046767313,
+    "startPrice": 152.5
+  },
+  "EGCO": {
+    "asset": "EGCO",
+    "baseReturn": 0.0039724355850567486,
+    "baseVolatility": 0.06334443042929043,
+    "startPrice": 117
+  },
+  "EUR_THB": {
+    "asset": "EUR_THB",
+    "baseReturn": -0.0010038144280673416,
+    "baseVolatility": 0.023576670137988785,
+    "startPrice": 35.469
+  },
+  "GLD": {
+    "asset": "GLD",
+    "baseReturn": 0.003487695951895968,
+    "baseVolatility": 0.03670005275967866,
+    "startPrice": 3.6
+  },
+  "GRAMMY": {
+    "asset": "GRAMMY",
+    "baseReturn": 0.001520097734439238,
+    "baseVolatility": 0.09753074080395865,
+    "startPrice": 8.3
+  },
+  "JPY_THB": {
+    "asset": "JPY_THB",
+    "baseReturn": -0.001769342925011598,
+    "baseVolatility": 0.02634974552768569,
+    "startPrice": 21.793
+  },
+  "KKP": {
+    "asset": "KKP",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.08928026368681616,
+    "startPrice": 52.5
+  },
+  "KTB": {
+    "asset": "KTB",
+    "baseReturn": 0.005,
+    "baseVolatility": 0.08104229119722912,
+    "startPrice": 21
+  },
+  "SET": {
+    "asset": "SET",
+    "baseReturn": 0.004172419090879416,
+    "baseVolatility": 0.0520244134758017,
+    "startPrice": 1400.21
+  },
+  "SET100": {
+    "asset": "SET100",
+    "baseReturn": 0.004394452118635054,
+    "baseVolatility": 0.05637000012186894,
+    "startPrice": 1959.79
+  },
+  "SET50": {
+    "asset": "SET50",
+    "baseReturn": 0.004240302746011317,
+    "baseVolatility": 0.05504108378374096,
+    "startPrice": 906.23
+  },
+  "USD_THB": {
+    "asset": "USD_THB",
+    "baseReturn": -0.0003165918588283679,
+    "baseVolatility": 0.021254839968770832,
+    "startPrice": 34.26
+  }
+}

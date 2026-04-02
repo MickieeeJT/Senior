@@ -1,0 +1,391 @@
+{
+  "REAL_POSITIVE": [
+    {
+      "title": "Top business groups see GDP growth of 2 . 5 %- 3 % this year",
+      "source": "News Media",
+      "url": "https://www.bangkokpost.com/business/1831299/top-business-groups-see-gdp-growth-of-2-5-3-this-year"
+    },
+    {
+      "title": "New year , new hope",
+      "source": "News Media",
+      "url": "https://www.bangkokpost.com/business/1832609/new-year-new-hope"
+    }
+  ],
+  "REAL_NEGATIVE": [
+    {
+      "title": "2019 tough for Thailand ; 2020 may not be much better",
+      "source": "News Media",
+      "url": "https://www.businesstimes.com.sg/government-economy/2019-tough-for-thailand-2020-may-not-be-much-better"
+    },
+    {
+      "title": "  ทักษิณ  อวยพรปีใหม่ แนะคนไทยรับมือเศรษฐกิจ จี้ผู้แทนทำตามสัญญา ปชช . ",
+      "source": "News Media",
+      "url": "https://www.thairath.co.th/news/politic/1738018"
+    }
+  ],
+  "REAL_NORMAL": [],
+  "MACRO_ECONOMY": [
+    {
+      "title": "Global Central Banks Announce Coordinated Interest Rate Cuts",
+      "source": "Financial Times",
+      "url": ""
+    },
+    {
+      "title": "Unexpected Spike in Core Inflation Spooks Bond Markets",
+      "source": "Wall Street Journal",
+      "url": ""
+    },
+    {
+      "title": "Major Investment Bank Files for Bankruptcy, Triggering Market Panic",
+      "source": "Bloomberg",
+      "url": ""
+    },
+    {
+      "title": "Consumer Confidence Hits 10-Year Low Amidst Recession Fears",
+      "source": "Macro Economics Daily",
+      "url": ""
+    },
+    {
+      "title": "Massive Quantitative Easing Program Announced to Stimulate Growth",
+      "source": "Central Bank Watch",
+      "url": ""
+    },
+    {
+      "title": "Currency Crisis: Major Asian Currency Loses 15% Value Overnight",
+      "source": "Forex News",
+      "url": ""
+    },
+    {
+      "title": "Stock Market Index Reaches All-Time High on Strong Earnings",
+      "source": "Market Watch",
+      "url": ""
+    },
+    {
+      "title": "Stagflation Warning Issued as Growth Slows and Prices Rise",
+      "source": "Global Finance",
+      "url": ""
+    },
+    {
+      "title": "Housing Bubble Bursts in Major Metropolitan Areas",
+      "source": "Property Insider",
+      "url": ""
+    },
+    {
+      "title": "Retail Investors Force Massive Short Squeeze on Hedge Funds",
+      "source": "Trading Desk",
+      "url": ""
+    }
+  ],
+  "GEOPOLITICS": [
+    {
+      "title": "Trade War Escalates: New 25% Tariffs Imposed on Tech Imports",
+      "source": "Trade Monitor",
+      "url": ""
+    },
+    {
+      "title": "Historic Peace Treaty Signed, Reopening Blocked Trade Routes",
+      "source": "World Politics",
+      "url": ""
+    },
+    {
+      "title": "UN Imposes Heavy Economic Sanctions on Major Oil Exporter",
+      "source": "International News",
+      "url": ""
+    },
+    {
+      "title": "Major Trade Pact Signed Between ASEAN and European Union",
+      "source": "Asia Business",
+      "url": ""
+    },
+    {
+      "title": "Diplomatic Tensions Rise Over Semiconductor Export Controls",
+      "source": "Tech Policy Weekly",
+      "url": ""
+    },
+    {
+      "title": "Key Maritime Canal Blocked Indefinitely, Freights Delayed",
+      "source": "Maritime Logistics",
+      "url": ""
+    },
+    {
+      "title": "Military Coup in Resource-Rich Nation Shocks Global Markets",
+      "source": "Global Alert",
+      "url": ""
+    },
+    {
+      "title": "Cyber Warfare Campaign Targets National Financial Infrastructures",
+      "source": "Cyber Defense Mag",
+      "url": ""
+    },
+    {
+      "title": "New Alliance Formed to Control Rare Earth Mineral Exports",
+      "source": "Geopolitics Daily",
+      "url": ""
+    },
+    {
+      "title": "Widespread Political Protests Shut Down Capital's Business District",
+      "source": "Local News Agency",
+      "url": ""
+    }
+  ],
+  "TECH_INNOVATION": [
+    {
+      "title": "AGI Breakthrough Announced, Drastically Shifting Labor Markets",
+      "source": "Tech Innovator",
+      "url": ""
+    },
+    {
+      "title": "Quantum Computing Renders Current Encryption Methods Obsolete",
+      "source": "CyberSec Journal",
+      "url": ""
+    },
+    {
+      "title": "Solid-State Battery Commercialization Revolutionizes EV Industry",
+      "source": "Auto Future",
+      "url": ""
+    },
+    {
+      "title": "Global Outage: Major Cloud Provider Goes Down for 24 Hours",
+      "source": "Tech News Asia",
+      "url": ""
+    },
+    {
+      "title": "First Commercial Nuclear Fusion Reactor Connected to Grid",
+      "source": "Science Today",
+      "url": ""
+    },
+    {
+      "title": "Breakthrough in Lab-Grown Meat Threatens Traditional Agriculture",
+      "source": "Food Tech Magazine",
+      "url": ""
+    },
+    {
+      "title": "Massive Data Breach Exposes Millions of Financial Records",
+      "source": "Cyber Alert",
+      "url": ""
+    },
+    {
+      "title": "Successful Mars Mission Sparks Golden Age for Aerospace Stocks",
+      "source": "Space Frontier",
+      "url": ""
+    },
+    {
+      "title": "Semiconductor Shortage Eases as New Mega-Fabs Begin Production",
+      "source": "Hardware Times",
+      "url": ""
+    },
+    {
+      "title": "Autonomous Trucking Fleet Deployed Nationwide, Slashing Logistics Costs",
+      "source": "Supply Chain Today",
+      "url": ""
+    }
+  ],
+  "CLIMATE_DISASTER": [
+    {
+      "title": "Category 5 Typhoon Devastates Key Manufacturing Hub in Asia",
+      "source": "Global Disasters",
+      "url": ""
+    },
+    {
+      "title": "Unprecedented Heatwave Causes Widespread Crop Failures",
+      "source": "AgriNews",
+      "url": ""
+    },
+    {
+      "title": "New Mutated Virus Strain Detected, Prompting Travel Bans",
+      "source": "World Health Report",
+      "url": ""
+    },
+    {
+      "title": "Historic Winter Storm Freezes Continental Energy Supply Lines",
+      "source": "Weather Economics",
+      "url": ""
+    },
+    {
+      "title": "Massive Earthquake Strikes Major Financial Capital",
+      "source": "Seismic Alert",
+      "url": ""
+    },
+    {
+      "title": "Severe Flooding Disrupts Mining Operations in South America",
+      "source": "Resource Mining",
+      "url": ""
+    },
+    {
+      "title": "Wildfires Destroy Thousands of Acres of Timberland",
+      "source": "Forestry News",
+      "url": ""
+    },
+    {
+      "title": "El Niño Weather Pattern Triggers Extreme Drought Warnings",
+      "source": "Climate Watch",
+      "url": ""
+    },
+    {
+      "title": "Major River Dries Up, Halting Hydropower Generation",
+      "source": "Energy Crisis Report",
+      "url": ""
+    },
+    {
+      "title": "Invasive Pest Destroys 30% of Global Coffee Harvest",
+      "source": "AgriBiz Daily",
+      "url": ""
+    }
+  ],
+  "COMMODITY_SHOCK": [
+    {
+      "title": "OPEC+ Announces Surprise 2 Million Barrel Production Cut",
+      "source": "Energy Times",
+      "url": ""
+    },
+    {
+      "title": "Massive New Gold Deposit Discovered, Pressuring Precious Metal Prices",
+      "source": "Mining Weekly",
+      "url": ""
+    },
+    {
+      "title": "Global Wheat Shortage Feared Following Export Bans",
+      "source": "Commodity Watch",
+      "url": ""
+    },
+    {
+      "title": "Rare Earth Metal Monopoly Imposes Strict Export Quotas",
+      "source": "Industrial Materials",
+      "url": ""
+    },
+    {
+      "title": "Oil Prices Crash Below $40 Amidst Global Supply Glut",
+      "source": "Energy Markets",
+      "url": ""
+    },
+    {
+      "title": "Copper Demand Surges 50% Due to Green Energy Transition",
+      "source": "Metal Bulletin",
+      "url": ""
+    },
+    {
+      "title": "Uranium Prices Skyrocket as Nuclear Power Expansion Approved",
+      "source": "Nuclear Energy News",
+      "url": ""
+    },
+    {
+      "title": "Sugar and Cocoa Prices Hit 20-Year High on Poor Harvests",
+      "source": "Agri Trading",
+      "url": ""
+    },
+    {
+      "title": "Major Pipeline Explosion Halts Natural Gas Deliveries to Europe",
+      "source": "Energy Security",
+      "url": ""
+    },
+    {
+      "title": "Silver Squeeze: Industrial Demand Outstrips Global Supply",
+      "source": "Precious Metals Report",
+      "url": ""
+    }
+  ],
+  "DOMESTIC_POLICY": [
+    {
+      "title": "Government Approves Trillion-Baht Infrastructure Megaproject",
+      "source": "National News",
+      "url": ""
+    },
+    {
+      "title": "Massive Minimum Wage Hike Approved by Parliament",
+      "source": "Labor Ministry",
+      "url": ""
+    },
+    {
+      "title": "New Property Tax Law Cools Down Real Estate Speculation",
+      "source": "Property News",
+      "url": ""
+    },
+    {
+      "title": "Government Launches Aggressive EV Subsidy Program",
+      "source": "Green Economy Board",
+      "url": ""
+    },
+    {
+      "title": "Complete Ban on Cryptocurrency Trading Enforced Nationwide",
+      "source": "Regulatory Watch",
+      "url": ""
+    },
+    {
+      "title": "Major Overhaul of Foreign Business Ownership Limits Announced",
+      "source": "Investment Board",
+      "url": ""
+    },
+    {
+      "title": "Corporate Tax Cut Spark Reshoring of Manufacturing Jobs",
+      "source": "Business Weekly",
+      "url": ""
+    },
+    {
+      "title": "Digital Wallet Stimulus Handout Officially Launched",
+      "source": "National Treasury",
+      "url": ""
+    },
+    {
+      "title": "Deregulation in Banking Sector Sparks Mergers and Acquisitions",
+      "source": "Financial Times",
+      "url": ""
+    },
+    {
+      "title": "New Data Privacy Law Levies Heavy Fines on Tech Firms",
+      "source": "Legal Tech Watch",
+      "url": ""
+    }
+  ],
+  "INDUSTRY_SPECIFIC": [
+    {
+      "title": "Airlines Report Record Profits as Travel Demand Surpasses Pre-Pandemic Levels",
+      "source": "Aviation Watch",
+      "url": ""
+    },
+    {
+      "title": "Major Automaker Recalls Millions of Vehicles Over Safety Defect",
+      "source": "Auto Weekly",
+      "url": ""
+    },
+    {
+      "title": "Retail Apocalypse: Historic Department Store Chain Liquidates",
+      "source": "Retail Insights",
+      "url": ""
+    },
+    {
+      "title": "Healthcare Sector Sees Influx of Venture Capital for Telemedicine",
+      "source": "Health & Wealth",
+      "url": ""
+    },
+    {
+      "title": "Logistics Giants Invest Heavily in AI and Warehouse Automation",
+      "source": "Supply Chain Today",
+      "url": ""
+    },
+    {
+      "title": "Major Merger Announced Between Two Leading Telecom Operators",
+      "source": "Corporate News",
+      "url": ""
+    },
+    {
+      "title": "Renewable Energy Stocks Surge on New Government Contracts",
+      "source": "Green Energy Times",
+      "url": ""
+    },
+    {
+      "title": "Pharmaceutical Giant Loses Patent on Blockbuster Drug",
+      "source": "Pharma News",
+      "url": ""
+    },
+    {
+      "title": "Construction Sector Booms Despite Rising Material Costs",
+      "source": "Builder's Journal",
+      "url": ""
+    },
+    {
+      "title": "E-commerce Sales Overtake Brick-and-Mortar for the First Time",
+      "source": "Retail Analytics",
+      "url": ""
+    }
+  ]
+}

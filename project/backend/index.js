@@ -6,6 +6,7 @@ import scoreHistory from "./routes/scoreHistory.js";
 import userAchievements from "./routes/userAchievements.js";
 import investRoutes from "./routes/investRoutes.js";
 import tutorialRoutes from "./routes/tutorialRoutes.js";
+import { learnFromCSV } from "./utils/dataLearner.js"; 
 
 import "./config/db.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
@@ -15,6 +16,8 @@ const PORT = 8000;
 
 app.use(cors());
 app.use(bodyParser.json());
+
+learnFromCSV();
 
 app.get("/", (req, res) => {
     res.send("Server is running 🚀");
