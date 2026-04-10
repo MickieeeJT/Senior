@@ -14,33 +14,20 @@ import rektAch from "./assets/rekt.png";
 import lostDecadeAch from "./assets/robot_lose.png";
 
 // --- COMPONENTS ---
-
 const StarIcon = ({ filled, className }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill={filled ? "#B7FD5E" : "none"} // Lime green
-    stroke={filled ? "#B7FD5E" : "#11942F"} // Dark green border
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={filled ? "#B7FD5E" : "none"} stroke={filled ? "#B7FD5E" : "#11942F"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
 
-const SimplePieChart = ({ data, totalMoney }) => {
+const SimplePieChart = ({ data, totalMoney, title }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   let currentAngle = 0;
-
-  if (total === 0)
-    return <div className="text-[#11942F] flex items-center justify-center h-full text-xl font-poiret font-bold">AWAITING DATA...</div>;
-
+  if (total === 0) return <div className="text-[#11942F] flex items-center justify-center h-full text-xl font-poiret font-bold">AWAITING DATA...</div>;
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full relative pt-4">
-      {/* 1. Increased max-w from 320px to 400px to make the chart physically larger */}
-      <div className="relative flex items-center justify-center w-full max-w-[400px] aspect-square shrink-0">
+    <div className="flex flex-col items-center justify-center h-full w-full relative pt-2 pb-4">
+      {title && <h4 className="text-[#B7FD5E] text-[12px] font-poiret font-bold tracking-widest uppercase mb-2">{title}</h4>}
+      <div className="relative flex items-center justify-center w-full max-w-[200px] aspect-square shrink-0">
         <svg viewBox="-1 -1 2 2" className="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(51,255,51,0.15)]">
           {data.map((item) => {
             const sliceAngle = (item.value / total) * 2 * Math.PI;
@@ -51,36 +38,20 @@ const SimplePieChart = ({ data, totalMoney }) => {
             const largeArcFlag = sliceAngle > Math.PI ? 1 : 0;
             const pathData = `M 0 0 L ${x1} ${y1} A 1 1 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
             currentAngle += sliceAngle;
-
-            return (
-              <path
-                key={item.name}
-                d={pathData}
-                fill={item.color}
-                className="hover:opacity-80 transition-opacity cursor-pointer stroke-[#011D10] stroke-[0.03]"
-              >
-                <title>{`${item.name}: $${item.value.toLocaleString()}`}</title>
-              </path>
-            );
+            return <path key={item.name} d={pathData} fill={item.color} className="hover:opacity-80 transition-opacity cursor-pointer stroke-[#011D10] stroke-[0.03]"><title>{`${item.name}: $${item.value.toLocaleString()}`}</title></path>;
           })}
           <circle cx="0" cy="0" r="0.72" fill="#011D10" />
         </svg>
-
-        {/* Center Text Overlay */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-          <p className="text-[#11942F] text-sm font-poiret font-bold uppercase tracking-widest mb-1">Total Assets</p>
-          <p className="text-4xl font-poiret font-bold text-[#B7FD5E]">${totalMoney.toLocaleString()}</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2">
+          <p className="text-[#11942F] text-[10px] font-poiret font-bold uppercase tracking-widest mb-1">Total Assets</p>
+          <p className="text-xl font-poiret font-bold text-[#B7FD5E]">${totalMoney.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
         </div>
       </div>
-
-      {/* Responsive Legend */}
-      <div className="flex flex-wrap justify-center gap-3 mt-6 w-full px-4 overflow-y-auto custom-scrollbar">
+      <div className="flex flex-wrap justify-center gap-2 mt-3 w-full px-2 overflow-y-auto custom-scrollbar">
         {data.map((item) => (
-          <div key={item.name} className="flex items-center gap-2 border border-[#11942F] px-2 py-1 bg-[#001a0a] rounded-sm">
-            <div className="w-3 h-3 border border-[#011D10] shrink-0" style={{ backgroundColor: item.color }}></div>
-            <span className="text-sm font-poiret font-bold text-white whitespace-nowrap">
-              {item.name} <span className="text-[#33ff33]">({((item.value / total) * 100).toFixed(0)}%)</span>
-            </span>
+          <div key={item.name} className="flex items-center gap-1 border border-[#11942F] px-2 py-1 bg-[#001a0a] rounded-sm">
+            <div className="w-2 h-2 border border-[#011D10] shrink-0" style={{ backgroundColor: item.color }}></div>
+            <span className="text-[10px] font-poiret font-bold text-white whitespace-nowrap">{item.name} <span className="text-[#33ff33]">({((item.value / total) * 100).toFixed(0)}%)</span></span>
           </div>
         ))}
       </div>
@@ -89,7 +60,6 @@ const SimplePieChart = ({ data, totalMoney }) => {
 };
 
 // --- DATA ---
-
 const getLessonContent = (id, passed) => {
   const lessons = {
     wealth: { pass: "Beat inflation! Your money outpaced the cost of living.", fail: "Inflation ate your wealth. You lost purchasing power." },
@@ -116,7 +86,7 @@ const ACHIEVEMENT_DATA = {
   LOST_DECADE: { name: "Lost Decade", icon: lostDecadeAch, desc: "Lost to Bot" },
 };
 
-export default function Dashboard() {
+export default function DashboardTemp() {
   const location = useLocation();
   const navigate = useNavigate();
   const { finalGameState, gameComplete, scoreData } = location.state || {};
@@ -126,31 +96,66 @@ export default function Dashboard() {
       <div className="h-screen w-screen bg-[#011D10] flex items-center justify-center font-poiret">
         <div className="text-center">
           <p className="text-white text-2xl font-bold mb-6 tracking-widest uppercase">No Terminal Data Found</p>
-          <button 
-            onClick={() => navigate("/")} 
-            className="group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-8 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none"
-          >
-            SYSTEM REBOOT (HOME)
-          </button>
+          <button onClick={() => navigate("/")} className="group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-8 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none">SYSTEM REBOOT (HOME)</button>
         </div>
       </div>
     );
   }
 
+  // --- CALCULATE FINANCIALS ---
+  const totalMoney = scoreData?.score || 0;
+  const playedYears = finalGameState.currentYear || finalGameState.maxYears || 20;
+  const totalInvested = playedYears * 8000;
+  // const totalInvested = finalGameState.totalInvested || (playedYears * 8000);
+  const totalGain = totalMoney - totalInvested;
+  const percentGain = totalInvested > 0 ? ((totalGain / totalInvested) * 100).toFixed(1) : 0;
+  
+  const botMoney = (scoreData?.botFinalValue && scoreData.botFinalValue > 0) ? scoreData.botFinalValue : (scoreData?.botScore || totalInvested * 1.05);
+  const youWin = totalMoney > botMoney;
+
+  // --- PIE CHART DATA ---
   const assetDistribution = [
     { name: "Cash", value: finalGameState.pocket + finalGameState.savingsBalance, color: "#33ff33" }, 
     { name: "Bonds", value: finalGameState.holdings.bonds || 0, color: "#11942F" }, 
     { name: "Index Fund", value: finalGameState.fundBalance, color: "#5EBD50" }, 
     { name: "Gold", value: finalGameState.goldBalance, color: "#B7FD5E" }, 
-    { name: "Stocks/Crypto", value: Math.max(0, (scoreData?.score || 0) - (finalGameState.pocket + finalGameState.savingsBalance + (finalGameState.holdings.bonds || 0) + finalGameState.fundBalance + finalGameState.goldBalance)), color: "#ffffff" }, 
+    { name: "Stocks/Crypto", value: Math.max(0, totalMoney - (finalGameState.pocket + finalGameState.savingsBalance + (finalGameState.holdings.bonds || 0) + finalGameState.fundBalance + finalGameState.goldBalance)), color: "#ffffff" }, 
   ].filter((item) => item.value > 0);
 
-  const totalMoney = scoreData?.score || 0;
-  const totalInvested = finalGameState.totalInvested || 4000;
-  const totalGain = totalMoney - totalInvested;
-  const percentGain = totalInvested > 0 ? ((totalGain / totalInvested) * 100).toFixed(1) : 0;
-  const botMoney = scoreData?.botScore || totalInvested * 1.6;
-  const youWin = totalMoney > botMoney;
+  const botAssetDistribution = scoreData?.botAssetBreakdown || [
+    { name: "Cash", value: botMoney * 0.8, color: "#33ff33" },
+    { name: "Index Fund", value: botMoney * 0.1, color: "#5EBD50" },
+    { name: "Gold", value: botMoney * 0.1, color: "#B7FD5E" }
+  ].filter((item) => item.value > 0);
+
+  // --- EXPLANATION LOGIC ---
+  const rawPMetrics = scoreData?.playerMetrics || scoreData?.metrics?.playerMetrics || {};
+  const rawBMetrics = scoreData?.botMetrics || scoreData?.metrics?.botMetrics || {};
+
+  const pMetrics = {
+    returnScore: rawPMetrics.returnScore || 0, diversification: rawPMetrics.diversification || 0,
+    riskTaking: rawPMetrics.riskTaking || 0, safety: rawPMetrics.safety || 0, accuracy: rawPMetrics.accuracy || 0,
+  };
+  const bMetrics = {
+    returnScore: rawBMetrics.returnScore || 0, diversification: rawBMetrics.diversification || 0,
+    riskTaking: rawBMetrics.riskTaking || 0, safety: rawBMetrics.safety || 0, accuracy: rawBMetrics.accuracy || 0,
+  };
+
+  const generateExplanation = () => {
+    if (youWin) {
+      if (pMetrics.returnScore > bMetrics.returnScore && pMetrics.riskTaking > bMetrics.riskTaking) return "You outperformed the AI by taking calculated risks at the right moments.";
+      if (pMetrics.safety > bMetrics.safety && pMetrics.diversification >= bMetrics.diversification) return "Victory through stability! Excellent diversification protected you from market crashes.";
+      if (pMetrics.diversification > bMetrics.diversification) return "Your superior asset diversification led to stronger, more resilient growth than the AI.";
+      return "You managed your portfolio decisively, timing the market perfectly to beat the AI's algorithm!";
+    } else {
+      if (pMetrics.safety > 75 && bMetrics.returnScore > pMetrics.returnScore) return "Too conservative. Hoarding cash caused you to miss out on the gains the AI captured.";
+      if (bMetrics.diversification > pMetrics.diversification) return "The AI won through diversification. Spreading investments across multiple assets minimized its losses.";
+      if (bMetrics.riskTaking > pMetrics.riskTaking) return "The AI correctly identified bullish trends and bought risky assets, compounding its returns past yours.";
+      return "The AI's algorithm adapted to market conditions and rebalanced its portfolio more effectively this time.";
+    }
+  };
+
+  const explanationText = generateExplanation();
   const feedbackDetails = scoreData?.details || [];
   const sessionAchievements = scoreData?.newAchievements || [];
 
@@ -170,7 +175,7 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-4">
           <button onClick={() => navigate("/home")} className={buttonStyle}>Main Menu</button>
-          <button onClick={() => navigate("/invest")} className={buttonStyle}>Run Again</button>
+          <button onClick={() => navigate("/invest", { state: { forceNew: true } })} className={buttonStyle}>Run Again</button>
         </div>
       </header>
 
@@ -183,22 +188,24 @@ export default function Dashboard() {
           {/* Executive Summary (Takes exactly 50% height) */}
           <div className={`${cardStyle} flex-1 min-h-0 p-4`}>
             <h3 className="text-lg font-poiret font-bold mb-3 text-[#B7FD5E] text-center border-b border-[#11942F] pb-2 tracking-widest uppercase shrink-0">Executive Summary</h3>
+            
+            {/* VETICAL STACK: Net Profit, Return, Vs Benchmark */}
             <div className="flex flex-col gap-2 flex-1 min-h-0">
               <div className={statBoxStyle}>
                 <p className="text-xs font-poiret font-bold text-[#11942F] uppercase tracking-widest">Net Profit</p>
-                <p className={`text-2xl font-poiret font-bold mt-1 ${totalGain >= 0 ? "text-[#33ff33]" : "text-red-500"}`}>
+                <p className={`text-3xl font-poiret font-bold mt-1 ${totalGain >= 0 ? "text-[#33ff33]" : "text-red-500"}`}>
                   {totalGain >= 0 ? "+" : ""}{totalGain.toLocaleString()} $
                 </p>
               </div>
               <div className={statBoxStyle}>
                 <p className="text-xs font-poiret font-bold text-[#11942F] uppercase tracking-widest">Total Return</p>
-                <p className={`text-2xl font-poiret font-bold mt-1 ${totalGain >= 0 ? "text-[#33ff33]" : "text-red-500"}`}>
+                <p className={`text-3xl font-poiret font-bold mt-1 ${totalGain >= 0 ? "text-[#33ff33]" : "text-red-500"}`}>
                   {totalGain >= 0 ? "+" : ""}{percentGain}%
                 </p>
               </div>
               <div className={`${statBoxStyle} ${youWin ? "border-[#33ff33] bg-[#002b11]" : "border-red-800 bg-[#2b0000]"}`}>
-                <p className="text-[10px] font-poiret font-bold text-white uppercase tracking-widest">Vs Benchmark Bot</p>
-                <p className={`text-lg font-poiret font-bold mt-1 uppercase ${youWin ? "text-[#33ff33]" : "text-red-500"}`}>
+                <p className="text-xs font-poiret font-bold text-white uppercase tracking-widest">Vs Benchmark Bot</p>
+                <p className={`text-xl font-poiret font-bold mt-1 uppercase ${youWin ? "text-[#33ff33]" : "text-red-500"}`}>
                   {youWin ? "Outperformed" : "Underperformed"}
                 </p>
               </div>
@@ -209,12 +216,12 @@ export default function Dashboard() {
           <div className={`${cardStyle} flex-1 min-h-0 p-4 flex flex-col`}>
             <h3 className="text-sm font-poiret font-bold mb-3 text-[#B7FD5E] text-center border-b border-[#11942F] pb-2 uppercase tracking-widest shrink-0">Unlocked Badges</h3>
             {sessionAchievements.length > 0 ? (
-              <div className="flex-1 grid grid-cols-2 gap-2 min-h-0">
-                {sessionAchievements.slice(0, 4).map((code) => {
+              <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 custom-scrollbar overflow-y-auto pr-1">
+                {sessionAchievements.map((code) => {
                   const achievement = ACHIEVEMENT_DATA[code];
                   if (!achievement) return null;
                   return (
-                    <div key={code} className="bg-[#001a0a] border border-[#11942F] p-2 text-center flex flex-col justify-center items-center hover:bg-[#002b11] transition-colors h-full">
+                    <div key={code} className="bg-[#001a0a] border border-[#11942F] p-2 text-center flex flex-col justify-center items-center hover:bg-[#002b11] transition-colors h-full min-h-[90px]">
                       <div className="w-12 h-12 mb-1 flex items-center justify-center">
                         <img src={achievement.icon} alt={achievement.name} className="w-full h-full object-contain" />
                       </div>
@@ -232,10 +239,15 @@ export default function Dashboard() {
 
         {/* COLUMN 2: Asset Allocation (40% width) */}
         <div className="w-[40%] flex flex-col gap-4 min-h-0">
-          <div className={`${cardStyle} flex-1 min-h-0 p-4`}>
+          <div className={`${cardStyle} flex-1 min-h-0 p-4 flex flex-col`}>
              <h3 className="text-lg font-poiret font-bold text-[#B7FD5E] text-center border-b border-[#11942F] pb-2 shrink-0 tracking-widest uppercase">Asset Allocation Mapping</h3>
-             <div className="flex-1 flex w-full h-full min-h-0 items-center justify-center overflow-hidden">
-                <SimplePieChart data={assetDistribution} totalMoney={totalMoney} />
+             
+             <div className="flex-1 flex flex-col w-full min-h-0 items-center justify-center overflow-hidden border-b border-[#11942F]/50 pb-2">
+                <SimplePieChart data={assetDistribution} totalMoney={totalMoney} title=">> PLAYER_ONE" />
+             </div>
+
+             <div className="flex-1 flex flex-col w-full min-h-0 items-center justify-center overflow-hidden pt-4">
+                <SimplePieChart data={botAssetDistribution} totalMoney={botMoney} title=">> AI_BOT" />
              </div>
           </div>
         </div>
@@ -273,28 +285,47 @@ export default function Dashboard() {
             </div>
             
             {/* Terminal output area */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-4 font-mono bg-[#011108]">
-              {feedbackDetails.map((item, idx) => (
-                <div key={idx} className="text-sm leading-relaxed border-b border-[#11942F]/30 pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-start gap-2">
-                    <span className={`font-bold shrink-0 ${item.passed ? "text-[#33ff33]" : "text-red-500"}`}>
-                      {item.passed ? "[OK]" : "[ERR]"}
-                    </span>
-                    <span className="text-[#5EBD50] uppercase shrink-0">{item.id}_MODULE:</span>
-                    <span className="text-gray-200">{item.msg}</span>
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col font-mono bg-[#011108]">
+              <div className="flex flex-col gap-4 mb-4">
+                {feedbackDetails.map((item, idx) => (
+                  <div key={idx} className="text-sm leading-relaxed border-b border-[#11942F]/30 pb-4 last:border-0 last:pb-0">
+                    <div className="flex items-start gap-2">
+                      <span className={`font-bold shrink-0 ${item.passed ? "text-[#33ff33]" : "text-red-500"}`}>
+                        {item.passed ? "[OK]" : "[ERR]"}
+                      </span>
+                      <span className="text-[#5EBD50] uppercase shrink-0">{item.id}_MODULE:</span>
+                      <span className="text-gray-200">{item.msg}</span>
+                    </div>
+                    <div className="pl-12 mt-1.5 text-[#11942F] italic">
+                      <span className="text-[#33ff33] mr-2">↳</span> 
+                      {getLessonContent(item.id, item.passed)}
+                    </div>
                   </div>
-                  <div className="pl-12 mt-1.5 text-[#11942F] italic">
-                    <span className="text-[#33ff33] mr-2">↳</span> 
-                    {getLessonContent(item.id, item.passed)}
-                  </div>
-                </div>
-              ))}
-              <div className="text-[#11942F] text-xs mt-2 animate-pulse">_END OF LOG</div>
+                ))}
+              </div>
+
+              <div className={`mt-auto p-3 border-l-2 ${youWin ? 'border-[#33ff33] bg-[#002b11]' : 'border-red-600 bg-[#2b0000]'}`}>
+                <h4 className={`uppercase font-poiret font-bold tracking-widest text-xs mb-1 ${youWin ? 'text-[#33ff33]' : 'text-red-500'}`}>
+                  {youWin ? '>> PLAYER WINS: ANALYSIS' : '>> BOT WINS: ANALYSIS'}
+                </h4>
+                <p className="text-xs text-gray-200 font-poiret leading-relaxed">
+                  {explanationText}
+                </p>
+              </div>
+
+              <div className="text-[#11942F] text-[10px] mt-3 animate-pulse">_END OF LOG</div>
             </div>
           </div>
           
         </div>
       </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #001a0a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #11942F; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #5EBD50; }
+      `}</style>
     </div>
   );
 }

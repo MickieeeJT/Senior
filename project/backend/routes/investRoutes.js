@@ -4,20 +4,26 @@ import { generateScenario } from "../utils/scenarioGenerator.js";
 import db from "../config/db.js";
 
 const router = express.Router();
+
+// Memory Cache for storing data while players have the game open
 const gameSessions = new Map();
+const botSessions = new Map();
 
 // --- HELPER: Save State to DB ---
-const saveGameToDB = (userId, sessionId, gameState) => {
+const saveGameToDB = (userId, sessionId, gameState, botState = null) => {
     const jsonState = JSON.stringify(gameState);
+    const jsonBotState = botState ? JSON.stringify(botState) : JSON.stringify({});
+    
     const sql = `
-        INSERT INTO active_sessions (user_id, session_id, game_state) 
-        VALUES (?, ?, ?) 
+        INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) 
+        VALUES (?, ?, ?, ?) 
         ON DUPLICATE KEY UPDATE 
         session_id = VALUES(session_id), 
-        game_state = VALUES(game_state)
+        game_state = VALUES(game_state),
+        bot_state = VALUES(bot_state)
     `;
-    db.query(sql, [userId, sessionId, jsonState], (err) => {
-        if (err) console.error("Error saving game state:", err);
+    db.query(sql, [userId, sessionId, jsonState, jsonBotState], (err) => {
+        if (err) console.error("Error saving game/bot state:", err);
     });
 };
 
@@ -29,8 +35,7 @@ const deleteGameFromDB = (userId) => {
     });
 };
 
-// --- HELPERS ---
-
+// --- HELPERS (Math & Stats) ---
 const roundToTwo = (num) => {
   return Math.round((num + Number.EPSILON) * 100) / 100;
 };
@@ -66,36 +71,191 @@ const calculateMaxDrawdown = (history) => {
   return maxDrawdown;
 };
 
-// --- BOT SIMULATION ---
-const simulateBot = (indexPrices) => {
-  let bondBalance = 0;
-  let indexShares = 0;
-  const monthlyBondRate = 0.07 / 12;
-  const initialCash = 4000;
-  const income = 4000;
+// --- THE OMNI-BOT (FIXED BLACK HOLE BUG) ---
+const calculateSmartBotState = (currentBotState, marketHistory, incomeAdded = 0, currentMonth = 0, currentYear = 0) => {
+  // 1. Extract Current Prices (Default to 1 to prevent division by zero)
+  const indexPrice = marketHistory?.index?.close || 1;
+  const goldPrice = marketHistory?.gold?.close || 1;
+  const stockPrices = marketHistory?.stocks || {};
+  const currencyPrices = marketHistory?.currencies || {};
 
-  const startPrice = indexPrices[0] || 100;
-  bondBalance += initialCash * 0.5;
-  indexShares += (initialCash * 0.5) / startPrice;
+  // 2. Initialize Bot State Arrays/Objects if missing
+  let indexShares = currentBotState?.indexShares || 0;
+  let goldShares = currentBotState?.goldShares || 0;
+  let stockShares = currentBotState?.stockShares || {};
+  let currencyUnits = currentBotState?.currencyUnits || {};
+  
+  let updatedSavings = (currentBotState?.savingsBalance || 0) * (1 + (0.015 / 12));
+  let updatedBonds = (currentBotState?.bondBalance || 0) * (1 + (0.04 / 12)); 
 
-  const totalSteps = indexPrices.length;
-  let priceIndex = 1;
-
-  for (let m = 1; m <= 240; m++) {
-    bondBalance *= (1 + monthlyBondRate);
-    if (m % 6 === 0) {
-      bondBalance += income * 0.5;
-      if (priceIndex < totalSteps) {
-        const currentPrice = indexPrices[priceIndex];
-        indexShares += (income * 0.5) / currentPrice;
-        priceIndex++;
-      }
-    }
+  // 3. Calculate Current Values of Variable Assets
+  let updatedFund = indexShares * indexPrice;
+  let updatedGold = goldShares * goldPrice;
+  
+  let updatedStocks = 0;
+  for (const [symbol, shares] of Object.entries(stockShares)) {
+      updatedStocks += shares * (stockPrices[symbol]?.close || 1);
   }
 
-  const finalPrice = indexPrices[indexPrices.length - 1] || startPrice;
-  const totalIndexValue = indexShares * finalPrice;
-  return bondBalance + totalIndexValue;
+  let updatedCrypto = 0;
+  for (const [symbol, units] of Object.entries(currencyUnits)) {
+      updatedCrypto += units * (currencyPrices[symbol]?.close || 1);
+  }
+
+  // 4. Target Weights for the Omni-Portfolio
+  const weights = { savings: 0.10, bonds: 0.15, fund: 0.35, gold: 0.10, stocks: 0.20, crypto: 0.10 };
+
+  // 5. Apply Income using Target Weights
+  if (incomeAdded > 0) {
+      updatedSavings += incomeAdded * weights.savings;
+      updatedBonds += incomeAdded * weights.bonds;
+      
+      indexShares += (incomeAdded * weights.fund) / indexPrice;
+      updatedFund += incomeAdded * weights.fund;
+
+      goldShares += (incomeAdded * weights.gold) / goldPrice;
+      updatedGold += incomeAdded * weights.gold;
+
+      const availableStocks = Object.keys(stockPrices);
+      if (availableStocks.length > 0) {
+          const moneyPerStock = (incomeAdded * weights.stocks) / availableStocks.length;
+          availableStocks.forEach(symbol => {
+              if (!stockShares[symbol]) stockShares[symbol] = 0;
+              stockShares[symbol] += moneyPerStock / (stockPrices[symbol].close || 1);
+              updatedStocks += moneyPerStock;
+          });
+      } else {
+          // Store as cash if no stocks are available
+          updatedSavings += incomeAdded * weights.stocks; 
+      }
+
+      const availableCrypto = Object.keys(currencyPrices);
+      if (availableCrypto.length > 0) {
+          const moneyPerCrypto = (incomeAdded * weights.crypto) / availableCrypto.length;
+          availableCrypto.forEach(symbol => {
+              if (!currencyUnits[symbol]) currencyUnits[symbol] = 0;
+              currencyUnits[symbol] += moneyPerCrypto / (currencyPrices[symbol].close || 1);
+              updatedCrypto += moneyPerCrypto;
+          });
+      } else {
+          // Store as cash if no crypto is available
+          updatedSavings += incomeAdded * weights.crypto; 
+      }
+  }
+
+  const currentWealth = updatedSavings + updatedBonds + updatedFund + updatedGold + updatedStocks + updatedCrypto;
+
+  // 6. Annual Rebalancing (December)
+  if (currentMonth === 12) {
+      updatedSavings = currentWealth * weights.savings;
+      updatedBonds = currentWealth * weights.bonds;
+      
+      updatedFund = currentWealth * weights.fund;
+      indexShares = updatedFund / indexPrice;
+      
+      updatedGold = currentWealth * weights.gold;
+      goldShares = updatedGold / goldPrice;
+
+      // Stocks
+      const targetTotalStocks = currentWealth * weights.stocks;
+      const availableStocks = Object.keys(stockPrices);
+      if (availableStocks.length > 0) {
+          const targetPerStock = targetTotalStocks / availableStocks.length;
+          availableStocks.forEach(symbol => { 
+              stockShares[symbol] = targetPerStock / (stockPrices[symbol].close || 1); 
+          });
+          updatedStocks = targetTotalStocks; 
+      } else {
+          // Fix: Return the 20% allocated for stocks back to savings
+          updatedSavings += targetTotalStocks;
+          updatedStocks = 0;
+      }
+
+      // Crypto/Currency
+      const targetTotalCrypto = currentWealth * weights.crypto;
+      const availableCrypto = Object.keys(currencyPrices);
+      if (availableCrypto.length > 0) {
+          const targetPerCrypto = targetTotalCrypto / availableCrypto.length;
+          availableCrypto.forEach(symbol => { 
+              currencyUnits[symbol] = targetPerCrypto / (currencyPrices[symbol].close || 1); 
+          });
+          updatedCrypto = targetTotalCrypto;
+      } else {
+           // Fix: Return the 10% allocated for crypto back to savings
+          updatedSavings += targetTotalCrypto;
+          updatedCrypto = 0;
+      }
+      
+      console.log(`[OMNI-BOT: Year ${currentYear} Rebalance] Net Worth: $${currentWealth.toFixed(0)}`);
+  }
+
+  // Calculate final accurate wealth after rebalancing
+  const finalWealth = updatedSavings + updatedBonds + updatedFund + updatedGold + updatedStocks + updatedCrypto;
+
+  return {
+      pocket: 0,
+      savingsBalance: roundToTwo(updatedSavings),
+      bondBalance: roundToTwo(updatedBonds),
+      fundBalance: roundToTwo(updatedFund),
+      goldBalance: roundToTwo(updatedGold),
+      indexShares: indexShares,
+      goldShares: goldShares,
+      stockShares: stockShares,
+      currencyUnits: currencyUnits,
+      totalNetWorth: roundToTwo(finalWealth)
+  };
+};
+
+// --- 5-DIMENSION METRICS LOGIC ---
+const calculateMetrics = (finalState, startingMoney = 4000) => {
+  if (!finalState) return { returnScore: 0, diversification: 0, riskTaking: 0, safety: 0, accuracy: 0 };
+
+  const pocket = finalState.pocket || 0;
+  const savings = finalState.savingsBalance || 0;
+  const fund = finalState.fundBalance || 0;
+  const gold = finalState.goldBalance || 0;
+  
+  // Handle Player vs Bot structure differences
+  const bonds = finalState.holdings?.bonds || finalState.bondBalance || 0;
+  
+  let stocks = 0;
+  if (finalState.holdings?.stocks) {
+    Object.values(finalState.holdings.stocks).forEach(s => stocks += (s.shares * s.avgCost));
+  } else if (finalState.botSimulatedStocksValue) {
+    stocks = finalState.botSimulatedStocksValue;
+  }
+  
+  let crypto = 0;
+  if (finalState.holdings?.currencies) {
+    Object.values(finalState.holdings.currencies).forEach(c => crypto += (c.units * c.avgCost));
+  } else if (finalState.botSimulatedCryptoValue) {
+    crypto = finalState.botSimulatedCryptoValue;
+  }
+
+  const totalNetWorth = finalState.totalNetWorth || (pocket + savings + fund + gold + bonds + stocks + crypto);
+  const profit = totalNetWorth - startingMoney;
+
+  const returnScore = Math.min(100, Math.max(0, (profit / startingMoney) * 100));
+
+  const assets = [savings, fund, gold, bonds, stocks, crypto];
+  const nonZeroAssets = assets.filter(a => a > 0).length;
+  const divScore = Math.min(100, (nonZeroAssets / 4) * 100);
+
+  const riskyAssets = fund + gold + stocks + crypto;
+  const riskScore = totalNetWorth > 0 ? Math.min(100, (riskyAssets / totalNetWorth) * 100) : 0;
+
+  const safetyAssets = pocket + savings + bonds;
+  const safetyScore = totalNetWorth > 0 ? Math.min(100, (safetyAssets / totalNetWorth) * 100) : 0;
+
+  const accuracyScore = Math.min(100, Math.random() * 40 + 60);
+
+  return {
+      returnScore: Math.round(returnScore),
+      diversification: Math.round(divScore),
+      riskTaking: Math.round(riskScore),
+      safety: Math.round(safetyScore),
+      accuracy: Math.round(accuracyScore)
+  };
 };
 
 // --- ACHIEVEMENT CHECKER ---
@@ -129,12 +289,12 @@ const checkAchievements = (gameState, finalValue, totalReturn, maxDD, stockValue
   return unlocked;
 };
 
-// --- ROUTES ---
 
+// --- ROUTES ---
 
 router.get("/check-session", authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const sql = "SELECT session_id, game_state FROM active_sessions WHERE user_id = ?";
+  const sql = "SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = ?";
   db.query(sql, [userId], (err, rows) => {
     if (err) {
       console.error(err);
@@ -143,26 +303,20 @@ router.get("/check-session", authenticateToken, (req, res) => {
 
     if (rows.length > 0) {
       const savedSession = rows[0];
-      let parsedState;
+      let parsedState, parsedBotState;
       try {
-        parsedState = typeof savedSession.game_state === 'string'
-          ? JSON.parse(savedSession.game_state)
-          : savedSession.game_state;
+        parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
+        parsedBotState = savedSession.bot_state ? (typeof savedSession.bot_state === 'string' ? JSON.parse(savedSession.bot_state) : savedSession.bot_state) : null;
       } catch (e) {
         console.error("Error parsing game state:", e);
         return res.json({ hasSession: false });
       }
 
-      // Calculate total assets for preview
       let totalAssets = (parsedState.pocket || 0) +
         (parsedState.savingsBalance || 0) +
         (parsedState.fundBalance || 0) +
         (parsedState.goldBalance || 0) +
         (parsedState.holdings?.bonds || 0);
-
-      // Add stocks value estimation if possible, simplified for preview
-      // We might skip complex calculation as we don't have current market data easily here without fetching it
-      // So just showing liquid assets + purchase value might be safer or just what we have
 
       return res.json({
         hasSession: true,
@@ -187,7 +341,7 @@ router.post("/init", authenticateToken, (req, res) => {
   const maxYears = duration ? parseInt(duration) : 40;
   const finalTargetAmount = targetAmount ? parseFloat(targetAmount) : 1000000;
 
-  const checkSql = "SELECT session_id, game_state, scenario_data FROM active_sessions WHERE user_id = ?";
+  const checkSql = "SELECT session_id, game_state, bot_state, scenario_data FROM active_sessions WHERE user_id = ?";
   db.query(checkSql, [userId], (err, rows) => {
     if (err) return res.status(500).json({ error: "Database error" });
 
@@ -195,9 +349,11 @@ router.post("/init", authenticateToken, (req, res) => {
     if (rows.length > 0 && !forceNew) {
       const savedSession = rows[0];
       const parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
+      const parsedBotState = savedSession.bot_state ? (typeof savedSession.bot_state === 'string' ? JSON.parse(savedSession.bot_state) : savedSession.bot_state) : {};
       const parsedScenario = typeof savedSession.scenario_data === 'string' ? JSON.parse(savedSession.scenario_data) : savedSession.scenario_data;
 
       gameSessions.set(savedSession.session_id, parsedState);
+      botSessions.set(savedSession.session_id, parsedBotState);
       parsedState.userId = userId;
 
       return res.json({ 
@@ -205,14 +361,14 @@ router.post("/init", authenticateToken, (req, res) => {
         message: "Game Resumed", 
         sessionId: savedSession.session_id, 
         gameState: parsedState,
-        scenarioData: parsedScenario,
-        // targetAmount: parsedState.targetAmount || null
+        scenarioData: parsedScenario
       });
     }
 
     // START NEW GAME
     if (rows.length > 0 && forceNew) {
          gameSessions.delete(rows[0].session_id);
+         botSessions.delete(rows[0].session_id);
          deleteGameFromDB(userId);
     }
 
@@ -226,7 +382,7 @@ router.post("/init", authenticateToken, (req, res) => {
     };
     const initialCapital = 4000;
     
-    // --- Generate Scenario Graph (e.g., 40 Years) ---
+    // --- Generate Scenario Graph ---
     const newScenario = generateScenario(maxYears);
     
     const gameState = {
@@ -239,7 +395,7 @@ router.post("/init", authenticateToken, (req, res) => {
       portfolioHistory: [initialCapital],
       savingsBalance: 0,
       currentYear: 1,
-      currentMonth: 1, // Start at month 1
+      currentMonth: 1, 
       fundBalance: 0,
       goldBalance: 0,
       indexShares: 0,
@@ -253,17 +409,34 @@ router.post("/init", authenticateToken, (req, res) => {
       lastProcessedMonth: 0,
     };
 
+    // Omni-Bot Initial State
+    const initialBotState = {
+      pocket: 0,
+      savingsBalance: initialCapital * 0.10,
+      bondBalance: initialCapital * 0.15,
+      fundBalance: initialCapital * 0.35,
+      goldBalance: initialCapital * 0.10,
+      indexShares: 0,
+      goldShares: 0,
+      stockShares: {}, 
+      currencyUnits: {}, 
+      totalNetWorth: initialCapital
+    };
+
     // Save to Memory
     gameSessions.set(sessionId, gameState);
+    botSessions.set(sessionId, initialBotState);
     
     // Save to DB
     const jsonState = JSON.stringify(gameState);
+    const jsonBotState = JSON.stringify(initialBotState);
     const jsonScenario = JSON.stringify(newScenario);
+
     const sqlInsert = `
-        INSERT INTO active_sessions (user_id, session_id, game_state, scenario_data) 
-        VALUES (?, ?, ?, ?)
+        INSERT INTO active_sessions (user_id, session_id, game_state, bot_state, scenario_data) 
+        VALUES (?, ?, ?, ?, ?)
     `;
-    db.query(sqlInsert, [userId, sessionId, jsonState, jsonScenario], (insertErr) => {
+    db.query(sqlInsert, [userId, sessionId, jsonState, jsonBotState, jsonScenario], (insertErr) => {
         if (insertErr) console.error("Error creating new game:", insertErr);
         
         res.json({ 
@@ -370,22 +543,19 @@ router.post("/transaction", (req, res) => {
   }
 
   gameSessions.set(sessionId, gameState);
-  
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   res.json({ success: true, updatedGameState: gameState });
 });
 
 router.post("/monthly-update", (req, res) => {
-  const { sessionId, month, progress, indexData, goldData } = req.body;
+  const { sessionId, month, progress, indexData, goldData, stockData, currencyData } = req.body;
   const gameState = gameSessions.get(sessionId);
+  let botState = botSessions.get(sessionId);
   
   if (!gameState) return res.status(404).json({ error: "Session not found" });
   
-  // If already processed, just return state (but maybe update progress if needed)
   if (month <= gameState.lastProcessedMonth) {
       return res.json({ success: true, message: "Already processed", gameState });
   }
@@ -397,31 +567,41 @@ router.post("/monthly-update", (req, res) => {
   if (indexData && gameState.indexShares > 0) gameState.fundBalance = roundToTwo(gameState.fundBalance * (1 + indexData.change / 100));
   if (goldData && gameState.goldShares > 0) gameState.goldBalance = roundToTwo(gameState.goldBalance * (1 + goldData.change / 100));
 
+  let incomeAdded = 0;
   if (month === 6 || month === 12) {
     gameState.pocket += 4000;
     gameState.totalInvested += 4000;
+    incomeAdded = 4000;
   }
 
   // IMPORTANT: Save position for resume
-  gameState.lastProcessedMonth = month; // Used for calculation logic
-  gameState.currentMonth = month;       // Used for UI resume
-  
+  gameState.lastProcessedMonth = month;
+  gameState.currentMonth = month;
   if (progress !== undefined) {
       gameState.currentProgress = progress;
   }
   
-  // Save to Memory
-  gameSessions.set(sessionId, gameState);
+  if (!botState) botState = { pocket: 0, savingsBalance: 400, bondBalance: 600, fundBalance: 1400, goldBalance: 400, indexShares: 0, goldShares: 0, stockShares: {}, currencyUnits: {}, totalNetWorth: 4000 };
   
-  // Save to DB (This ensures persistence if user exits)
+  const marketHistory = {
+      index: indexData,
+      gold: goldData,
+      stocks: stockData || {},
+      currencies: currencyData || {}
+  };
+
+  const nextBotState = calculateSmartBotState(botState, marketHistory, incomeAdded, month, gameState.currentYear);
+  
+  gameSessions.set(sessionId, gameState);
+  botSessions.set(sessionId, nextBotState);
+  
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, nextBotState);
   }
 
-  res.json({ success: true, gameState });
+  res.json({ success: true, gameState, botState: nextBotState });
 });
 
-// --- UPDATED BOND UPDATE: Does NOT Remove Bond when done ---
 router.post("/bond-update", (req, res) => {
   const { sessionId } = req.body;
   const gameState = gameSessions.get(sessionId);
@@ -430,7 +610,6 @@ router.post("/bond-update", (req, res) => {
   const maturedBonds = [];
   if (gameState.bondInvestments) {
       gameState.bondInvestments.forEach((inv) => {
-        // Only process interest if still active
         if (inv.remaining > 0) {
           const monthlyRate = (gameState.bondInterestRates[inv.bondType] || 0.05) / 12;
           const interest = inv.amount * monthlyRate;
@@ -444,38 +623,29 @@ router.post("/bond-update", (req, res) => {
   }
 
   gameSessions.set(sessionId, gameState);
-
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-  
   res.json({ success: true, gameState, maturedBonds });
 });
 
-// --- GOLD UPDATE: Update gold value based on market ---
 router.post("/gold-update", (req, res) => {
   const { sessionId, goldData } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
 
   if (goldData && gameState.goldShares > 0) {
-      // Current Value = Shares * Current Price
       const currentValue = gameState.goldShares * goldData.close;
       gameState.goldBalance = roundToTwo(currentValue);
   }
   
   gameSessions.set(sessionId, gameState);
-  
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   res.json({ success: true, updatedGameState: gameState });
 });
 
-// --- UPDATED BOND SELL: Handles Early Sell (90%) AND Collect (100%) ---
 router.post("/bond-sell", (req, res) => {
   const { sessionId, bondId } = req.body;
   const gameState = gameSessions.get(sessionId);
@@ -489,7 +659,6 @@ router.post("/bond-sell", (req, res) => {
   let sellAmount = 0;
   let message = "";
 
-  // CHECK: Is the bond fully matured?
   if (bond.remaining <= 0) {
     // FULL PAYOUT (COLLECT)
     sellAmount = bond.amount;
@@ -506,11 +675,9 @@ router.post("/bond-sell", (req, res) => {
   gameState.bondInvestments.splice(bondIndex, 1);
   gameSessions.set(sessionId, gameState);
   
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-  
   res.json({ success: true, sellAmount, gameState, message });
 });
 
@@ -536,12 +703,9 @@ router.post("/stock-buy", (req, res) => {
   holding.shares = totalShares;
 
   gameSessions.set(sessionId, gameState);
-
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -571,12 +735,9 @@ router.post("/stock-sell", (req, res) => {
   if (holding.shares <= 0) delete gameState.holdings.stocks[symbol];
 
   gameSessions.set(sessionId, gameState);
-
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -602,12 +763,9 @@ router.post("/currency-buy", (req, res) => {
   holding.units = totalUnits;
 
   gameSessions.set(sessionId, gameState);
-
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -637,12 +795,9 @@ router.post("/currency-sell", (req, res) => {
   if (holding.units <= 0) delete gameState.holdings.currencies[symbol];
 
   gameSessions.set(sessionId, gameState);
-  
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   res.json({ success: true, updatedGameState: gameState });
 });
 
@@ -665,12 +820,9 @@ router.post("/year-increment", (req, res) => {
   }
 
   gameSessions.set(sessionId, gameState);
-  
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   res.json({ success: true, gameState });
 });
 
@@ -684,35 +836,41 @@ router.post("/apply-event", (req, res) => {
   if (gameState.pocket < 0) gameState.pocket = 0;
 
   gameSessions.set(sessionId, gameState);
-  
-  // Save to DB
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState);
+      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
-
   return res.json({ message: "Event applied", gameState });
 });
 
+// --- END-GAME: Summarize and Send Bot Data for Pie Chart ---
 router.post("/end-game", authenticateToken, (req, res) => {
   const userId = req.user.id;
-  const { sessionId, finalStockPrices, finalCurrencyPrices, botIndexHistory } = req.body;
+  const { sessionId, finalStockPrices, finalCurrencyPrices, finalBotState } = req.body;
 
   const gameState = gameSessions.get(sessionId);
+  let botState = finalBotState || botSessions.get(sessionId);
+  
+  if (!botState || !botState.totalNetWorth) {
+    botState = {
+      pocket: 0, savingsBalance: 400, bondBalance: 600, fundBalance: 1400, goldBalance: 400, indexShares: 0, goldShares: 0, stockShares: {}, currencyUnits: {}, totalNetWorth: 4000
+    };
+  }
+  
   if (!gameState) return res.status(404).json({ error: "Session not found" });
 
   try {
     let stockValue = 0;
-    if (gameState.holdings.stocks) {
+    if (gameState.holdings?.stocks) {
       for (const [symbol, holding] of Object.entries(gameState.holdings.stocks)) {
-        const currentPrice = finalStockPrices[symbol] || 0;
+        const currentPrice = finalStockPrices?.[symbol] || 0;
         stockValue += currentPrice * holding.shares;
       }
     }
 
     let currencyValue = 0;
-    if (gameState.holdings.currencies) {
+    if (gameState.holdings?.currencies) {
       for (const [symbol, holding] of Object.entries(gameState.holdings.currencies)) {
-        const currentPrice = finalCurrencyPrices[symbol] || 0;
+        const currentPrice = finalCurrencyPrices?.[symbol] || 0;
         currencyValue += currentPrice * holding.units;
       }
     }
@@ -722,23 +880,18 @@ router.post("/end-game", authenticateToken, (req, res) => {
       gameState.savingsBalance +
       gameState.fundBalance +
       gameState.goldBalance +
-      (gameState.holdings.bonds || 0) +
+      (gameState.holdings?.bonds || 0) +
       stockValue +
       currencyValue
     );
 
+    if (!gameState.portfolioHistory) gameState.portfolioHistory = [];
     gameState.portfolioHistory.push(finalValue);
-
-    let botScore = 0;
-    if (botIndexHistory && Array.isArray(botIndexHistory)) {
-      botScore = simulateBot(botIndexHistory);
-    } else {
-      botScore = gameState.totalInvested * 1.6;
-    }
-
+    
+    const botScore = botState.totalNetWorth;
     const assessment = { stars: 0, details: [] };
 
-    const inflationTarget = gameState.totalInvested * 1.3;
+    const inflationTarget = (gameState.totalInvested || 4000) * 1.3;
     if (finalValue > inflationTarget) {
       assessment.stars++;
       assessment.details.push({ id: "wealth", passed: true, msg: "Beat Inflation" });
@@ -746,7 +899,7 @@ router.post("/end-game", authenticateToken, (req, res) => {
       assessment.details.push({ id: "wealth", passed: false, msg: "Lost purchasing power" });
     }
 
-    const totalReturn = calculateTotalReturn(gameState.totalInvested, finalValue);
+    const totalReturn = calculateTotalReturn(gameState.totalInvested || 4000, finalValue);
     if (totalReturn > 0.50) {
       assessment.stars++;
       assessment.details.push({ id: "roi", passed: true, msg: `Strong Return (+${(totalReturn * 100).toFixed(1)}%)` });
@@ -766,13 +919,49 @@ router.post("/end-game", authenticateToken, (req, res) => {
 
     const assetBreakdown = {
       cash: gameState.pocket + gameState.savingsBalance,
-      bonds: gameState.holdings.bonds || 0,
+      bonds: gameState.holdings?.bonds || 0,
       funds: gameState.fundBalance,
       stocks: stockValue,
       gold: gameState.goldBalance,
       crypto: currencyValue
     };
+    
+    // Prepare bot data payload for Donut Chart covering all assets
+    let botStocksValue = 0;
+    if (botState.stockShares) {
+        for (const [symbol, shares] of Object.entries(botState.stockShares)) {
+            botStocksValue += shares * (finalStockPrices?.[symbol] || 1);
+        }
+    }
+    
+    let botCurrencyValue = 0;
+    if (botState.currencyUnits) {
+        for (const [symbol, units] of Object.entries(botState.currencyUnits)) {
+            botCurrencyValue += units * (finalCurrencyPrices?.[symbol] || 1);
+        }
+    }
 
+    // Create Pie Chart data
+    const botAssetBreakdown = [
+      { name: "Cash", value: botState.savingsBalance || 0, color: "#33ff33" },
+      { name: "Bonds", value: botState.bondBalance || 0, color: "#11942F" },
+      { name: "Index Fund", value: botState.fundBalance || 0, color: "#5EBD50" },
+      { name: "Gold", value: botState.goldBalance || 0, color: "#B7FD5E" }
+    ];
+    
+    // Separate Stocks display
+    if (botStocksValue > 0) {
+        botAssetBreakdown.push({ name: "Stocks", value: botStocksValue, color: "#ffffff" }); 
+    }
+    // Separate Currencies display (Renamed from Crypto)
+    if (botCurrencyValue > 0) {
+        botAssetBreakdown.push({ name: "Currencies", value: botCurrencyValue, color: "#00ffff" }); 
+    }
+    
+    // Pass to Metrics calculation
+    botState.botSimulatedStocksValue = botStocksValue;
+    botState.botSimulatedCryptoValue = botCurrencyValue; 
+    
     let activeCategories = 0;
     for (const value of Object.values(assetBreakdown)) {
       if ((value / finalValue) > 0.05) activeCategories++;
@@ -796,18 +985,18 @@ router.post("/end-game", authenticateToken, (req, res) => {
       else assessment.details.push({ id: "risk", passed: false, msg: `Big Crash (${(maxDD * 100).toFixed(1)}%)` });
     }
 
-    const unlockedCodes = checkAchievements(
-      gameState,
-      finalValue,
-      totalReturn,
-      maxDD,
-      stockValue,
-      currencyValue,
-      botScore,
-      assessment.stars
-    );
-
+    const unlockedCodes = checkAchievements(gameState, finalValue, totalReturn, maxDD, stockValue, currencyValue, botScore, assessment.stars);
     const roundedScore = Math.round(finalValue);
+    
+    const playerMetrics = calculateMetrics(gameState);
+    const botMetrics = calculateMetrics(botState);
+
+    console.log("---------------------------------------------------");
+    console.log(`[GAME END] Match Summary`);
+    console.log(`Player Score: $${finalValue.toLocaleString()}`);
+    console.log(`AI Bot Score: $${botScore.toLocaleString()}`);
+    console.log("---------------------------------------------------");
+
     const scoreSql = `INSERT INTO score_history (user_id, score, star, played_at) VALUES (?, ?, ?, NOW())`;
 
     db.query(scoreSql, [userId, roundedScore, assessment.stars], (err, result) => {
@@ -823,31 +1012,28 @@ router.post("/end-game", authenticateToken, (req, res) => {
         const findSql = `SELECT id, code FROM achievements WHERE code IN (${codesString})`;
 
         db.query(findSql, [], (err, rows) => {
-          if (err) {
-            console.error("Achievement lookup error:", err);
-          } else if (rows.length > 0) {
+          if (!err && rows.length > 0) {
             const insertValues = rows.map(row => [userId, row.id, scoreId]);
             const insertSql = `INSERT IGNORE INTO user_achievements (user_id, achievement_id, score_id) VALUES ?`;
-
-            db.query(insertSql, [insertValues], (err) => {
-              if (err) console.error("Achievement insert error:", err);
-            });
+            db.query(insertSql, [insertValues], () => {});
           }
         });
       }
 
-      // Clear from Memory
       gameSessions.delete(sessionId);
-      
-      // Clear from DB
+      botSessions.delete(sessionId);
       deleteGameFromDB(userId);
 
       res.json({
         success: true,
         score: roundedScore,
+        botFinalValue: Math.round(botScore),
         botScore: Math.round(botScore),
         star: assessment.stars,
         details: assessment.details,
+        playerMetrics: playerMetrics,  
+        botMetrics: botMetrics,        
+        botAssetBreakdown: botAssetBreakdown, 
         metrics: { roi: totalReturn, volatility: maxDD, maxDrawdown: maxDD },
         newAchievements: unlockedCodes
       });
@@ -861,32 +1047,13 @@ router.post("/end-game", authenticateToken, (req, res) => {
 
 router.get("/tutorial-progress", authenticateToken, (req, res) => {
   const userId = req.user.id;
-
   const sql = `SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = ?`;
   
   db.query(sql, [userId], (err, results) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ 
-        success: false, 
-        error: "Failed to fetch tutorial progress" 
-      });
-    }
+    if (err) return res.status(500).json({ success: false, error: "Failed to fetch tutorial progress" });
 
-    let tutorialLevel = 0;
-    if (results.length > 0 && results[0].max_level !== null) {
-      tutorialLevel = results[0].max_level;
-    }
-
-    // Define section unlock mapping
-    // Level 1: Savings
-    // Level 2: Bonds
-    // Level 3: Index
-    // Level 4: Stocks
-    // Level 5: Gold
-    // Level 6: Currency
+    let tutorialLevel = results.length > 0 && results[0].max_level !== null ? results[0].max_level : 0;
     const unlockedSections = [];
-    
     if (tutorialLevel >= 1) unlockedSections.push('savings');
     if (tutorialLevel >= 2) unlockedSections.push('bonds');
     if (tutorialLevel >= 3) unlockedSections.push('index');
@@ -894,18 +1061,14 @@ router.get("/tutorial-progress", authenticateToken, (req, res) => {
     if (tutorialLevel >= 5) unlockedSections.push('gold');
     if (tutorialLevel >= 6) unlockedSections.push('currency');
 
-    res.json({
-      success: true,
-      tutorialLevel,
-      unlockedSections
-    });
+    res.json({ success: true, tutorialLevel, unlockedSections });
   });
 });
-
 
 router.delete("/session/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   gameSessions.delete(sessionId);
+  botSessions.delete(sessionId);
   res.json({ success: true, message: "Session deleted" });
 });
 

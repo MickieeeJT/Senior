@@ -65,6 +65,7 @@ export default function Invest() {
   const currencyRef = useRef(selectedCurrency);
   const currentMonthRef = useRef(currentMonth);
   const selectedIndexRef = useRef(selectedIndex);
+  const selectedGoldRef = useRef(selectedGold);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -72,12 +73,14 @@ export default function Invest() {
     currencyRef.current = selectedCurrency;
     currentMonthRef.current = currentMonth;
     selectedIndexRef.current = selectedIndex;
+    selectedGoldRef.current = selectedGold;
   }, [
     gameState,
     selectedStocks,
     selectedCurrency,
     currentMonth,
     selectedIndex,
+    selectedGold
   ]);
 
   // Load tutorial progress from database on mount
@@ -85,6 +88,7 @@ export default function Invest() {
     const fetchTutorialProgress = async () => {
       try {
         const token = localStorage.getItem("token");
+        if (!token) return;
         const response = await fetch(`${API_BASE_URL}/tutorial-progress`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -141,19 +145,14 @@ export default function Invest() {
     }
     setTotalAssets(total);
 
-    // Check win condition with enhanced protection
+    // Check win condition
     if (targetAmount && total >= targetAmount && !showWinModal && isRunning) {
-      // Immediately stop everything
       setIsRunning(false);
       setShowWinModal(true);
-      
-      // Force clear all timers
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      
-      // Stop any processing
       setIsProcessingYear(false);
     }
   }, [gameState, progress, currentMonth, selectedStocks, selectedCurrency, targetAmount, showWinModal, isRunning]);
@@ -217,6 +216,7 @@ export default function Invest() {
     return total;
   };
 
+  // --- SAVE SCORE & GET METRICS ---
   const saveScore = async () => {
     const gs = gameStateRef.current;
     if (!gs) return null;
@@ -238,16 +238,6 @@ export default function Invest() {
       finalCurrencyPrices[curr.symbol] = curr.data[weekIndex].close;
     });
 
-    const botIndexHistory = [];
-    const idx = selectedIndexRef.current;
-    if (idx && idx.data) {
-      for (let m = 0; m <= 240; m += 6) {
-        const weekIndex = Math.floor(m * (52 / 12));
-        const dataIndex = weekIndex % idx.data.length;
-        botIndexHistory.push(idx.data[dataIndex].close);
-      }
-    }
-
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE_URL}/end-game`, {
@@ -258,44 +248,39 @@ export default function Invest() {
         },
         body: JSON.stringify({
           sessionId: gs.sessionId,
+          finalGameState: gs,
           finalStockPrices,
           finalCurrencyPrices,
-          botIndexHistory,
         }),
       });
       const data = await response.json();
 
       if (data.success) {
-        return {
-          score: data.score,
-          botScore: data.botScore,
-          star: data.star,
-          details: data.details,
-          metrics: data.metrics,
-          newAchievements: data.newAchievements,
-        };
+        return data;
       } else {
         return null;
       }
     } catch (error) {
+      console.error("Failed to save score:", error);
       return null;
     }
   };
 
-const initGame = async (forceNew = false) => {
+  const initGame = async (forceNew = false) => {
     try {
       setLoading(true);
       setIsGenerating(true);
       
       const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
       
       const { duration, targetAmount } = location.state || {};
       const selectedDuration = duration || 30;
       const selectedTarget = targetAmount || 1000000;
-      
-      console.log(`[Client Init] Requesting ${forceNew ? 'NEW' : 'EXISTING'} game...`);
 
-      // วิ่งไปที่เส้นทางเดียว ไม่ว่าจะเริ่มเกมใหม่หรือโหลดเซฟ
       const response = await fetch(`${API_BASE_URL}/init`, {
         method: "POST",
         headers: { 
@@ -324,7 +309,7 @@ const initGame = async (forceNew = false) => {
       setIsGenerating(false);
       
     } catch (error) {
-      console.error("[Client Init] Error:", error);
+      console.error("Init Game Error:", error);
       setLoading(false);
       setIsGenerating(false);
     }
@@ -372,8 +357,7 @@ const initGame = async (forceNew = false) => {
         setSelectedCurrency(currencies);
         setScenarioEvents(data.scenarioData.events);
         
-        // Set total weeks based on the generated scenario or calculate from duration_years
-        const finalWeeks = data.scenarioData.totalWeeks || (data.gameState.duration_years || 30) * 52;
+        const finalWeeks = data.scenarioData.totalWeeks || (data.gameState.maxYears || 30) * 52;
         setTotalWeeks(finalWeeks);
     }
   };
@@ -397,7 +381,7 @@ const initGame = async (forceNew = false) => {
 
     clearInterval(timerRef.current);
 
-    const duration = 60000;
+    const duration = 10000;
     const steps = 100;
     const baseInterval = duration / steps;
     const interval = baseInterval / gameSpeed;
@@ -417,21 +401,26 @@ const initGame = async (forceNew = false) => {
 
           fetch(`${API_BASE_URL}/year-increment`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${localStorage.getItem("token")}`
+            },
             body: JSON.stringify({ sessionId, currentNetWorth }),
           })
             .then((res) => res.json())
             .then(async (data) => {
               if (data.gameComplete) {
                 setIsRunning(false);
-                const saved = await saveScore();
+                // Fetch all evaluation data from Backend
+                const saved = await saveScore(); 
+                
                 if (saved) {
                   setTimeout(() => {
                     navigate("/dashboard", {
                       state: {
-                        finalGameState: data.gameState,
+                        finalGameState: data.gameState || gameStateRef.current,
                         gameComplete: true,
-                        scoreData: saved,
+                        scoreData: saved, // Pass metrics and bot data to Dashboard
                       },
                     });
                   }, 2000);
@@ -496,14 +485,36 @@ const initGame = async (forceNew = false) => {
       const currentGoldData = selectedGold.data[goldMonthIndex];
       setGoldValue(currentGoldData.close);
 
+      // Fetch current stock and currency prices
+      const currentStockPrices = {};
+      selectedStocks.forEach(stock => {
+        const weekIndex = currentDataIndexForMonth % stock.data.length;
+        currentStockPrices[stock.symbol] = stock.data[weekIndex];
+      });
+
+      const currentCurrencyPrices = {};
+      selectedCurrency.forEach(curr => {
+        const weekIndex = currentDataIndexForMonth % curr.data.length;
+        currentCurrencyPrices[curr.symbol] = curr.data[weekIndex];
+      });
+
+      const token = localStorage.getItem("token");
+
+      // Send current data to Backend to update state and bot
       fetch(`${API_BASE_URL}/monthly-update`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           sessionId,
           month,
+          gameState: gameStateRef.current,
           indexData: currentIndexData,
           goldData: currentGoldData,
+          stockData: currentStockPrices,       // Send stock data to bot
+          currencyData: currentCurrencyPrices  // Send currency data to bot
         }),
       })
         .then((res) => {
@@ -514,28 +525,30 @@ const initGame = async (forceNew = false) => {
           if (data.gameState) setGameState(data.gameState);
           return fetch(`${API_BASE_URL}/bond-update`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify({ sessionId }),
           });
         })
         .then((res) => {
-          if (!res || !res.ok) {
-             return null;
-          }
+          if (!res || !res.ok) return null;
           return res.json();
         })
         .then((data) => {
           if (data?.gameState) setGameState(data.gameState);
           return fetch(`${API_BASE_URL}/gold-update`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
             body: JSON.stringify({ sessionId, goldData: currentGoldData }),
           });
         })
         .then((res) => {
-          if (!res || !res.ok) {
-             return null;
-          }
+          if (!res || !res.ok) return null;
           return res.json();
         })
         .then((data) => {
@@ -543,27 +556,26 @@ const initGame = async (forceNew = false) => {
         })
         .catch((error) => {
           if (error.message.includes("Monthly update failed") && !loading) {
-              fetch(`${API_BASE_URL}/state/${sessionId}`)
+              fetch(`${API_BASE_URL}/state/${sessionId}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+              })
               .then(res => {
-                  if (res.status === 404) {
-                      navigate("/dashboard");
-                  }
+                  if (res.status === 404) navigate("/dashboard");
               });
           }
         });
     }
   }, [currentMonth, sessionId, gameState, selectedIndex, selectedGold]);
 
-  const handleTransaction = async (
-    action,
-    transactionAmount,
-    bondType = null
-  ) => {
+  const handleTransaction = async (action, transactionAmount, bondType = null) => {
     if (!sessionId) return;
     try {
       const response = await fetch(`${API_BASE_URL}/transaction`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({
           sessionId,
           action,
@@ -574,30 +586,23 @@ const initGame = async (forceNew = false) => {
         }),
       });
       const data = await response.json();
-      if (!response.ok) {
-        return;
-      }
-      if (data.updatedGameState) {
-          setGameState(data.updatedGameState);
-      } else if (data.gameState) {
-          setGameState(data.gameState);
-      }
+      if (!response.ok) return;
+      
+      if (data.updatedGameState) setGameState(data.updatedGameState);
+      else if (data.gameState) setGameState(data.gameState);
+      
       setAmount("");
       setActiveInput(null);
       setSelectedBond("");
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleSubmit = () => {
     const value = parseFloat(amount);
-    if (isNaN(value) || value <= 0) {
-      return;
-    }
+    if (isNaN(value) || value <= 0) return;
+    
     if (activeInput === "bond-select") {
-      if (!selectedBond) {
-        return;
-      }
+      if (!selectedBond) return;
       handleTransaction("bond-buy", value, selectedBond);
     } else if (activeInput) {
       handleTransaction(activeInput, value);
@@ -628,32 +633,29 @@ const initGame = async (forceNew = false) => {
     let amount = 0;
     const holding = gameState.holdings?.stocks?.[symbol];
     if (amountStr === "MAX") {
-      amount =
-        action === "buy"
-          ? Math.floor(gameState.pocket / price)
-          : holding?.shares || 0;
+      amount = action === "buy" ? Math.floor(gameState.pocket / price) : holding?.shares || 0;
     } else {
       amount = parseInt(amountStr);
     }
-    if (amount <= 0 || isNaN(amount)) {
-      return;
-    }
+    if (amount <= 0 || isNaN(amount)) return;
+    
     try {
       const res = await fetch(`${API_BASE_URL}/stock-${action}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({ sessionId, symbol, amount, price }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) return;
+      
       if (data.updatedGameState) setGameState(data.updatedGameState);
       else if (data.gameState) setGameState(data.gameState);
       
       setActiveStockInput(null);
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleCurrencyTransaction = async (symbol, action, price) => {
@@ -661,51 +663,53 @@ const initGame = async (forceNew = false) => {
     let amount = 0;
     const holding = gameState.holdings?.currencies?.[symbol];
     if (amountStr === "MAX") {
-      amount =
-        action === "buy"
-          ? Math.floor(gameState.pocket / price)
-          : holding?.units || 0;
+      amount = action === "buy" ? Math.floor(gameState.pocket / price) : holding?.units || 0;
     } else {
       amount = parseInt(amountStr);
     }
-    if (amount <= 0 || isNaN(amount)) {
-      return;
-    }
+    if (amount <= 0 || isNaN(amount)) return;
+    
     try {
       const res = await fetch(`${API_BASE_URL}/currency-${action}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({ sessionId, symbol, amount, price }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) return;
+      
       if (data.updatedGameState) setGameState(data.updatedGameState);
       else if (data.gameState) setGameState(data.gameState);
       
       setActiveCurrencyInput(null);
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleBondSell = async (inv) => {
     try {
       const res = await fetch(`${API_BASE_URL}/bond-sell`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({ sessionId, bondId: inv.id }),
       });
       const data = await res.json();
       if (data?.gameState) setGameState(data.gameState);
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const applyEventEffect = async (effect) => {
     const res = await fetch(`${API_BASE_URL}/apply-event`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
+      },
       body: JSON.stringify({ sessionId, effect }),
     });
     const data = await res.json();
@@ -717,7 +721,7 @@ const initGame = async (forceNew = false) => {
     navigate("/home");
   };
 
-  // --- Generating Screen ---
+  // --- UI SCREENS ---
   if (isGenerating) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-black">
@@ -737,12 +741,8 @@ const initGame = async (forceNew = false) => {
     );
   }
 
-  const currentIndexValue = gameState.indexShares * indexValue;
-  const indexUnrealizedProfit =
-    gameState.fundBalance - gameState.holdings.index;
-  const currentDataIndex =
-    (gameState.currentYear - 1) * 52 +
-    Math.min(51, Math.floor((progress / 100) * 52));
+  const indexUnrealizedProfit = gameState.fundBalance - gameState.holdings.index;
+  const currentDataIndex = (gameState.currentYear - 1) * 52 + Math.min(51, Math.floor((progress / 100) * 52));
 
   const buttonStyle =
     "group relative inline-flex h-10 w-24 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-3 font-poiret font-bold text-sm tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_4px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#005500] active:translate-y-[2px] active:shadow-none";
@@ -861,11 +861,7 @@ const initGame = async (forceNew = false) => {
                   SAVING ACCOUNT
                 </h3>
                 <div className="flex justify-center">
-                  <img
-                    src={saving}
-                    alt="saving icon"
-                    className="w-20 h-20"
-                  />
+                  <img src={saving} alt="saving icon" className="w-20 h-20" />
                 </div>
                 <div className="flex justify-between px-4 mt-1">
                   <p className="text-white text-base font-poiret font-bold">
@@ -879,32 +875,13 @@ const initGame = async (forceNew = false) => {
               <div className="pb-1">
                 {!activeInput?.includes("savings") && (
                   <div className="flex justify-center gap-2 mt-1">
-                    <button
-                      onClick={(e) => toggleInput("savings-withdraw", e)}
-                      className={buttonStyle}
-                    >
-                      WITHDRAW
-                    </button>
-                    <button
-                      onClick={(e) => toggleInput("savings-deposit", e)}
-                      className={buttonStyle}
-                    >
-                      DEPOSIT
-                    </button>
+                    <button onClick={(e) => toggleInput("savings-withdraw", e)} className={buttonStyle}>WITHDRAW</button>
+                    <button onClick={(e) => toggleInput("savings-deposit", e)} className={buttonStyle}>DEPOSIT</button>
                   </div>
                 )}
                 {activeInput?.includes("savings") && (
-                  <div
-                    onClick={preventClose}
-                    className="mt-1 flex justify-center items-center gap-2"
-                  >
-                    <input
-                      type="number"
-                      placeholder="Amount"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className={InputStyle}
-                    />
+                  <div onClick={preventClose} className="mt-1 flex justify-center items-center gap-2">
+                    <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className={InputStyle} />
                     <button onClick={handleSubmit} className={buttonStyle}>
                       {activeInput === "savings-deposit" ? "DEPOSIT" : "WITHDRAW"}
                     </button>
@@ -917,68 +894,32 @@ const initGame = async (forceNew = false) => {
             <div className="col-span-1 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col justify-between overflow-hidden h-full relative">
               {!isSectionUnlocked('bonds') && <LockedOverlay sectionName="GOVERNMENT BONDS" />}
               <div className="flex-1 overflow-y-auto">
-                <h3 className="text-xl font-poiret font-bold mb-1 text-white">
-                  GOVERNMENT BONDS
-                </h3>
+                <h3 className="text-xl font-poiret font-bold mb-1 text-white">GOVERNMENT BONDS</h3>
                 <div className="flex justify-center mb-1">
-                  <p className="text-white text-base font-poiret font-bold">
-                    Profit: {gameState.profit.bonds.toFixed(2)} $
-                  </p>
+                  <p className="text-white text-base font-poiret font-bold">Profit: {gameState.profit.bonds.toFixed(2)} $</p>
                 </div>
 
-                {activeInput !== "bond-select" &&
-                  gameState.bondInvestments.length > 0 && (
-                    <div className="mt-1 flex justify-center gap-2 flex-wrap">
-                      {gameState.bondInvestments.map((inv) => {
-                        const progress =
-                          ((inv.duration - inv.remaining) / inv.duration) * 100;
-
-                        return (
-                          <div
-                            key={inv.id}
-                            className="flex flex-col items-center mb-1"
-                          >
-                            <div className="relative w-12 h-12">
-                              <svg
-                                viewBox="0 0 36 36"
-                                className="w-full h-full rounded-full transform -rotate-90"
-                              >
-                                <path
-                                  className="text-gray-700"
-                                  strokeWidth="30"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                />
-                                <path
-                                  className="text-[#B7FD5E]"
-                                  strokeWidth="30"
-                                  strokeDasharray={`${progress}, 100`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                />
-                              </svg>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center text-base font-poiret text-white">
-                                <div className="text-sm font-poiret font-bold text-white">
-                                  ${inv.amount.toFixed(0)}
-                                </div>
-                              </div>
+                {activeInput !== "bond-select" && gameState.bondInvestments.length > 0 && (
+                  <div className="mt-1 flex justify-center gap-2 flex-wrap">
+                    {gameState.bondInvestments.map((inv) => {
+                      const progress = ((inv.duration - inv.remaining) / inv.duration) * 100;
+                      return (
+                        <div key={inv.id} className="flex flex-col items-center mb-1">
+                          <div className="relative w-12 h-12">
+                            <svg viewBox="0 0 36 36" className="w-full h-full rounded-full transform -rotate-90">
+                              <path className="text-gray-700" strokeWidth="30" fill="none" stroke="currentColor" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                              <path className="text-[#B7FD5E]" strokeWidth="30" strokeDasharray={`${progress}, 100`} fill="none" stroke="currentColor" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-base font-poiret text-white">
+                              <div className="text-sm font-poiret font-bold text-white">${inv.amount.toFixed(0)}</div>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleBondSell(inv);
-                              }}
-                              className="mt-1 text-white text-base font-poiret font-bold hover:underline"
-                            >
-                              Collect
-                            </button>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          <button onClick={(e) => { e.stopPropagation(); handleBondSell(inv); }} className="mt-1 text-white text-base font-poiret font-bold hover:underline">Collect</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="pb-1">
@@ -986,68 +927,32 @@ const initGame = async (forceNew = false) => {
                   <button
                     onClick={(e) => {
                       if (gameState.bondInvestments.length >= 3) {
-                        alert("Maximum 3 active bonds allowed!");
-                        e.stopPropagation();
-                        return;
+                        alert("Maximum 3 active bonds allowed!"); e.stopPropagation(); return;
                       }
                       toggleInput("bond-select", e);
                     }}
-                    className={`${buttonStyle} ${
-                      gameState.bondInvestments.length >= 3
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
-                  >
-                    BUY
-                  </button>
+                    className={`${buttonStyle} ${gameState.bondInvestments.length >= 3 ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >BUY</button>
                 )}
 
                 {activeInput === "bond-select" && (
-                  <div
-                    onClick={preventClose}
-                    className="mt-1 flex flex-col items-center space-y-2"
-                  >
+                  <div onClick={preventClose} className="mt-1 flex flex-col items-center space-y-2">
                     <div className="flex justify-center gap-2">
                       {["1 year", "5 years", "10 years"].map((t) => {
-                        const rate = gameState.bondInterestRates[t];
-                        const ratePercent = (rate * 100).toFixed(1);
-
+                        const ratePercent = (gameState.bondInterestRates[t] * 100).toFixed(1);
                         return (
-                          <div
-                            key={t}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedBond(t);
-                            }}
-                            className="flex flex-col items-center cursor-pointer"
-                          >
-                            <div
-                              className={`font-bold rounded-full w-10 h-10 flex items-center justify-center transition-all text-base ${
-                                selectedBond === t
-                                  ? "bg-[#B7FD5E] text-black scale-105 shadow-[0_0_10px_#00FF00]"
-                                  : "bg-gray-100 text-black hover:bg-gray-300"
-                              }`}
-                            >
+                          <div key={t} onClick={(e) => { e.stopPropagation(); setSelectedBond(t); }} className="flex flex-col items-center cursor-pointer">
+                            <div className={`font-bold rounded-full w-10 h-10 flex items-center justify-center transition-all text-base ${selectedBond === t ? "bg-[#B7FD5E] text-black scale-105 shadow-[0_0_10px_#00FF00]" : "bg-gray-100 text-black hover:bg-gray-300"}`}>
                               {t.split(" ")[0]}
                             </div>
-                            <div className="text-base font-poiret font-bold text-[#B7FD5E] mt-1">
-                              {ratePercent}%
-                            </div>
+                            <div className="text-base font-poiret font-bold text-[#B7FD5E] mt-1">{ratePercent}%</div>
                           </div>
                         );
                       })}
                     </div>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        placeholder="Amount"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className={InputStyle}
-                      />
-                      <button onClick={handleSubmit} className={buttonStyle}>
-                        BUY
-                      </button>
+                      <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className={InputStyle} />
+                      <button onClick={handleSubmit} className={buttonStyle}>BUY</button>
                     </div>
                   </div>
                 )}
@@ -1061,107 +966,45 @@ const initGame = async (forceNew = false) => {
                 <h3 className="text-xl font-poiret font-bold mb-1 text-white">
                   INDEX - {selectedIndex?.symbol || "Loading..."}
                 </h3>
-
-                {/* Mini Chart */}
                 <div className="w-full flex justify-center mb-1">
                   <div className="w-[85%] h-12">
-                    <MiniChart
-                      data={selectedIndex?.data || []}
-                      currentIndex={
-                        selectedIndex?.data
-                          ? currentDataIndex % selectedIndex.data.length
-                          : 0
-                      }
-                    />
+                    <MiniChart data={selectedIndex?.data || []} currentIndex={selectedIndex?.data ? currentDataIndex % selectedIndex.data.length : 0} />
                   </div>
                 </div>
 
                 <div className="flex justify-between px-4 mt-1">
-                  <p className="text-white text-sm font-poiret font-bold">
-                    {indexValue.toFixed(2)}
-                  </p>
-                  <div
-                    className={`text-sm font-poiret font-bold ${
-                      selectedIndex?.data[
-                        currentDataIndex % (selectedIndex?.data?.length || 1)
-                      ]?.change >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {selectedIndex?.data[
-                      currentDataIndex % (selectedIndex?.data?.length || 1)
-                    ]?.change >= 0
-                      ? "▲"
-                      : "▼"}{" "}
-                    {Math.abs(
-                      selectedIndex?.data[
-                        currentDataIndex % (selectedIndex?.data?.length || 1)
-                      ]?.change || 0
-                    ).toFixed(2)}%
+                  <p className="text-white text-sm font-poiret font-bold">{indexValue.toFixed(2)}</p>
+                  <div className={`text-sm font-poiret font-bold ${selectedIndex?.data[currentDataIndex % (selectedIndex?.data?.length || 1)]?.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    {selectedIndex?.data[currentDataIndex % (selectedIndex?.data?.length || 1)]?.change >= 0 ? "▲" : "▼"}{" "}
+                    {Math.abs(selectedIndex?.data[currentDataIndex % (selectedIndex?.data?.length || 1)]?.change || 0).toFixed(2)}%
                   </div>
                 </div>
                 <div className="flex justify-between px-4 mt-1">
-                  <p className="text-white text-base font-poiret font-bold">
-                    Balance: {gameState.fundBalance.toFixed(2)} $
-                  </p>
-                  <p
-                    className={`text-base font-poiret font-bold ${
-                      indexUnrealizedProfit >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    Unrealized: {indexUnrealizedProfit.toFixed(2)} $
-                  </p>
+                  <p className="text-white text-base font-poiret font-bold">Balance: {gameState.fundBalance.toFixed(2)} $</p>
+                  <p className={`text-base font-poiret font-bold ${indexUnrealizedProfit >= 0 ? "text-green-400" : "text-red-400"}`}>Unrealized: {indexUnrealizedProfit.toFixed(2)} $</p>
                 </div>
               </div>
 
               <div className="pb-1">
                 {!activeInput?.includes("index") && (
                   <div className="flex justify-center gap-2 mt-1">
-                    <button
-                      onClick={(e) => toggleInput("index-sell", e)}
-                      className={buttonStyle}
-                    >
-                      SELL
-                    </button>
-                    <button
-                      onClick={(e) => toggleInput("index-buy", e)}
-                      className={buttonStyle}
-                    >
-                      BUY
-                    </button>
+                    <button onClick={(e) => toggleInput("index-sell", e)} className={buttonStyle}>SELL</button>
+                    <button onClick={(e) => toggleInput("index-buy", e)} className={buttonStyle}>BUY</button>
                   </div>
                 )}
-
                 {activeInput?.includes("index") && (
-                  <div
-                    onClick={preventClose}
-                    className="mt-1 flex justify-center items-center gap-2"
-                  >
-                    <input
-                      type="number"
-                      placeholder="Amount"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className={InputStyle}
-                    />
-                    <button onClick={handleSubmit} className={buttonStyle}>
-                      {activeInput === "index-buy" ? "BUY" : "SELL"}
-                    </button>
+                  <div onClick={preventClose} className="mt-1 flex justify-center items-center gap-2">
+                    <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className={InputStyle} />
+                    <button onClick={handleSubmit} className={buttonStyle}>{activeInput === "index-buy" ? "BUY" : "SELL"}</button>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ROW 2: Individual Stocks (spanning 3 columns) */}
+            {/* Individual Stocks */}
             <div className="col-span-3 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col h-full relative">
               {!isSectionUnlocked('stocks') && <LockedOverlay sectionName="INDIVIDUAL STOCKS" />}
-              <h3 className="text-center text-xl font-poiret font-bold text-white mb-1 flex-shrink-0">
-                INDIVIDUAL STOCKS
-              </h3>
-
+              <h3 className="text-center text-xl font-poiret font-bold text-white mb-1 flex-shrink-0">INDIVIDUAL STOCKS</h3>
               <div className="flex-1 overflow-y-auto min-h-0">
                 <div className="grid grid-cols-4 gap-2">
                   {selectedStocks.map((stock) => {
@@ -1169,119 +1012,39 @@ const initGame = async (forceNew = false) => {
                     const currentStockData = stock.data[weekIndex];
                     const stockId = stock.symbol;
                     const holding = gameState.holdings?.stocks?.[stockId];
-                    const unrealizedStockProfit = holding
-                      ? currentStockData.close * holding.shares -
-                        holding.avgCost * holding.shares
-                      : 0;
+                    const unrealizedStockProfit = holding ? currentStockData.close * holding.shares - holding.avgCost * holding.shares : 0;
 
                     return (
-                      <div
-                        key={stockId}
-                        className="border-r border-dashed border-white last:border-r-0 px-2 pt-2 flex flex-col justify-between"
-                      >
+                      <div key={stockId} className="border-r border-dashed border-white last:border-r-0 px-2 pt-2 flex flex-col justify-between">
                         <div>
-                          <p className="text-white text-base font-poiret font-bold">
-                            {stock.symbol}
-                          </p>
-
-                          {/* Mini Chart */}
+                          <p className="text-white text-base font-poiret font-bold">{stock.symbol}</p>
                           <div className="w-full flex justify-center mb-1">
                             <div className="w-[85%] h-10">
-                              <MiniChart
-                                data={stock?.data || []}
-                                currentIndex={
-                                  stock?.data
-                                    ? currentDataIndex % stock.data.length
-                                    : 0
-                                }
-                              />
+                              <MiniChart data={stock?.data || []} currentIndex={stock?.data ? currentDataIndex % stock.data.length : 0} />
                             </div>
                           </div>
-
                           <div className="flex justify-between px-2">
-                            <p className="text-white text-sm font-poiret font-bold">
-                              {currentStockData.close.toFixed(2)} $
-                            </p>
-                            <p
-                              className={`text-sm font-poiret font-bold ${
-                                currentStockData.change >= 0
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              {currentStockData.change >= 0 ? "▲" : "▼"}{" "}
-                              {Math.abs(currentStockData.change).toFixed(2)}%
+                            <p className="text-white text-sm font-poiret font-bold">{currentStockData.close.toFixed(2)} $</p>
+                            <p className={`text-sm font-poiret font-bold ${currentStockData.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              {currentStockData.change >= 0 ? "▲" : "▼"} {Math.abs(currentStockData.change).toFixed(2)}%
                             </p>
                           </div>
-
                           <div className="flex justify-between px-2 mt-1">
-                            <p
-                              className={`text-base font-poiret font-bold ${
-                                unrealizedStockProfit >= 0
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
+                            <p className={`text-base font-poiret font-bold ${unrealizedStockProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
                               Unreal: {unrealizedStockProfit.toFixed(0)} $
                             </p>
-                            <p className="text-white text-base font-poiret font-bold">
-                              Shares: {holding?.shares || 0}
-                            </p>
+                            <p className="text-white text-base font-poiret font-bold">Shares: {holding?.shares || 0}</p>
                           </div>
                         </div>
-
                         <div className="pb-1">
-                          {/* Amount buttons */}
                           <div className="flex justify-between px-4 mt-1 text-base">
                             {["1", "10", "25", "MAX"].map((amt) => (
-                              <button
-                                key={amt}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setStockAmounts({
-                                    ...stockAmounts,
-                                    [stockId]: amt,
-                                  });
-                                }}
-                                className={`text-sm font-poiret font-bold transition-all duration-200 ${
-                                  stockAmounts[stockId] === amt
-                                    ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
-                                    : "text-white opacity-70 hover:opacity-100"
-                                }`}
-                              >
-                                {amt}
-                              </button>
+                              <button key={amt} onClick={(e) => { e.stopPropagation(); setStockAmounts({ ...stockAmounts, [stockId]: amt }); }} className={`text-sm font-poiret font-bold transition-all duration-200 ${stockAmounts[stockId] === amt ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]" : "text-white opacity-70 hover:opacity-100"}`}>{amt}</button>
                             ))}
                           </div>
-
-                          {/* Action buttons */}
                           <div className="flex justify-center gap-2 mt-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStockTransaction(
-                                  stockId,
-                                  "sell",
-                                  currentStockData.close
-                                );
-                              }}
-                              className={buttonStyle}
-                            >
-                              SELL
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStockTransaction(
-                                  stockId,
-                                  "buy",
-                                  currentStockData.close
-                                );
-                              }}
-                              className={buttonStyle}
-                            >
-                              BUY
-                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleStockTransaction(stockId, "sell", currentStockData.close); }} className={buttonStyle}>SELL</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleStockTransaction(stockId, "buy", currentStockData.close); }} className={buttonStyle}>BUY</button>
                           </div>
                         </div>
                       </div>
@@ -1291,234 +1054,87 @@ const initGame = async (forceNew = false) => {
               </div>
             </div>
 
-            {/* ROW 3: Gold and Currency */}
             {/* Gold */}
-            <div
-              className="col-span-1 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col h-full relative"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="col-span-1 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col h-full relative" onClick={(e) => e.stopPropagation()}>
               {!isSectionUnlocked('gold') && <LockedOverlay sectionName="GOLD" />}
               <div className="flex-1 flex flex-col justify-between">
                 <div>
-                  <h3 className="text-xl font-poiret font-bold mb-1 text-white">
-                    GOLD - {selectedGold?.symbol || "Loading..."}
-                  </h3>
-
-                {/* Mini Chart */}
-                <div className="w-full flex justify-center mb-1">
-                  <div className="w-[85%] h-12">
-                    <MiniChart
-                      data={selectedGold?.data || []}
-                      currentIndex={
-                        selectedGold?.data
-                          ? currentDataIndex % selectedGold.data.length
-                          : 0
-                      }
-                    />
+                  <h3 className="text-xl font-poiret font-bold mb-1 text-white">GOLD - {selectedGold?.symbol || "Loading..."}</h3>
+                  <div className="w-full flex justify-center mb-1">
+                    <div className="w-[85%] h-12">
+                      <MiniChart data={selectedGold?.data || []} currentIndex={selectedGold?.data ? currentDataIndex % selectedGold.data.length : 0} />
+                    </div>
+                  </div>
+                  <div className="flex justify-between px-4 mt-1">
+                    <p className="text-white text-sm font-poiret font-bold">{goldValue.toFixed(2)}</p>
+                    <div className={`text-sm font-poiret font-bold ${selectedGold?.data[currentDataIndex % (selectedGold?.data?.length || 1)]?.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {selectedGold?.data[currentDataIndex % (selectedGold?.data?.length || 1)]?.change >= 0 ? "▲" : "▼"} {Math.abs(selectedGold?.data[currentDataIndex % (selectedGold?.data?.length || 1)]?.change || 0).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div className="flex justify-between px-4 mt-1">
+                    <p className="text-white text-base font-poiret font-bold">Balance: {gameState.goldBalance?.toFixed(2) || 0} $</p>
+                    <p className="text-white text-base font-poiret font-bold">Profit: {gameState.profit?.gold?.toFixed(2) || 0} $</p>
                   </div>
                 </div>
-
-                <div className="flex justify-between px-4 mt-1">
-                  <p className="text-white text-sm font-poiret font-bold">
-                    {goldValue.toFixed(2)}
-                  </p>
-                  <div
-                    className={`text-sm font-poiret font-bold ${
-                      selectedGold?.data[
-                        currentDataIndex % (selectedGold?.data?.length || 1)
-                      ]?.change >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {selectedGold?.data[
-                      currentDataIndex % (selectedGold?.data?.length || 1)
-                    ]?.change >= 0
-                      ? "▲"
-                      : "▼"}{" "}
-                    {Math.abs(
-                      selectedGold?.data[
-                        currentDataIndex % (selectedGold?.data?.length || 1)
-                      ]?.change || 0
-                    ).toFixed(2)}%
-                  </div>
-                </div>
-                <div className="flex justify-between px-4 mt-1">
-                  <p className="text-white text-base font-poiret font-bold">
-                    Balance: {gameState.goldBalance?.toFixed(2) || 0} $
-                  </p>
-                  <p className="text-white text-base font-poiret font-bold">
-                    Profit: {gameState.profit?.gold?.toFixed(2) || 0} $
-                  </p>
-                </div>
-              </div>
               </div>
               <div className="pb-1 flex-shrink-0">
                 {!activeInput?.includes("gold") && (
                   <div className="flex justify-center gap-2 mt-1">
-                    <button
-                      onClick={(e) => toggleInput("gold-sell", e)}
-                      className={buttonStyle}
-                    >
-                      SELL
-                    </button>
-                    <button
-                      onClick={(e) => toggleInput("gold-buy", e)}
-                      className={buttonStyle}
-                    >
-                      BUY
-                    </button>
+                    <button onClick={(e) => toggleInput("gold-sell", e)} className={buttonStyle}>SELL</button>
+                    <button onClick={(e) => toggleInput("gold-buy", e)} className={buttonStyle}>BUY</button>
                   </div>
                 )}
                 {activeInput?.includes("gold") && (
-                  <div
-                    onClick={preventClose}
-                    className="mt-1 flex justify-center items-center gap-2"
-                  >
-                    <input
-                      type="number"
-                      placeholder="Amount"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className={InputStyle}
-                    />
-                    <button onClick={handleSubmit} className={buttonStyle}>
-                      {activeInput === "gold-buy" ? "BUY" : "SELL"}
-                    </button>
+                  <div onClick={preventClose} className="mt-1 flex justify-center items-center gap-2">
+                    <input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} className={InputStyle} />
+                    <button onClick={handleSubmit} className={buttonStyle}>{activeInput === "gold-buy" ? "BUY" : "SELL"}</button>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Currency Exchange */}
-            <div
-              className="col-span-2 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col h-full relative"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="col-span-2 row-span-1 p-2 text-center border-t-[3px] border-t-[#5EBD50] border-l-[3px] border-l-[#5EBD50] border-b-[3px] border-b-[#11942F] border-r-[3px] border-r-[#11942F] flex flex-col h-full relative" onClick={(e) => e.stopPropagation()}>
               {!isSectionUnlocked('currency') && <LockedOverlay sectionName="CURRENCY EXCHANGE" />}
-              <h3 className="text-center text-xl font-poiret font-bold text-white mb-1 flex-shrink-0">
-                CURRENCY EXCHANGE
-              </h3>
-
+              <h3 className="text-center text-xl font-poiret font-bold text-white mb-1 flex-shrink-0">CURRENCY EXCHANGE</h3>
               <div className="flex-1 overflow-y-auto min-h-0">
                 <div className="grid grid-cols-3 gap-2">
                   {selectedCurrency.map((currency) => {
                     const weekIndex = currentDataIndex % currency.data.length;
                     const currentCurrencyData = currency.data[weekIndex];
                     const currencyId = currency.symbol;
-                    const holding =
-                      gameState.holdings?.currencies?.[currencyId];
-                    const unrealizedCurrencyProfit = holding
-                      ? currentCurrencyData.close * holding.units -
-                        holding.avgCost * holding.units
-                      : 0;
+                    const holding = gameState.holdings?.currencies?.[currencyId];
+                    const unrealizedCurrencyProfit = holding ? currentCurrencyData.close * holding.units - holding.avgCost * holding.units : 0;
 
                     return (
-                      <div
-                        key={currencyId}
-                        className="border-r border-dashed border-white last:border-r-0 px-2 pt-2 flex flex-col justify-between"
-                      >
+                      <div key={currencyId} className="border-r border-dashed border-white last:border-r-0 px-2 pt-2 flex flex-col justify-between">
                         <div>
-                          <p className="text-white text-base font-poiret font-bold">
-                            {currency.symbol}
-                          </p>
-
-                          {/* Mini Chart */}
+                          <p className="text-white text-base font-poiret font-bold">{currency.symbol}</p>
                           <div className="w-full flex justify-center mb-1">
                             <div className="w-[85%] h-10">
-                              <MiniChart
-                                data={currency?.data || []}
-                                currentIndex={
-                                  currency?.data
-                                    ? currentDataIndex % currency.data.length
-                                    : 0
-                                }
-                              />
+                              <MiniChart data={currency?.data || []} currentIndex={currency?.data ? currentDataIndex % currency.data.length : 0} />
                             </div>
                           </div>
-
                           <div className="flex justify-between px-2">
-                            <p className="text-white text-sm font-poiret font-bold">
-                              {currentCurrencyData.close.toFixed(2)} $
-                            </p>
-                            <p
-                              className={`text-sm font-poiret font-bold ${
-                                currentCurrencyData.change >= 0
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              {currentCurrencyData.change >= 0 ? "▲" : "▼"}{" "}
-                              {Math.abs(currentCurrencyData.change).toFixed(2)}%
+                            <p className="text-white text-sm font-poiret font-bold">{currentCurrencyData.close.toFixed(2)} $</p>
+                            <p className={`text-sm font-poiret font-bold ${currentCurrencyData.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              {currentCurrencyData.change >= 0 ? "▲" : "▼"} {Math.abs(currentCurrencyData.change).toFixed(2)}%
                             </p>
                           </div>
-
                           <div className="flex justify-between px-2 mt-1">
-                            <p
-                              className={`text-base font-poiret font-bold ${
-                                unrealizedCurrencyProfit >= 0
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              Unreal: {unrealizedCurrencyProfit.toFixed(0)} $
-                            </p>
-                            <p className="text-white text-base font-poiret font-bold">
-                              Units: {holding?.units || 0}
-                            </p>
+                            <p className={`text-base font-poiret font-bold ${unrealizedCurrencyProfit >= 0 ? "text-green-400" : "text-red-400"}`}>Unreal: {unrealizedCurrencyProfit.toFixed(0)} $</p>
+                            <p className="text-white text-base font-poiret font-bold">Units: {holding?.units || 0}</p>
                           </div>
                         </div>
-
                         <div className="pb-1">
-                          {/* Amount buttons */}
                           <div className="flex justify-between px-4 mt-1 text-base">
                             {["1", "10", "25", "MAX"].map((amt) => (
-                              <button
-                                key={amt}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCurrencyAmounts({
-                                    ...currencyAmounts,
-                                    [currencyId]: amt,
-                                  });
-                                }}
-                                className={`text-sm font-poiret font-bold transition-all duration-200 ${
-                                  currencyAmounts[currencyId] === amt
-                                    ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]"
-                                    : "text-white opacity-70 hover:opacity-100"
-                                }`}
-                              >
-                                {amt}
-                              </button>
+                              <button key={amt} onClick={(e) => { e.stopPropagation(); setCurrencyAmounts({ ...currencyAmounts, [currencyId]: amt }); }} className={`text-sm font-poiret font-bold transition-all duration-200 ${currencyAmounts[currencyId] === amt ? "text-[#afffaf] drop-shadow-[0_0_8px_#00FF00]" : "text-white opacity-70 hover:opacity-100"}`}>{amt}</button>
                             ))}
                           </div>
-
-                          {/* Action buttons */}
                           <div className="flex justify-center gap-2 mt-2">
-                            <button
-                              onClick={() =>
-                                handleCurrencyTransaction(
-                                  currencyId,
-                                  "sell",
-                                  currentCurrencyData.close
-                                )
-                              }
-                              className={buttonStyle}
-                            >
-                              SELL
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleCurrencyTransaction(
-                                  currencyId,
-                                  "buy",
-                                  currentCurrencyData.close
-                                )
-                              }
-                              className={buttonStyle}
-                            >
-                              BUY
-                            </button>
+                            <button onClick={() => handleCurrencyTransaction(currencyId, "sell", currentCurrencyData.close)} className={buttonStyle}>SELL</button>
+                            <button onClick={() => handleCurrencyTransaction(currencyId, "buy", currentCurrencyData.close)} className={buttonStyle}>BUY</button>
                           </div>
                         </div>
                       </div>
@@ -1535,19 +1151,10 @@ const initGame = async (forceNew = false) => {
       {showExitModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-poiret font-bold mb-4 text-white">
-              Exit the Investment Game?
-            </h2>
+            <h2 className="text-2xl font-poiret font-bold mb-4 text-white">Exit the Investment Game?</h2>
             <div className="flex justify-center gap-4">
-              <button onClick={handleExitConfirm} className={buttonStyle}>
-                Yes
-              </button>
-              <button
-                onClick={() => setShowExitModal(false)}
-                className={buttonStyle}
-              >
-                Cancel
-              </button>
+              <button onClick={handleExitConfirm} className={buttonStyle}>Yes</button>
+              <button onClick={() => setShowExitModal(false)} className={buttonStyle}>Cancel</button>
             </div>
           </div>
         </div>
@@ -1556,57 +1163,24 @@ const initGame = async (forceNew = false) => {
       {showEventModal && eventData && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 text-center w-[400px]">
-            <h2 className="text-2xl font-poiret font-bold mb-3 text-[#B7FD5E]">
-              {eventData.title}
-            </h2>
-
-            <p className="text-xl font-poiret font-bold text-white mb-4">
-              {eventData.message}
-            </p>
-
-            <p
-              className={`text-xl font-poiret font-bold mb-4 ${
-                eventData.amount >= 0 ? "text-[#B7FD5E]" : "text-red-500"
-              }`}
-            >
-              {eventData.amount > 0
-                ? `+${eventData.amount.toLocaleString()}$`
-                : `${eventData.amount.toLocaleString()}$`}
+            <h2 className="text-2xl font-poiret font-bold mb-3 text-[#B7FD5E]">{eventData.title}</h2>
+            <p className="text-xl font-poiret font-bold text-white mb-4">{eventData.message}</p>
+            <p className={`text-xl font-poiret font-bold mb-4 ${eventData.amount >= 0 ? "text-[#B7FD5E]" : "text-red-500"}`}>
+              {eventData.amount > 0 ? `+${eventData.amount.toLocaleString()}$` : `${eventData.amount.toLocaleString()}$`}
             </p>
 
             {eventData.amount >= 0 ? (
-              <button
-                onClick={async () => {
-                  await applyEventEffect({ amount: eventData.amount });
-                  setShowEventModal(false);
-                }}
-                className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none"
-              >
+              <button onClick={async () => { await applyEventEffect({ amount: eventData.amount }); setShowEventModal(false); }} className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none">
                 Collect
               </button>
             ) : (
               <div className="flex flex-col gap-3">
                 {gameState.pocket >= Math.abs(eventData.amount) && (
-                  <button
-                    onClick={async () => {
-                      await applyEventEffect({ amount: eventData.amount });
-                      setShowEventModal(false);
-                    }}
-                    className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-red-700 bg-red-400 px-4 font-poiret font-bold text-xl tracking-wide text-red-100 transition-all duration-150 [box-shadow:0px_4px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#550000] active:translate-y-[4px] active:shadow-none"
-                  >
-                    Pay with Pocket Cash (
-                    {Math.abs(eventData.amount).toLocaleString()}$)
+                  <button onClick={async () => { await applyEventEffect({ amount: eventData.amount }); setShowEventModal(false); }} className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-red-700 bg-red-400 px-4 font-poiret font-bold text-xl tracking-wide text-red-100 transition-all duration-150 [box-shadow:0px_4px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#550000] active:translate-y-[4px] active:shadow-none">
+                    Pay with Pocket Cash ({Math.abs(eventData.amount).toLocaleString()}$)
                   </button>
                 )}
-
-                <button
-                  onClick={() => {
-                    setDebtAmount(Math.abs(eventData.amount));
-                    setInDebtMode(true);
-                    setShowEventModal(false);
-                  }}
-                  className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none"
-                >
+                <button onClick={() => { setDebtAmount(Math.abs(eventData.amount)); setInDebtMode(true); setShowEventModal(false); }} className="group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-4 font-poiret font-bold text-xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none">
                   Find Funds (Sell Assets)
                 </button>
               </div>
@@ -1615,27 +1189,17 @@ const initGame = async (forceNew = false) => {
         </div>
       )}
 
-      {/* Debt Mode Overlay */}
       {inDebtMode && (
         <>
           <div className="fixed inset-0 bg-black bg-opacity-20 pointer-events-none z-40"></div>
-
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
             <div className="relative group">
               <div className="bg-red-600 border-2 border-red-900 rounded-sm px-4 py-2 [box-shadow:0px_4px_0px_#550000] cursor-pointer pointer-events-auto">
-                <p className="text-base font-poiret font-bold text-red-100 text-center whitespace-nowrap">
-                  Debt: {debtAmount.toLocaleString()}$
-                </p>
+                <p className="text-base font-poiret font-bold text-red-100 text-center whitespace-nowrap">Debt: {debtAmount.toLocaleString()}$</p>
               </div>
-
               <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-red-600 border-2 border-red-800 rounded-sm p-4 [box-shadow:0px_4px_0px_#550000] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 w-[280px] pointer-events-auto">
-                <p className="text-xl font-poiret font-bold text-red-100 text-center mb-1">
-                  You owe: {debtAmount.toLocaleString()}$
-                </p>
-                <p className="text-base font-poiret font-bold text-red-100 text-center mb-2">
-                  Sell assets to raise funds
-                </p>
-
+                <p className="text-xl font-poiret font-bold text-red-100 text-center mb-1">You owe: {debtAmount.toLocaleString()}$</p>
+                <p className="text-base font-poiret font-bold text-red-100 text-center mb-2">Sell assets to raise funds</p>
                 <button
                   onClick={async () => {
                     if (gameState.pocket >= debtAmount) {
@@ -1645,20 +1209,9 @@ const initGame = async (forceNew = false) => {
                     }
                   }}
                   disabled={gameState.pocket < debtAmount}
-                  className={`
-      group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 px-4 font-poiret font-bold text-base tracking-wide transition-all duration-150
-      ${
-        gameState.pocket >= debtAmount
-          ? "border-red-700 bg-red-400 text-red-100 cursor-pointer [box-shadow:0px_4px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#550000] active:translate-y-[2px] active:shadow-none"
-          : "border-gray-600 bg-gray-500 text-gray-300 cursor-not-allowed [box-shadow:0px_4px_0px_#333333] opacity-80"
-      }
-    `}
+                  className={`group relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-sm border-2 px-4 font-poiret font-bold text-base tracking-wide transition-all duration-150 ${gameState.pocket >= debtAmount ? "border-red-700 bg-red-400 text-red-100 cursor-pointer [box-shadow:0px_4px_0px_#550000] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#550000] active:translate-y-[2px] active:shadow-none" : "border-gray-600 bg-gray-500 text-gray-300 cursor-not-allowed [box-shadow:0px_4px_0px_#333333] opacity-80"}`}
                 >
-                  {gameState.pocket >= debtAmount
-                    ? `Pay Debt (${debtAmount.toLocaleString()}$)`
-                    : `Need ${(
-                        debtAmount - gameState.pocket
-                      ).toLocaleString()}$ more`}
+                  {gameState.pocket >= debtAmount ? `Pay Debt (${debtAmount.toLocaleString()}$)` : `Need ${(debtAmount - gameState.pocket).toLocaleString()}$ more`}
                 </button>
               </div>
             </div>
@@ -1666,25 +1219,14 @@ const initGame = async (forceNew = false) => {
         </>
       )}
 
-      {/* Win Modal */}
       {showWinModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-[#001a0a] border-4 border-[#00FF00] rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-poiret font-bold mb-4 text-white">
-              Congratulations!
-            </h2>
-            <p className="text-xl font-poiret font-bold mb-2 text-[#B7FD5E]">
-              You've reached your target amount!
-            </p>
-            <p className="text-lg font-poiret mb-4 text-white">
-              Target: {targetAmount?.toLocaleString()}$ 
-            </p>
-            <p className="text-lg font-poiret mb-4 text-[#B7FD5E]">
-              Final Amount: {totalAssets.toLocaleString()}$
-            </p>
-            <p className="text-sm font-poiret mb-6 text-gray-300">
-              Game completed in Year {gameState.currentYear}
-            </p>
+            <h2 className="text-2xl font-poiret font-bold mb-4 text-white">Congratulations!</h2>
+            <p className="text-xl font-poiret font-bold mb-2 text-[#B7FD5E]">You've reached your target amount!</p>
+            <p className="text-lg font-poiret mb-4 text-white">Target: {targetAmount?.toLocaleString()}$ </p>
+            <p className="text-lg font-poiret mb-4 text-[#B7FD5E]">Final Amount: {totalAssets.toLocaleString()}$</p>
+            <p className="text-sm font-poiret mb-6 text-gray-300">Game completed in Year {gameState.currentYear}</p>
             <button
               onClick={async () => {
                 const saved = await saveScore();
@@ -1693,7 +1235,7 @@ const initGame = async (forceNew = false) => {
                     finalGameState: gameState,
                     gameComplete: true,
                     targetReached: true,
-                    scoreData: saved,
+                    scoreData: saved, // Pass evaluation data to Dashboard
                   },
                 });
               }}
