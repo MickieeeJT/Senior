@@ -381,7 +381,7 @@ export default function Invest() {
 
     clearInterval(timerRef.current);
 
-    const duration = 10000;
+    const duration = 100000;
     const steps = 100;
     const baseInterval = duration / steps;
     const interval = baseInterval / gameSpeed;
@@ -747,7 +747,7 @@ export default function Invest() {
   const buttonStyle =
     "group relative inline-flex h-10 w-24 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-transparent px-3 font-poiret font-bold text-sm tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_4px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_6px_0px_#005500] active:translate-y-[2px] active:shadow-none";
   const InputStyle =
-    "group relative inline-flex h-10 w-32 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-white px-3 font-poiret font-bold text-sm tracking-wide text-black";
+    "no-spinner group relative inline-flex h-10 w-32 items-center justify-center overflow-hidden rounded-sm border-2 border-[#11942F] bg-white px-3 font-poiret font-bold text-sm tracking-wide text-black";
 
   // Locked Overlay Component
   const LockedOverlay = ({ sectionName }) => (

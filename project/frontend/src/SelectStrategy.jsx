@@ -55,47 +55,48 @@ export default function SelectStrategy() {
   };
 
   const durations = [20, 30, 40];
+  const buttonStyle =
+    "group relative inline-flex h-14 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-transparent px-6 font-poiret text-3xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none";
 
   return (
-    <div className="relative flex items-center justify-center h-screen bg-[#00542A] text-[#33ff33] font-jersey overflow-hidden">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#00542A] text-[#33ff33] font-jersey">
 
-      {/* CRT overlay */}
+      <button
+        onClick={handleBackClick}
+        className="absolute top-8 right-8 z-50 inline-flex h-12 items-center justify-center rounded-sm border border-[#33ff33]/30 bg-transparent px-8 font-poiret text-2xl tracking-wide text-[#33ff33]/60 transition-all duration-150 hover:border-[#33ff33] hover:bg-[#33ff33]/10 hover:text-[#33ff33]"
+      >
+        Back
+      </button>
+
       <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-20"></div>
 
-      <div className="relative z-10 border-4 border-[#0f3d0f] bg-[#032F14]/90 px-24 py-16 rounded-lg shadow-[0_0_50px_rgba(51,255,51,0.1)] text-center w-[700px]">
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_50%,#000000_100%)]"></div>
 
-        {/* Title with Back Button */}
-        <div className="relative mb-4">
-          <button
-            onClick={handleBackClick}
-            className="absolute -top-10 -left-12 px-4 py-2 border-2 border-[#33ff33] text-lg hover:bg-[#003300] transition-all duration-150"
-          >
-            ← Back
-          </button>
+      <div className="relative z-10 flex w-[min(92vw,760px)] flex-col items-center rounded-lg border-4 border-[#0f3d0f] bg-[#032F14]/90 px-8 py-12 text-center shadow-[0_0_50px_rgba(51,255,51,0.1)] backdrop-blur-sm md:px-16 md:py-16">
 
-          <h1 className="text-7xl text-center tracking-widest drop-shadow-[0_0_10px_#33ff33]">
+        <div className="mb-4 text-center">
+          <h1 className="text-7xl md:text-8xl tracking-widest text-[#33ff33] drop-shadow-[0_0_10px_#33ff33]">
             SIMUVEST
           </h1>
         </div>
 
-        <div className="h-2 w-full bg-[#33ff33] shadow-[0_0_10px_#33ff33] mb-6"></div>
-        <p className="tracking-[0.3em] text-[#00aa00] mb-12">
+        <div className="h-2 w-full bg-[#33ff33] shadow-[0_0_10px_#33ff33] mb-4"></div>
+        <p className="mb-12 tracking-[0.3em] text-[#00aa00]">
           select your mission
         </p>
 
         {/* Duration */}
-        <div className="text-left mb-10">
-          <h2 className="text-3xl mb-6 font-jersey tracking-widest">Duration:</h2>
-          <div className="flex gap-6 justify-center">
+        <div className="mb-10 w-full text-left">
+          <h2 className="text-3xl mb-6 font-poiret tracking-widest">Duration:</h2>
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center sm:gap-6">
             {durations.map((year) => (
               <button
                 key={year}
                 onClick={() => setDuration(year)}
-                className={`px-10 py-4 border-2 text-2xl font-jersey tracking-widest transition-all duration-150
-                ${
+                className={`inline-flex h-14 items-center justify-center border-2 px-10 text-2xl font-jersey tracking-widest transition-all duration-150 ${
                   duration === year
-                    ? "bg-[#33ff33] text-black border-[#33ff33]"
-                    : "bg-[#032F14] border-[#33ff33] text-[#33ff33] hover:bg-[#0a4a1a]"
+                    ? "border-[#33ff33] bg-[#33ff33] text-black [box-shadow:0px_6px_0px_#005500]"
+                    : "border-[#33ff33] bg-[#032F14] text-[#33ff33] hover:bg-[#0a4a1a]"
                 }`}
               >
                 {year} Years
@@ -105,8 +106,8 @@ export default function SelectStrategy() {
         </div>
 
         {/* Target Return */}
-        <div className="text-left mb-4">
-          <h2 className="text-3xl mb-6 font-jersey tracking-widest">Target Return:</h2>
+        <div className="mb-4 w-full text-left">
+          <h2 className="text-3xl mb-6 font-poiret tracking-widest">Target Return:</h2>
           <input
             type="number"
             placeholder="Enter amount (at least $160,000)"
@@ -120,7 +121,7 @@ export default function SelectStrategy() {
             }}
             min="0"
             max="160000"
-            className="w-full py-4 px-6 text-2xl bg-[#021a0a] text-[#33ff33] font-jersey outline-none border-2 border-[#33ff33] placeholder-[#33ff33]/40 tracking-widest"
+            className="no-spinner w-full border-2 border-[#33ff33] bg-[#021a0a] px-6 py-4 text-2xl font-jersey tracking-widest text-[#33ff33] outline-none placeholder-[#33ff33]/40"
           />
 
           {targetAmount !== "" && Number(targetAmount) < 160000 && (
@@ -139,80 +140,18 @@ export default function SelectStrategy() {
         <button
           onClick={handleConfirm}
           disabled={!targetAmount || Number(targetAmount) < 160000}
-          className={`mt-8 w-full py-4 border-2 text-2xl font-jersey tracking-widest transition-all duration-150
+          className={`mt-8 inline-flex h-14 w-full items-center justify-center border-2 text-2xl font-poiret tracking-widest transition-all duration-150
           ${
             !targetAmount || Number(targetAmount) < 160000
-              ? "border-[#33ff33]/30 text-[#33ff33]/30 bg-transparent cursor-not-allowed"
-              : "border-[#33ff33] text-[#33ff33] bg-[#032F14] hover:bg-[#0a4a1a] active:scale-95 cursor-pointer"
+              ? "cursor-not-allowed border-[#33ff33]/30 bg-transparent text-[#33ff33]/30"
+              : "cursor-pointer border-[#33ff33] bg-[#032F14] text-[#33ff33] hover:bg-[#0a4a1a] active:scale-95"
           }`}
         >
-          CONFIRM STRATEGY
+          Confirm Strategy
         </button>
       </div>
 
-      {/* Resume Modal — only shown when came from resume and back is clicked */}
-      {showResumeModal && resumeSessionData && resumeSessionData.preview && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-          <div className="relative border-2 border-[#33ff33] bg-[#032F14] p-8 rounded-sm max-w-xl w-full">
-
-            <div className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-20 rounded-sm"></div>
-
-            <div className="relative z-10 text-center">
-              <h2 className="text-5xl font-jersey tracking-widest text-[#33ff33] mb-2">
-                RESUME GAME?
-              </h2>
-              <div className="h-1 w-full bg-[#33ff33] mt-3 mb-2"></div>
-              <p className="mb-6 text-sm tracking-[0.5em] text-[#33ff33] font-jersey opacity-70">
-                LOAD SAVE DATA
-              </p>
-
-              <div className="bg-[#021a0a] border border-[#1a5c2a] p-6 rounded-sm mb-8 text-left space-y-4 font-jersey">
-                <div className="flex justify-between items-center border-b border-[#1a5c2a] pb-4">
-                  <span className="text-[#33ff33] text-xl opacity-80">Year / Month</span>
-                  <span className="text-[#33ff33] text-2xl">
-                    {resumeSessionData.preview?.currentYear} / {Math.floor(resumeSessionData.preview?.currentMonth)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center border-b border-[#1a5c2a] py-4">
-                  <span className="text-[#33ff33] text-xl opacity-80">Pocket Cash</span>
-                  <span className="text-[#33ff33] text-2xl">
-                    {resumeSessionData.preview?.pocket?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-[#33ff33] text-xl opacity-80">Total Assets</span>
-                  <span className="text-[#33ff33] text-2xl">
-                    {resumeSessionData.preview?.totalAssets?.toLocaleString(undefined, { maximumFractionDigits: 0 })} $
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center gap-5">
-                <button
-                  onClick={() => navigate("/invest", { state: { forceNew: false } })}
-                  className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-jersey text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
-                >
-                  CONTINUE GAME
-                </button>
-
-                <button
-                  onClick={() => navigate("/select-strategy", { state: { from: "resume" } })}
-                  className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-red-800 bg-[#1a0000] font-jersey text-xl tracking-widest text-red-600 transition-all duration-150 hover:bg-[#2a0000] active:scale-95"
-                >
-                  START NEW GAME
-                </button>
-
-                <button
-                  onClick={() => navigate("/home")}
-                  className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-jersey text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
-                >
-                  BACK TO MENU
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 }

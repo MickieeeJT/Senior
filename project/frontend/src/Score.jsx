@@ -47,7 +47,7 @@ export default function ScoreHistoryPage() {
 
   // Retro Button Style
   const buttonStyle =
-    "group relative inline-flex h-12 w-48 items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-transparent px-4 font-jersey text-2xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none";
+    "group relative inline-flex h-12 w-48 items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-transparent px-4 font-poiret text-2xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -212,7 +212,7 @@ export default function ScoreHistoryPage() {
 
         {/* FOOTER */}
         <div className="shrink-0 mt-6 flex justify-end items-center border-t-2 border-[#0f3d0f] pt-4 px-2">
-            <Link to="/home" className={buttonStyle}>BACK TO MENU</Link>
+            <Link to="/home" className={buttonStyle}>Back to Menu</Link>
         </div>
 
       </div>

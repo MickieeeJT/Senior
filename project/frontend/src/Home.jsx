@@ -97,7 +97,7 @@ export default function Home() {
   };
 
   const buttonStyle =
-    "group relative inline-flex h-14 w-72 items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-transparent px-6 font-jersey text-3xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none";
+    "group relative inline-flex h-14 w-72 items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-transparent px-6 font-poiret text-3xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none";
 
   return (
     <div className="relative flex flex-col items-center justify-center h-screen bg-[#00542A] text-[#33ff33] font-jersey overflow-hidden">
@@ -107,7 +107,7 @@ export default function Home() {
           localStorage.removeItem("token");
           navigate("/login");
         }}
-        className="absolute top-8 right-8 z-50 group inline-flex h-12 items-center justify-center rounded-sm border border-[#33ff33]/30 bg-transparent px-8 font-jersey text-2xl tracking-wide text-[#33ff33]/60 transition-all duration-150 hover:border-[#33ff33] hover:text-[#33ff33] hover:bg-[#33ff33]/10 uppercase"
+        className="absolute top-8 right-8 z-50 group inline-flex h-12 items-center justify-center rounded-sm border border-[#33ff33]/30 bg-transparent px-8 font-poiret text-2xl tracking-wide text-[#33ff33]/60 transition-all duration-150 hover:border-[#33ff33] hover:text-[#33ff33] hover:bg-[#33ff33]/10"
         >
         Logout
       </button>
@@ -122,8 +122,8 @@ export default function Home() {
       <div className="relative z-10 flex flex-col items-center border-4 border-[#0f3d0f] bg-[#032F14]/90 px-24 py-12 shadow-[0_0_50px_rgba(51,255,51,0.1)] rounded-lg backdrop-blur-sm">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-9xl font-jersey tracking-widest text-[#33ff33] drop-shadow-[0_0_10px_#33ff33] animate-pulse">
-            SIMUVEST
+          <h1 className="text-9xl font-jersey tracking-widest text-[#33ff33] drop-shadow-[0_0_10px_#33ff33]">
+            Simuvest
           </h1>
           {/* Pixelated Separator Line */}
           <div className="h-2 w-full bg-[#33ff33] mt-4 shadow-[0_0_10px_#33ff33]"></div>
@@ -135,23 +135,23 @@ export default function Home() {
         {/* Menu Buttons */}
         <div className="flex flex-col items-center gap-8">
           <Link to="/tutorial" className={buttonStyle}>
-            TUTORIAL
+            Tutorial
           </Link>
 
           <button onClick={handleStartInvest} className={buttonStyle}>
-            START INVEST
+            Start Invest
           </button>
 
           <Link to="/score-history" className={buttonStyle}>
-            SCORE HISTORY
+            Score History
           </Link>
         </div>
 
         {/* Tutorial Progress Indicator */}
         {!loading && (
           <div className="mt-8 text-center">
-            <div className="text-sm text-[#00aa00] tracking-wider">
-              TUTORIAL PROGRESS: LEVEL {tutorialLevel}/6
+            <div className="text-sm text-[#00aa00] tracking-wider font-poiret">
+              Tutorial Progress: Level {tutorialLevel}/6
             </div>
             <div className="flex gap-1 mt-2 justify-center">
               {[1, 2, 3, 4, 5, 6].map((level) => (
@@ -170,7 +170,7 @@ export default function Home() {
 
         {/* Footer */}
         <div className="mt-16 text-center text-[#005500] text-l tracking-widest uppercase">
-          © 2025 Investment Game System •{" "}
+          © Investment Game System •{" "}
           <span className="animate-blink">READY</span>
         </div>
       </div>
@@ -229,7 +229,7 @@ export default function Home() {
       )}
 
     {showResumeModal && resumeSessionData && resumeSessionData.preview && (
-      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+      <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-md">
         <div className="relative border-2 border-[#33ff33] bg-[#032F14] p-8 rounded-sm max-w-xl w-full">
 
           {/* CRT Scanline Overlay */}
@@ -244,7 +244,7 @@ export default function Home() {
               LOAD SAVE DATA
             </p>
 
-            <div className="bg-[#021a0a] border border-[#1a5c2a] p-6 rounded-sm mb-8 text-left space-y-4 font-jersey">
+            <div className="bg-[#021a0a] border border-[#1a5c2a] p-6 rounded-sm mb-8 text-left space-y-4 font-poiret">
               <div className="flex justify-between items-center border-b border-[#1a5c2a] pb-4">
                 <span className="text-[#33ff33] text-xl opacity-80">Year / Month</span>
                 <span className="text-[#33ff33] text-2xl">
@@ -268,23 +268,23 @@ export default function Home() {
             <div className="flex flex-col items-center gap-5">
               <button
                 onClick={() => navigate("/invest", { state: { forceNew: false } })}
-                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-jersey text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
+                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-poiret text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
               >
-                CONTINUE GAME
+                Continue Game
               </button>
 
               <button
                 onClick={() => navigate("/select-strategy", { state: { from: "resume" } })}
-                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-red-800 bg-[#1a0000] font-jersey text-xl tracking-widest text-red-600 transition-all duration-150 hover:bg-[#2a0000] active:scale-95"
+                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-red-800 bg-[#1a0000] font-poiret text-xl tracking-widest text-red-600 transition-all duration-150 hover:bg-[#2a0000] active:scale-95"
               >
-                START NEW GAME
+                Start New Game
               </button>
 
               <button
                 onClick={() => setShowResumeModal(false)}
-                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-jersey text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
+                className="inline-flex h-14 w-4/5 items-center justify-center border-2 border-[#33ff33] bg-[#032F14] font-poiret text-xl tracking-widest text-[#33ff33] transition-all duration-150 hover:bg-[#0a4a1a] active:scale-95"
               >
-                CANCEL
+                Cancel
               </button>
             </div>
           </div>
