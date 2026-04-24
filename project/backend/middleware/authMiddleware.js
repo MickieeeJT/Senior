@@ -1,7 +1,5 @@
 import jwt from "jsonwebtoken";
-
-// Use a secret key (put in .env in real projects)
-const SECRET_KEY = "your-secret-key";
+import { env } from "../config/env.js";
 
 export function authenticateToken(req, res, next) {
     const authHeader = req.headers["authorization"];
@@ -12,7 +10,7 @@ export function authenticateToken(req, res, next) {
     }
 
     try {
-        const decoded = jwt.verify(token, SECRET_KEY);
+        const decoded = jwt.verify(token, env.jwtSecret);
         req.user = decoded;
         next();
     } catch (err) {

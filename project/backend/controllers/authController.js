@@ -1,8 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import db from "../config/db.js";
-
-const SECRET_KEY = "your-secret-key"; // move this to .env later
+import { env } from "../config/env.js";
 
 // Signup
 export const signup = async (req, res) => {
@@ -74,7 +73,7 @@ export const login = (req, res) => {
         // ✅ SIGN A JWT THAT CONTAINS THE USER ID
         const token = jwt.sign(
             { id: user.id, email: user.email },
-            SECRET_KEY,
+            env.jwtSecret,
             { expiresIn: "3h" }
         );
 

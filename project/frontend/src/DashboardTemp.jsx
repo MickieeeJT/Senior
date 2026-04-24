@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import starAch from "./assets/5stars.png";
 import whaleAch from "./assets/whale.png";

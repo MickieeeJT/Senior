@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect } from "react";
 import jwt_decode from "jwt-decode";
 
-export const UserContext = createContext();
+const UserContext = createContext();
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);

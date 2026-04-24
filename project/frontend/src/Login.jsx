@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { API_PATHS } from "./config/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -39,7 +40,7 @@ export default function LoginPage() {
     setMessage("");
 
     try {
-      const response = await fetch("http://localhost:8000/auth/login", {
+      const response = await fetch(API_PATHS.authLogin, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

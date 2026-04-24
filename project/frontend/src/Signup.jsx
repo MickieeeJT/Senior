@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_PATHS } from "./config/api";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -49,7 +50,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/auth/signup", {
+      const response = await fetch(API_PATHS.authSignup, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

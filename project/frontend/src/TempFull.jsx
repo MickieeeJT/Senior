@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import randomEvent from "./data/Event/event.json";
 import MiniChart from "./MiniChart";
+import { API_PATHS } from "./config/api";
 
-const API_BASE_URL = "http://localhost:8000/api/invest";
+const API_BASE_URL = API_PATHS.invest;
 
 //Import all index fund data files
 const indexFiles = import.meta.glob("./data/IndexFund/*.json", { eager: true });
@@ -56,8 +57,8 @@ export default function Invest() {
   const [loading, setLoading] = useState(true);
   
   // Tutorial completion state
-  const [completedTutorials, setCompletedTutorials] = useState(new Set());
-  const [practiceCompleted, setPracticeCompleted] = useState(new Set());
+  const [, setCompletedTutorials] = useState(new Set());
+  const [, setPracticeCompleted] = useState(new Set());
 
   const [progress, setProgress] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(1);
@@ -74,12 +75,12 @@ export default function Invest() {
   const [indexValue, setIndexValue] = useState(0);
   const [selectedStocks, setSelectedStocks] = useState([]);
   const [stockAmounts, setStockAmounts] = useState({});
-  const [activeStockInput, setActiveStockInput] = useState(null);
+  const [, setActiveStockInput] = useState(null);
   const [selectedGold, setSelectedGold] = useState(null);
   const [goldValue, setGoldValue] = useState(0);
   const [selectedCurrency, setSelectedCurrency] = useState([]);
   const [currencyAmounts, setCurrencyAmounts] = useState({});
-  const [activeCurrencyInput, setActiveCurrencyInput] = useState(null);
+  const [, setActiveCurrencyInput] = useState(null);
 
   // Event & Timer
   const [eventData, setEventData] = useState(null);
@@ -123,24 +124,6 @@ export default function Invest() {
       setPracticeCompleted(practiceSet);
     }
   }, []);
-
-  // Check if an investment type is available (both tutorial and practice completed)
-  const isInvestmentAvailable = (tutorialType) => {
-    return completedTutorials.has(tutorialType) && practiceCompleted.has(tutorialType);
-  };
-
-  // Handle investment interactions with tutorial and practice restrictions
-  const handleRestrictedAction = (tutorialType, actionName) => {
-    if (!completedTutorials.has(tutorialType)) {
-      alert(`Complete the ${actionName} tutorial first to unlock this investment option!`);
-      return false;
-    }
-    if (!practiceCompleted.has(tutorialType)) {
-      alert(`Complete the ${actionName} practice session first! Go to Tutorial page to practice.`);
-      return false;
-    }
-    return true;
-  };
 
   // Calculate Total Assets for UI
   useEffect(() => {
@@ -616,7 +599,6 @@ export default function Invest() {
     );
   }
 
-  const currentIndexValue = gameState.indexShares * indexValue;
   const indexUnrealizedProfit =
     gameState.fundBalance - gameState.holdings.index;
   const displayTotalMonths =

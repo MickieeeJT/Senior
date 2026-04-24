@@ -13,6 +13,7 @@ import stock from "./assets/stocktrader.png";
 import turtle from "./assets/turtle.png";
 import whale from "./assets/whale.png";
 import rekt from "./assets/rekt.png";
+import { API_PATHS } from "./config/api";
 
 // --- 1. ACHIEVEMENTS DATA (Static Definitions) ---
 const ACHIEVEMENT_DATA = [
@@ -66,8 +67,8 @@ export default function ScoreHistoryPage() {
 
       try {
         const [scoreRes, achievementRes] = await Promise.all([
-          fetch("http://localhost:8000/api/score-history", { headers }),
-          fetch("http://localhost:8000/api/user-achievements", { headers }),
+          fetch(API_PATHS.scoreHistory, { headers }),
+          fetch(API_PATHS.userAchievements, { headers }),
         ]);
 
         const scoreData = await scoreRes.json();

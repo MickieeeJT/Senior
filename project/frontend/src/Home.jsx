@@ -1,7 +1,8 @@
-import { Link, useNavigate, useLocation} from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { API_PATHS } from "./config/api";
 
-const API_BASE_URL = "http://localhost:8000/api/invest";
+const API_BASE_URL = API_PATHS.invest;
 
 export default function Home() {
   const navigate = useNavigate();
@@ -91,7 +92,7 @@ export default function Home() {
       } else {
         navigate("/select-strategy");
       }
-    } catch (err) {
+    } catch {
       navigate("/select-strategy");
     }
   };

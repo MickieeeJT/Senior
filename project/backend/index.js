@@ -7,14 +7,18 @@ import userAchievements from "./routes/userAchievements.js";
 import investRoutes from "./routes/investRoutes.js";
 import tutorialRoutes from "./routes/tutorialRoutes.js";
 import { learnFromCSV } from "./utils/dataLearner.js"; 
+import { env } from "./config/env.js";
 
 import "./config/db.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
 
 const app = express();
-const PORT = 8000;
+const PORT = env.port;
 
-app.use(cors());
+app.use(cors({
+    origin: env.frontendOrigin,
+    credentials: true,
+}));
 app.use(bodyParser.json());
 
 learnFromCSV();

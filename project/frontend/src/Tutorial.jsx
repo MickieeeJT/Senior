@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import index from "./assets/Index.png";
 import gold from "./assets/Gold.png";
+import { API_PATHS } from "./config/api";
 
 // --- CONFIGURATION ---
-const API_BASE_URL = "http://localhost:8000/api/tutorial"; 
+const API_BASE_URL = API_PATHS.tutorial;
 
 const TUTORIAL_TYPES = {
   SAVINGS: 'savings',
@@ -178,10 +179,8 @@ export default function Tutorial() {
   const [activeTutorial, setActiveTutorial] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState('');
   
   // Tutorial mode state
-  const [showGameInterface, setShowGameInterface] = useState(false);
   const [showPracticeMode, setShowPracticeMode] = useState(false);
 
   // Practice mode state
@@ -274,8 +273,7 @@ export default function Tutorial() {
     }
 
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setUsername(payload.username || 'User');
+      JSON.parse(atob(token.split('.')[1]));
     } catch (error) {
       console.error('Invalid token:', error);
       navigate('/login');
@@ -366,7 +364,6 @@ export default function Tutorial() {
     // Always start with tutorial interface, even if completed
     setActiveTutorial(type);
     setCurrentStep(0);
-    setShowGameInterface(true);
     // Reset practice data when starting a tutorial
     if (!completedTutorials.has(type)) {
        // Only needed if strictly new, but harmless to leave out as handleNext/End will init it
@@ -379,7 +376,6 @@ export default function Tutorial() {
       setCurrentStep(currentStep + 1);
     } else {
       initializePracticeMode(activeTutorial);
-      setShowGameInterface(false);
       setShowPracticeMode(true);
     }
   };
@@ -393,7 +389,6 @@ export default function Tutorial() {
   const handleCloseTutorial = () => {
     setActiveTutorial(null);
     setCurrentStep(0);
-    setShowGameInterface(false);
     setShowPracticeMode(false);
     setPracticeAmount("");
     setSelectedBond("");
@@ -470,7 +465,7 @@ export default function Tutorial() {
         }
         break;
         
-      case 'indexFund':
+      case 'indexFund': {
         const shares = amount / practiceData.price;
         if (action === 'buy') {
           if (amount <= practiceData.pocket) {
@@ -492,6 +487,7 @@ export default function Tutorial() {
           } else alert("Insufficient fund balance!");
         }
         break;
+      }
         
       case 'gold':
         if (action === 'buy') {

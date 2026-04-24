@@ -37,8 +37,6 @@ export default function Dashboard() {
 
   // --- 2. BOT COMPARISON DATA ---
   const botMoney = (scoreData?.botFinalValue && scoreData.botFinalValue > 0) ? scoreData.botFinalValue : (scoreData?.botScore || totalIncome * 1.05);
-  const botGain = botMoney - totalIncome;
-  const botPercentGain = ((botGain / totalIncome) * 100).toFixed(2);
   const youWin = totalMoney > botMoney;
 
   // --- 3. 5-DIMENSION METRICS (FOR WIN/LOSS ANALYSIS ONLY) ---

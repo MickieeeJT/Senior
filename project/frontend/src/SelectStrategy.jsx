@@ -1,39 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const API_BASE_URL = "http://localhost:8000/api/invest";
 
 export default function SelectStrategy() {
   const navigate = useNavigate();
   const location = useLocation();
   const [duration, setDuration] = useState(30);
   const [targetAmount, setTargetAmount] = useState("");
-  const [showResumeModal, setShowResumeModal] = useState(false);
-  const [resumeSessionData, setResumeSessionData] = useState(null);
 
   const from = location.state?.from; // "home" | "resume"
-
-  // If came from resume modal, auto-load session data for the modal
-  useEffect(() => {
-    if (from === "resume") {
-      const loadSession = async () => {
-        try {
-          const token = localStorage.getItem("token");
-          if (!token) return;
-          const res = await fetch(`${API_BASE_URL}/check-session`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const data = await res.json();
-          if (data.hasSession) {
-            setResumeSessionData(data);
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      };
-      loadSession();
-    }
-  }, [from]);
 
   const handleConfirm = () => {
     if (!targetAmount || Number(targetAmount) < 160000) return;
@@ -55,8 +29,6 @@ export default function SelectStrategy() {
   };
 
   const durations = [20, 30, 40];
-  const buttonStyle =
-    "group relative inline-flex h-14 w-full items-center justify-center overflow-hidden rounded-sm border-2 border-[#33ff33] bg-transparent px-6 font-poiret text-3xl tracking-wide text-[#33ff33] transition-all duration-150 [box-shadow:0px_6px_0px_#005500] hover:-translate-y-[2px] hover:[box-shadow:0px_8px_0px_#005500] active:translate-y-[4px] active:shadow-none";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#00542A] text-[#33ff33] font-jersey">

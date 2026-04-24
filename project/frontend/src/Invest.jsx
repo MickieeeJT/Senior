@@ -2,8 +2,9 @@ import { useRef, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import saving from "./assets/Saving.png";
 import MiniChart from "./MiniChart";
+import { API_PATHS } from "./config/api";
 
-const API_BASE_URL = "http://localhost:8000/api/invest";
+const API_BASE_URL = API_PATHS.invest;
 
 export default function Invest() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function Invest() {
   const [isGenerating, setIsGenerating] = useState(true);
   
   // Tutorial progress state
-  const [tutorialLevel, setTutorialLevel] = useState(0);
+  const [, setTutorialLevel] = useState(0);
   const [unlockedSections, setUnlockedSections] = useState([]);
 
   const [progress, setProgress] = useState(0);
@@ -39,12 +40,12 @@ export default function Invest() {
   const [indexValue, setIndexValue] = useState(0);
   const [selectedStocks, setSelectedStocks] = useState([]);
   const [stockAmounts, setStockAmounts] = useState({});
-  const [activeStockInput, setActiveStockInput] = useState(null);
+  const [, setActiveStockInput] = useState(null);
   const [selectedGold, setSelectedGold] = useState(null);
   const [goldValue, setGoldValue] = useState(0);
   const [selectedCurrency, setSelectedCurrency] = useState([]);
   const [currencyAmounts, setCurrencyAmounts] = useState({});
-  const [activeCurrencyInput, setActiveCurrencyInput] = useState(null);
+  const [, setActiveCurrencyInput] = useState(null);
 
   // Event & Timer
   const [scenarioEvents, setScenarioEvents] = useState([]);
@@ -100,7 +101,7 @@ export default function Invest() {
           setTutorialLevel(data.tutorialLevel);
           setUnlockedSections(data.unlockedSections);
         }
-      } catch (error) {
+      } catch {
         setTutorialLevel(0);
         setUnlockedSections([]);
       }
@@ -433,7 +434,7 @@ export default function Invest() {
                 setIsProcessingYear(false);
               }
             })
-            .catch((error) => {
+            .catch(() => {
               setIsProcessingYear(false);
             });
           return 100;
@@ -594,7 +595,9 @@ export default function Invest() {
       setAmount("");
       setActiveInput(null);
       setSelectedBond("");
-    } catch (error) {}
+    } catch (error) {
+      console.error("Transaction failed:", error);
+    }
   };
 
   const handleSubmit = () => {
@@ -655,7 +658,9 @@ export default function Invest() {
       else if (data.gameState) setGameState(data.gameState);
       
       setActiveStockInput(null);
-    } catch (error) {}
+    } catch (error) {
+      console.error("Stock transaction failed:", error);
+    }
   };
 
   const handleCurrencyTransaction = async (symbol, action, price) => {
@@ -685,7 +690,9 @@ export default function Invest() {
       else if (data.gameState) setGameState(data.gameState);
       
       setActiveCurrencyInput(null);
-    } catch (error) {}
+    } catch (error) {
+      console.error("Currency transaction failed:", error);
+    }
   };
 
   const handleBondSell = async (inv) => {
@@ -700,7 +707,9 @@ export default function Invest() {
       });
       const data = await res.json();
       if (data?.gameState) setGameState(data.gameState);
-    } catch (error) {}
+    } catch (error) {
+      console.error("Bond sell failed:", error);
+    }
   };
 
   const applyEventEffect = async (effect) => {
