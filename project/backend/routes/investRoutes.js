@@ -71,7 +71,7 @@ const calculateMaxDrawdown = (history) => {
   return maxDrawdown;
 };
 
-// --- THE OMNI-BOT (FIXED BLACK HOLE BUG) ---
+// --- THE OMNI-BOT ---
 const calculateSmartBotState = (currentBotState, marketHistory, incomeAdded = 0, currentMonth = 0, currentYear = 0) => {
   // 1. Extract Current Prices (Default to 1 to prevent division by zero)
   const indexPrice = marketHistory?.index?.close || 1;
@@ -303,10 +303,9 @@ router.get("/check-session", authenticateToken, (req, res) => {
 
     if (rows.length > 0) {
       const savedSession = rows[0];
-      let parsedState, parsedBotState;
+      let parsedState;
       try {
         parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
-        parsedBotState = savedSession.bot_state ? (typeof savedSession.bot_state === 'string' ? JSON.parse(savedSession.bot_state) : savedSession.bot_state) : null;
       } catch (e) {
         console.error("Error parsing game state:", e);
         return res.json({ hasSession: false });
@@ -334,119 +333,219 @@ router.get("/check-session", authenticateToken, (req, res) => {
   });
 });
 
-router.post("/init", authenticateToken, (req, res) => {
+// --- INIT ROUTE: Segmented Category Saving (One Row, Multiple Columns) ---
+router.post("/init", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { forceNew, duration, targetAmount } = req.body;
 
   const maxYears = duration ? parseInt(duration) : 40;
   const finalTargetAmount = targetAmount ? parseFloat(targetAmount) : 1000000;
 
-  const checkSql = "SELECT session_id, game_state, bot_state, scenario_data FROM active_sessions WHERE user_id = ?";
-  db.query(checkSql, [userId], (err, rows) => {
-    if (err) return res.status(500).json({ error: "Database error" });
+  try {
+      const [rows] = await db.promise().query("SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = ?", [userId]);
 
-    // RESUME EXISTING GAME
-    if (rows.length > 0 && !forceNew) {
-      const savedSession = rows[0];
-      const parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
-      const parsedBotState = savedSession.bot_state ? (typeof savedSession.bot_state === 'string' ? JSON.parse(savedSession.bot_state) : savedSession.bot_state) : {};
-      const parsedScenario = typeof savedSession.scenario_data === 'string' ? JSON.parse(savedSession.scenario_data) : savedSession.scenario_data;
+      // --- RESUME EXISTING GAME ---
+      if (rows.length > 0 && !forceNew) {
+        const savedSession = rows[0];
+        const parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
+        const parsedBotState = savedSession.bot_state ? (typeof savedSession.bot_state === 'string' ? JSON.parse(savedSession.bot_state) : savedSession.bot_state) : {};
 
-      gameSessions.set(savedSession.session_id, parsedState);
-      botSessions.set(savedSession.session_id, parsedBotState);
-      parsedState.userId = userId;
-
-      return res.json({ 
-        success: true, 
-        message: "Game Resumed", 
-        sessionId: savedSession.session_id, 
-        gameState: parsedState,
-        scenarioData: parsedScenario
-      });
-    }
-
-    // START NEW GAME
-    if (rows.length > 0 && forceNew) {
-         gameSessions.delete(rows[0].session_id);
-         botSessions.delete(rows[0].session_id);
-         deleteGameFromDB(userId);
-    }
-
-    const sessionId = Date.now().toString();
-    const baseRate = 0.03 + Math.random() * 0.02;
-
-    const bondInterestRates = {
-      "1 year": baseRate,
-      "5 years": baseRate + 0.015 + (Math.random() * 0.01),
-      "10 years": baseRate + 0.03 + (Math.random() * 0.015),
-    };
-    const initialCapital = 4000;
-    
-    // --- Generate Scenario Graph ---
-    const newScenario = generateScenario(maxYears);
-    
-    const gameState = {
-      userId,
-      sessionId,
-      maxYears,
-      targetAmount: finalTargetAmount,
-      pocket: initialCapital,
-      totalInvested: initialCapital,
-      portfolioHistory: [initialCapital],
-      savingsBalance: 0,
-      currentYear: 1,
-      currentMonth: 1, 
-      fundBalance: 0,
-      goldBalance: 0,
-      indexShares: 0,
-      goldShares: 0,
-      indexAvgPrice: 0,
-      goldAvgPrice: 0,
-      profit: { savings: 0, bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
-      holdings: { bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
-      bondInvestments: [],
-      bondInterestRates,
-      lastProcessedMonth: 0,
-    };
-
-    // Omni-Bot Initial State
-    const initialBotState = {
-      pocket: 0,
-      savingsBalance: initialCapital * 0.10,
-      bondBalance: initialCapital * 0.15,
-      fundBalance: initialCapital * 0.35,
-      goldBalance: initialCapital * 0.10,
-      indexShares: 0,
-      goldShares: 0,
-      stockShares: {}, 
-      currencyUnits: {}, 
-      totalNetWorth: initialCapital
-    };
-
-    // Save to Memory
-    gameSessions.set(sessionId, gameState);
-    botSessions.set(sessionId, initialBotState);
-    
-    // Save to DB
-    const jsonState = JSON.stringify(gameState);
-    const jsonBotState = JSON.stringify(initialBotState);
-    const jsonScenario = JSON.stringify(newScenario);
-
-    const sqlInsert = `
-        INSERT INTO active_sessions (user_id, session_id, game_state, bot_state, scenario_data) 
-        VALUES (?, ?, ?, ?, ?)
-    `;
-    db.query(sqlInsert, [userId, sessionId, jsonState, jsonBotState, jsonScenario], (insertErr) => {
-        if (insertErr) console.error("Error creating new game:", insertErr);
+        // Fetch the single row of categorized scenario data
+        const [scenarioRows] = await db.promise().query("SELECT * FROM session_scenarios WHERE session_id = ?", [savedSession.session_id]);
         
-        res.json({ 
-            sessionId, 
-            gameState, 
-            scenarioData: newScenario,
-            message: "New Game Started" 
+        let parsedScenario = { events: [], assets: {}, totalWeeks: parsedState.maxYears * 52 };
+        
+        if (scenarioRows.length > 0) {
+            const scenarioData = scenarioRows[0];
+            
+            // Reconstruct the events
+            if (scenarioData.events_data) {
+                parsedScenario.events = JSON.parse(scenarioData.events_data);
+            }
+            
+            // Reconstruct all assets into the single 'assets' object
+            const categories = ['stocks_data', 'currencies_data', 'index_data', 'gold_data', 'bonds_data'];
+            categories.forEach(cat => {
+                if (scenarioData[cat]) {
+                    const catAssets = JSON.parse(scenarioData[cat]);
+                    // catAssets is an object where keys are asset names and values are their data
+                    Object.assign(parsedScenario.assets, catAssets);
+                }
+            });
+        }
+
+        gameSessions.set(savedSession.session_id, parsedState);
+        botSessions.set(savedSession.session_id, parsedBotState);
+        parsedState.userId = userId;
+
+        return res.json({ 
+          success: true, 
+          message: "Game Resumed", 
+          sessionId: savedSession.session_id, 
+          gameState: parsedState,
+          scenarioData: parsedScenario
         });
-    });
-  });
+      }
+
+      // --- START NEW GAME ---
+      if (rows.length > 0 && forceNew) {
+           gameSessions.delete(rows[0].session_id);
+           botSessions.delete(rows[0].session_id);
+           await db.promise().query("DELETE FROM active_sessions WHERE user_id = ?", [userId]);
+           await db.promise().query("DELETE FROM session_scenarios WHERE session_id = ?", [rows[0].session_id]);
+      }
+
+      const sessionId = Date.now().toString();
+      const baseRate = 0.03 + Math.random() * 0.02;
+
+      const bondInterestRates = {
+        "1 year": baseRate,
+        "5 years": baseRate + 0.015 + (Math.random() * 0.01),
+        "10 years": baseRate + 0.03 + (Math.random() * 0.015),
+      };
+      const initialCapital = 4000;
+      
+      // Generate full scenario Graph
+      const newScenario = generateScenario(maxYears);
+      
+      const gameState = {
+        userId,
+        sessionId,
+        maxYears,
+        targetAmount: finalTargetAmount,
+        pocket: initialCapital,
+        totalInvested: initialCapital,
+        portfolioHistory: [initialCapital],
+        savingsBalance: 0,
+        currentYear: 1,
+        currentMonth: 1, 
+        fundBalance: 0,
+        goldBalance: 0,
+        indexShares: 0,
+        goldShares: 0,
+        indexAvgPrice: 0,
+        goldAvgPrice: 0,
+        profit: { savings: 0, bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
+        holdings: { bonds: 0, index: 0, gold: 0, stocks: {}, currencies: {} },
+        bondInvestments: [],
+        bondInterestRates,
+        lastProcessedMonth: 0,
+      };
+
+      // Omni-Bot Initial State
+      const initialBotState = {
+        pocket: 0,
+        savingsBalance: initialCapital * 0.10,
+        bondBalance: initialCapital * 0.15,
+        fundBalance: initialCapital * 0.35,
+        goldBalance: initialCapital * 0.10,
+        indexShares: 0,
+        goldShares: 0,
+        stockShares: {}, 
+        currencyUnits: {}, 
+        totalNetWorth: initialCapital
+      };
+
+      gameSessions.set(sessionId, gameState);
+      botSessions.set(sessionId, initialBotState);
+      
+      const jsonState = JSON.stringify(gameState);
+      const jsonBotState = JSON.stringify(initialBotState);
+
+      // Save Primary Game State
+      await db.promise().query(
+          "INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) VALUES (?, ?, ?, ?)",
+          [userId, sessionId, jsonState, jsonBotState]
+      );
+
+      // Organize Scenario Data by Category
+      const categorizedData = {
+          stocks: {},
+          currencies: {},
+          index: {},
+          gold: {},
+          bonds: {}
+      };
+
+      Object.values(newScenario.assets).forEach(asset => {
+          if (categorizedData[asset.category] !== undefined) {
+              categorizedData[asset.category][asset.name] = asset;
+          }
+      });
+
+      // Save Scenario Data in CHUNKS to bypass max_allowed_packet limit
+      
+      // Create an empty row first
+      await db.promise().query(
+          "INSERT INTO session_scenarios (session_id) VALUES (?)",
+          [sessionId]
+      );
+
+      // Update one column at a time to distribute data size per query
+      const updateQueries = [];
+      
+      const scenarioEventsJSON = JSON.stringify(newScenario.events);
+      if (scenarioEventsJSON.length > 2) {
+          updateQueries.push(db.promise().query(
+              "UPDATE session_scenarios SET events_data = ? WHERE session_id = ?",
+              [scenarioEventsJSON, sessionId]
+          ));
+      }
+
+      const stocksJSON = JSON.stringify(categorizedData.stocks);
+      if (stocksJSON.length > 2) {
+          updateQueries.push(db.promise().query(
+              "UPDATE session_scenarios SET stocks_data = ? WHERE session_id = ?",
+              [stocksJSON, sessionId]
+          ));
+      }
+
+      const currenciesJSON = JSON.stringify(categorizedData.currencies);
+      if (currenciesJSON.length > 2) {
+          updateQueries.push(db.promise().query(
+              "UPDATE session_scenarios SET currencies_data = ? WHERE session_id = ?",
+              [currenciesJSON, sessionId]
+          ));
+      }
+
+      const indexJSON = JSON.stringify(categorizedData.index);
+      if (indexJSON.length > 2) {
+          updateQueries.push(db.promise().query(
+              "UPDATE session_scenarios SET index_data = ? WHERE session_id = ?",
+              [indexJSON, sessionId]
+          ));
+      }
+
+      const goldJSON = JSON.stringify(categorizedData.gold);
+      if (goldJSON.length > 2) {
+          updateQueries.push(db.promise().query(
+              "UPDATE session_scenarios SET gold_data = ? WHERE session_id = ?",
+              [goldJSON, sessionId]
+          ));
+      }
+
+      const bondsJSON = JSON.stringify(categorizedData.bonds);
+      if (bondsJSON.length > 2) {
+          updateQueries.push(db.promise().query(
+              "UPDATE session_scenarios SET bonds_data = ? WHERE session_id = ?",
+              [bondsJSON, sessionId]
+          ));
+      }
+
+      // Wait for all sub-queries to finish
+      await Promise.all(updateQueries);
+          
+      res.json({ 
+          sessionId, 
+          gameState, 
+          scenarioData: newScenario,
+          message: "New Game Started" 
+      });
+
+  } catch (error) {
+      console.error("Error creating/resuming game:", error);
+      res.status(500).json({ error: "Failed to process game session" });
+  }
 });
 
 router.get("/state/:sessionId", (req, res) => {
@@ -1023,6 +1122,9 @@ router.post("/end-game", authenticateToken, (req, res) => {
       gameSessions.delete(sessionId);
       botSessions.delete(sessionId);
       deleteGameFromDB(userId);
+      
+      // CLEANUP: Delete associated scenario data to keep the database clean
+      db.query("DELETE FROM session_scenarios WHERE session_id = ?", [sessionId]);
 
       res.json({
         success: true,
@@ -1069,6 +1171,10 @@ router.delete("/session/:sessionId", (req, res) => {
   const { sessionId } = req.params;
   gameSessions.delete(sessionId);
   botSessions.delete(sessionId);
+  
+  // CLEANUP: Delete associated scenario data when a session is manually deleted
+  db.query("DELETE FROM session_scenarios WHERE session_id = ?", [sessionId]);
+  
   res.json({ success: true, message: "Session deleted" });
 });
 
