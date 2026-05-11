@@ -25,7 +25,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const env = {
-    port: process.env.PORT || 5000, // Render needs process.env.PORT
-    frontendOrigin: process.env.FRONTEND_URL || "http://localhost:3000", // Update this to your Vercel URL later
-    databaseUrl: process.env.DATABASE_URL 
+    port: process.env.PORT || 5000, 
+    frontendOrigin: process.env.FRONTEND_URL || "http://localhost:3000", 
+    databaseUrl: process.env.DATABASE_URL,
+    jwtSecret: process.env.JWT_SECRET
 };
