@@ -11,30 +11,30 @@ const TUTORIAL_MAP = {
 };
 
 // 1. GET PROGRESS
-export const getTutorialProgress = (req, res) => {
+export const getTutorialProgress = async (req, res) => {
     const userId = req.user.id;
 
-    // Get the HIGHEST level this user has achieved
-    const sql = "SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = ?";
-    
-    db.query(sql, [userId], (err, results) => {
-        if (err) {
-            console.error("DB Error:", err);
-            return res.status(500).json({ success: false, message: "Database error" });
-        }
-
+    try {
+        // Get the HIGHEST level this user has achieved
+        const sql = "SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = $1";
+        
+        const result = await db.query(sql, [userId]);
+        
         // If user has no progress, max_level will be null, so default to 0
-        const currentLevel = results[0].max_level || 0;
+        const currentLevel = result.rows[0]?.max_level || 0;
         
         res.json({
             success: true,
             tutorialLevel: currentLevel
         });
-    });
+    } catch (err) {
+        console.error("DB Error:", err);
+        res.status(500).json({ success: false, message: "Database error" });
+    }
 };
 
 // 2. COMPLETE TUTORIAL
-export const completeTutorial = (req, res) => {
+export const completeTutorial = async (req, res) => {
     const userId = req.user.id;
     const { tutorialType } = req.body;
 
@@ -45,55 +45,57 @@ export const completeTutorial = (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid tutorial type" });
     }
 
-    // Insert the level. INSERT IGNORE prevents crashing if they did it already.
-    const sql = "INSERT IGNORE INTO tutorial_progress (user_id, tutorial_level) VALUES (?, ?)";
-    
-    db.query(sql, [userId, level], (err, result) => {
-        if (err) {
-            console.error("DB Insert Error:", err);
-            return res.status(500).json({ success: false });
-        }
+    try {
+        // PostgreSQL: Use ON CONFLICT DO NOTHING to handle duplicates
+        const sql = `INSERT INTO tutorial_progress (user_id, tutorial_level) 
+                     VALUES ($1, $2) 
+                     ON CONFLICT (user_id, tutorial_level) DO NOTHING`;
+        
+        await db.query(sql, [userId, level]);
         res.json({ success: true, message: "Tutorial completed" });
-    });
+    } catch (err) {
+        console.error("DB Insert Error:", err);
+        res.status(500).json({ success: false, message: "Error completing tutorial" });
+    }
 };
 
 // 3. RESET PROGRESS (For testing or 'New Game')
-export const resetTutorialProgress = (req, res) => {
+export const resetTutorialProgress = async (req, res) => {
     const userId = req.user.id;
     
-    const sql = "DELETE FROM tutorial_progress WHERE user_id = ?";
-    
-    db.query(sql, [userId], (err) => {
-        if (err) {
-            console.error("DB Reset Error:", err);
-            return res.status(500).json({ success: false, message: "Database error" });
-        }
+    try {
+        const sql = "DELETE FROM tutorial_progress WHERE user_id = $1";
+        
+        await db.query(sql, [userId]);
         res.json({ success: true, message: "Progress reset successfully" });
-    });
+    } catch (err) {
+        console.error("DB Reset Error:", err);
+        res.status(500).json({ success: false, message: "Database error" });
+    }
 };
 
 // 4. GET STATS (Leaderboard/Analytics)
-export const getTutorialStats = (req, res) => {
-    const sql = `
-        SELECT 
-            u.username,
-            MAX(tp.tutorial_level) as current_level
-        FROM users u
-        LEFT JOIN tutorial_progress tp ON u.id = tp.user_id
-        GROUP BY u.id, u.username
-        ORDER BY current_level DESC
-        LIMIT 10
-    `;
-    
-    db.query(sql, (err, results) => {
-        if (err) {
-            console.error("Stats Error:", err);
-            return res.status(500).json({ success: false, message: "Database error" });
-        }
+export const getTutorialStats = async (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                u.email,
+                MAX(tp.tutorial_level) as current_level
+            FROM users u
+            LEFT JOIN tutorial_progress tp ON u.id = tp.user_id
+            GROUP BY u.id, u.email
+            ORDER BY current_level DESC
+            LIMIT 10
+        `;
+        
+        const result = await db.query(sql);
 
         res.json({
             success: true,
-            stats: results
+            stats: result.rows
         });
-    });
+    } catch (err) {
+        console.error("Stats Error:", err);
+        res.status(500).json({ success: false, message: "Database error" });
+    }
 };

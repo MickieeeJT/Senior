@@ -10,29 +10,33 @@ const gameSessions = new Map();
 const botSessions = new Map();
 
 // --- HELPER: Save State to DB ---
-const saveGameToDB = (userId, sessionId, gameState, botState = null) => {
+const saveGameToDB = async (userId, sessionId, gameState, botState = null) => {
     const jsonState = JSON.stringify(gameState);
     const jsonBotState = botState ? JSON.stringify(botState) : JSON.stringify({});
     
     const sql = `
         INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) 
-        VALUES (?, ?, ?, ?) 
-        ON DUPLICATE KEY UPDATE 
-        session_id = VALUES(session_id), 
-        game_state = VALUES(game_state),
-        bot_state = VALUES(bot_state)
+        VALUES ($1, $2, $3, $4) 
+        ON CONFLICT (user_id) DO UPDATE SET
+        session_id = EXCLUDED.session_id, 
+        game_state = EXCLUDED.game_state,
+        bot_state = EXCLUDED.bot_state
     `;
-    db.query(sql, [userId, sessionId, jsonState, jsonBotState], (err) => {
-        if (err) console.error("Error saving game/bot state:", err);
-    });
+    try {
+        await db.query(sql, [userId, sessionId, jsonState, jsonBotState]);
+    } catch (err) {
+        console.error("Error saving game/bot state:", err);
+    }
 };
 
 // --- HELPER: Delete State from DB ---
-const deleteGameFromDB = (userId) => {
-    const sql = "DELETE FROM active_sessions WHERE user_id = ?";
-    db.query(sql, [userId], (err) => {
-        if (err) console.error("Error deleting game state:", err);
-    });
+const deleteGameFromDB = async (userId) => {
+    const sql = "DELETE FROM active_sessions WHERE user_id = $1";
+    try {
+        await db.query(sql, [userId]);
+    } catch (err) {
+        console.error("Error deleting game state:", err);
+    }
 };
 
 // --- HELPERS (Math & Stats) ---
@@ -292,17 +296,14 @@ const checkAchievements = (gameState, finalValue, totalReturn, maxDD, stockValue
 
 // --- ROUTES ---
 
-router.get("/check-session", authenticateToken, (req, res) => {
+router.get("/check-session", authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const sql = "SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = ?";
-  db.query(sql, [userId], (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Database error" });
-    }
+  try {
+    const sql = "SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = $1";
+    const result = await db.query(sql, [userId]);
 
-    if (rows.length > 0) {
-      const savedSession = rows[0];
+    if (result.rows.length > 0) {
+      const savedSession = result.rows[0];
       let parsedState;
       try {
         parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
@@ -330,7 +331,10 @@ router.get("/check-session", authenticateToken, (req, res) => {
     }
 
     res.json({ hasSession: false });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
 // --- INIT ROUTE: Segmented Category Saving (One Row, Multiple Columns) ---
@@ -342,21 +346,21 @@ router.post("/init", authenticateToken, async (req, res) => {
   const finalTargetAmount = targetAmount ? parseFloat(targetAmount) : 1000000;
 
   try {
-      const [rows] = await db.promise().query("SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = ?", [userId]);
+      const checkResult = await db.query("SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = $1", [userId]);
 
       // --- RESUME EXISTING GAME ---
-      if (rows.length > 0 && !forceNew) {
-        const savedSession = rows[0];
+      if (checkResult.rows.length > 0 && !forceNew) {
+        const savedSession = checkResult.rows[0];
         const parsedState = typeof savedSession.game_state === 'string' ? JSON.parse(savedSession.game_state) : savedSession.game_state;
         const parsedBotState = savedSession.bot_state ? (typeof savedSession.bot_state === 'string' ? JSON.parse(savedSession.bot_state) : savedSession.bot_state) : {};
 
         // Fetch the single row of categorized scenario data
-        const [scenarioRows] = await db.promise().query("SELECT * FROM session_scenarios WHERE session_id = ?", [savedSession.session_id]);
+        const scenarioResult = await db.query("SELECT * FROM session_scenarios WHERE session_id = $1", [savedSession.session_id]);
         
         let parsedScenario = { events: [], assets: {}, totalWeeks: parsedState.maxYears * 52 };
         
-        if (scenarioRows.length > 0) {
-            const scenarioData = scenarioRows[0];
+        if (scenarioResult.rows.length > 0) {
+            const scenarioData = scenarioResult.rows[0];
             
             // Reconstruct the events
             if (scenarioData.events_data) {
@@ -388,11 +392,11 @@ router.post("/init", authenticateToken, async (req, res) => {
       }
 
       // --- START NEW GAME ---
-      if (rows.length > 0 && forceNew) {
-           gameSessions.delete(rows[0].session_id);
-           botSessions.delete(rows[0].session_id);
-           await db.promise().query("DELETE FROM active_sessions WHERE user_id = ?", [userId]);
-           await db.promise().query("DELETE FROM session_scenarios WHERE session_id = ?", [rows[0].session_id]);
+      if (checkResult.rows.length > 0 && forceNew) {
+           gameSessions.delete(checkResult.rows[0].session_id);
+           botSessions.delete(checkResult.rows[0].session_id);
+           await db.query("DELETE FROM active_sessions WHERE user_id = $1", [userId]);
+           await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [checkResult.rows[0].session_id]);
       }
 
       const sessionId = Date.now().toString();
@@ -453,8 +457,8 @@ router.post("/init", authenticateToken, async (req, res) => {
       const jsonBotState = JSON.stringify(initialBotState);
 
       // Save Primary Game State
-      await db.promise().query(
-          "INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) VALUES (?, ?, ?, ?)",
+      await db.query(
+          "INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) VALUES ($1, $2, $3, $4)",
           [userId, sessionId, jsonState, jsonBotState]
       );
 
@@ -476,8 +480,8 @@ router.post("/init", authenticateToken, async (req, res) => {
       // Save Scenario Data in CHUNKS to bypass max_allowed_packet limit
       
       // Create an empty row first
-      await db.promise().query(
-          "INSERT INTO session_scenarios (session_id) VALUES (?)",
+      await db.query(
+          "INSERT INTO session_scenarios (session_id) VALUES ($1)",
           [sessionId]
       );
 
@@ -486,48 +490,48 @@ router.post("/init", authenticateToken, async (req, res) => {
       
       const scenarioEventsJSON = JSON.stringify(newScenario.events);
       if (scenarioEventsJSON.length > 2) {
-          updateQueries.push(db.promise().query(
-              "UPDATE session_scenarios SET events_data = ? WHERE session_id = ?",
+          updateQueries.push(db.query(
+              "UPDATE session_scenarios SET events_data = $1 WHERE session_id = $2",
               [scenarioEventsJSON, sessionId]
           ));
       }
 
       const stocksJSON = JSON.stringify(categorizedData.stocks);
       if (stocksJSON.length > 2) {
-          updateQueries.push(db.promise().query(
-              "UPDATE session_scenarios SET stocks_data = ? WHERE session_id = ?",
+          updateQueries.push(db.query(
+              "UPDATE session_scenarios SET stocks_data = $1 WHERE session_id = $2",
               [stocksJSON, sessionId]
           ));
       }
 
       const currenciesJSON = JSON.stringify(categorizedData.currencies);
       if (currenciesJSON.length > 2) {
-          updateQueries.push(db.promise().query(
-              "UPDATE session_scenarios SET currencies_data = ? WHERE session_id = ?",
+          updateQueries.push(db.query(
+              "UPDATE session_scenarios SET currencies_data = $1 WHERE session_id = $2",
               [currenciesJSON, sessionId]
           ));
       }
 
       const indexJSON = JSON.stringify(categorizedData.index);
       if (indexJSON.length > 2) {
-          updateQueries.push(db.promise().query(
-              "UPDATE session_scenarios SET index_data = ? WHERE session_id = ?",
+          updateQueries.push(db.query(
+              "UPDATE session_scenarios SET index_data = $1 WHERE session_id = $2",
               [indexJSON, sessionId]
           ));
       }
 
       const goldJSON = JSON.stringify(categorizedData.gold);
       if (goldJSON.length > 2) {
-          updateQueries.push(db.promise().query(
-              "UPDATE session_scenarios SET gold_data = ? WHERE session_id = ?",
+          updateQueries.push(db.query(
+              "UPDATE session_scenarios SET gold_data = $1 WHERE session_id = $2",
               [goldJSON, sessionId]
           ));
       }
 
       const bondsJSON = JSON.stringify(categorizedData.bonds);
       if (bondsJSON.length > 2) {
-          updateQueries.push(db.promise().query(
-              "UPDATE session_scenarios SET bonds_data = ? WHERE session_id = ?",
+          updateQueries.push(db.query(
+              "UPDATE session_scenarios SET bonds_data = $1 WHERE session_id = $2",
               [bondsJSON, sessionId]
           ));
       }
@@ -555,7 +559,7 @@ router.get("/state/:sessionId", (req, res) => {
   res.json(gameState);
 });
 
-router.post("/transaction", (req, res) => {
+router.post("/transaction", async (req, res) => {
   const { sessionId, action, amount, bondType, indexValue, goldValue } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -643,12 +647,12 @@ router.post("/transaction", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, updatedGameState: gameState });
 });
 
-router.post("/monthly-update", (req, res) => {
+router.post("/monthly-update", async (req, res) => {
   const { sessionId, month, progress, indexData, goldData, stockData, currencyData } = req.body;
   const gameState = gameSessions.get(sessionId);
   let botState = botSessions.get(sessionId);
@@ -695,13 +699,13 @@ router.post("/monthly-update", (req, res) => {
   botSessions.set(sessionId, nextBotState);
   
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, nextBotState);
+      await saveGameToDB(gameState.userId, sessionId, gameState, nextBotState);
   }
 
   res.json({ success: true, gameState, botState: nextBotState });
 });
 
-router.post("/bond-update", (req, res) => {
+router.post("/bond-update", async (req, res) => {
   const { sessionId } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -723,12 +727,12 @@ router.post("/bond-update", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, gameState, maturedBonds });
 });
 
-router.post("/gold-update", (req, res) => {
+router.post("/gold-update", async (req, res) => {
   const { sessionId, goldData } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -740,12 +744,12 @@ router.post("/gold-update", (req, res) => {
   
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, updatedGameState: gameState });
 });
 
-router.post("/bond-sell", (req, res) => {
+router.post("/bond-sell", async (req, res) => {
   const { sessionId, bondId } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -775,12 +779,12 @@ router.post("/bond-sell", (req, res) => {
   gameSessions.set(sessionId, gameState);
   
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, sellAmount, gameState, message });
 });
 
-router.post("/stock-buy", (req, res) => {
+router.post("/stock-buy", async (req, res) => {
   const { sessionId, symbol, amount, price } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -803,12 +807,12 @@ router.post("/stock-buy", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, updatedGameState: gameState });
 });
 
-router.post("/stock-sell", (req, res) => {
+router.post("/stock-sell", async (req, res) => {
   const { sessionId, symbol, amount, price } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -835,12 +839,12 @@ router.post("/stock-sell", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, updatedGameState: gameState });
 });
 
-router.post("/currency-buy", (req, res) => {
+router.post("/currency-buy", async (req, res) => {
   const { sessionId, symbol, amount, price } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -863,12 +867,12 @@ router.post("/currency-buy", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, updatedGameState: gameState });
 });
 
-router.post("/currency-sell", (req, res) => {
+router.post("/currency-sell", async (req, res) => {
   const { sessionId, symbol, amount, price } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -895,12 +899,12 @@ router.post("/currency-sell", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, updatedGameState: gameState });
 });
 
-router.post("/year-increment", (req, res) => {
+router.post("/year-increment", async (req, res) => {
   const { sessionId, currentNetWorth } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(404).json({ error: "Session not found" });
@@ -920,12 +924,12 @@ router.post("/year-increment", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   res.json({ success: true, gameState });
 });
 
-router.post("/apply-event", (req, res) => {
+router.post("/apply-event", async (req, res) => {
   const { sessionId, effect } = req.body;
   const gameState = gameSessions.get(sessionId);
   if (!gameState) return res.status(400).json({ error: "Invalid session" });
@@ -936,13 +940,13 @@ router.post("/apply-event", (req, res) => {
 
   gameSessions.set(sessionId, gameState);
   if (gameState.userId) {
-      saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
+      await saveGameToDB(gameState.userId, sessionId, gameState, botSessions.get(sessionId));
   }
   return res.json({ message: "Event applied", gameState });
 });
 
 // --- END-GAME: Summarize and Send Bot Data for Pie Chart ---
-router.post("/end-game", authenticateToken, (req, res) => {
+router.post("/end-game", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { sessionId, finalStockPrices, finalCurrencyPrices, finalBotState } = req.body;
 
@@ -1096,35 +1100,36 @@ router.post("/end-game", authenticateToken, (req, res) => {
     console.log(`AI Bot Score: $${botScore.toLocaleString()}`);
     console.log("---------------------------------------------------");
 
-    const scoreSql = `INSERT INTO score_history (user_id, score, star, played_at) VALUES (?, ?, ?, NOW())`;
-
-    db.query(scoreSql, [userId, roundedScore, assessment.stars], (err, result) => {
-      if (err) {
-        console.error("Score save error:", err);
-        return res.status(500).json({ success: false, message: "Failed to save score" });
-      }
-
-      const scoreId = result.insertId;
+    try {
+      const scoreSql = `INSERT INTO score_history (user_id, score, star, played_at) VALUES ($1, $2, $3, NOW())`;
+      const scoreResult = await db.query(scoreSql, [userId, roundedScore, assessment.stars]);
+      
+      // Get the ID of the inserted score (this varies depending on your implementation)
+      // For now, we'll use the current timestamp as a unique identifier
+      const scoreId = Date.now();
 
       if (unlockedCodes.length > 0) {
-        const codesString = unlockedCodes.map(c => `'${c}'`).join(",");
-        const findSql = `SELECT id, code FROM achievements WHERE code IN (${codesString})`;
+        const codesPlaceholders = unlockedCodes.map((_, i) => `$${i + 1}`).join(",");
+        const findSql = `SELECT id, code FROM achievements WHERE code IN (${codesPlaceholders})`;
 
-        db.query(findSql, [], (err, rows) => {
-          if (!err && rows.length > 0) {
-            const insertValues = rows.map(row => [userId, row.id, scoreId]);
-            const insertSql = `INSERT IGNORE INTO user_achievements (user_id, achievement_id, score_id) VALUES ?`;
-            db.query(insertSql, [insertValues], () => {});
+        const achievementsResult = await db.query(findSql, unlockedCodes);
+        
+        if (achievementsResult.rows.length > 0) {
+          for (const row of achievementsResult.rows) {
+            const insertSql = `INSERT INTO user_achievements (user_id, achievement_id, score_id) 
+                               VALUES ($1, $2, $3) 
+                               ON CONFLICT DO NOTHING`;
+            await db.query(insertSql, [userId, row.id, scoreId]);
           }
-        });
+        }
       }
 
       gameSessions.delete(sessionId);
       botSessions.delete(sessionId);
-      deleteGameFromDB(userId);
+      await deleteGameFromDB(userId);
       
       // CLEANUP: Delete associated scenario data to keep the database clean
-      db.query("DELETE FROM session_scenarios WHERE session_id = ?", [sessionId]);
+      await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [sessionId]);
 
       res.json({
         success: true,
@@ -1139,7 +1144,10 @@ router.post("/end-game", authenticateToken, (req, res) => {
         metrics: { roi: totalReturn, volatility: maxDD, maxDrawdown: maxDD },
         newAchievements: unlockedCodes
       });
-    });
+    } catch (dbError) {
+      console.error("Database error:", dbError);
+      res.status(500).json({ success: false, message: "Failed to save score" });
+    }
 
   } catch (error) {
     console.error("Calculation error:", error);
@@ -1147,14 +1155,13 @@ router.post("/end-game", authenticateToken, (req, res) => {
   }
 });
 
-router.get("/tutorial-progress", authenticateToken, (req, res) => {
+router.get("/tutorial-progress", authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const sql = `SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = ?`;
-  
-  db.query(sql, [userId], (err, results) => {
-    if (err) return res.status(500).json({ success: false, error: "Failed to fetch tutorial progress" });
+  try {
+    const sql = `SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = $1`;
+    const result = await db.query(sql, [userId]);
 
-    let tutorialLevel = results.length > 0 && results[0].max_level !== null ? results[0].max_level : 0;
+    let tutorialLevel = result.rows.length > 0 && result.rows[0].max_level !== null ? result.rows[0].max_level : 0;
     const unlockedSections = [];
     if (tutorialLevel >= 1) unlockedSections.push('savings');
     if (tutorialLevel >= 2) unlockedSections.push('bonds');
@@ -1164,18 +1171,24 @@ router.get("/tutorial-progress", authenticateToken, (req, res) => {
     if (tutorialLevel >= 6) unlockedSections.push('currency');
 
     res.json({ success: true, tutorialLevel, unlockedSections });
-  });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: "Failed to fetch tutorial progress" });
+  }
 });
 
-router.delete("/session/:sessionId", (req, res) => {
+router.delete("/session/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   gameSessions.delete(sessionId);
   botSessions.delete(sessionId);
   
-  // CLEANUP: Delete associated scenario data when a session is manually deleted
-  db.query("DELETE FROM session_scenarios WHERE session_id = ?", [sessionId]);
-  
-  res.json({ success: true, message: "Session deleted" });
+  try {
+    // CLEANUP: Delete associated scenario data when a session is manually deleted
+    await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [sessionId]);
+    res.json({ success: true, message: "Session deleted" });
+  } catch (err) {
+    console.error("Error deleting session:", err);
+    res.status(500).json({ success: false, error: "Failed to delete session" });
+  }
 });
 
 export default router;
