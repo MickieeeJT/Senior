@@ -31,13 +31,12 @@ const saveGameToDB = async (userId, sessionId, gameState, botState = null) => {
 
 // --- HELPER: Delete State from DB ---
 const deleteGameFromDB = async (userId) => {
-    const sql = "DELETE FROM active_sessions WHERE user_id = $1";
     try {
-        await db.query(sql, [userId]);
+        await db.query("DELETE FROM active_sessions WHERE user_id = $1", [userId]);
     } catch (err) {
-        console.error("Error deleting game state:", err);
+        console.error(err);
     }
-};
+}
 
 // --- HELPERS (Math & Stats) ---
 const roundToTwo = (num) => {
