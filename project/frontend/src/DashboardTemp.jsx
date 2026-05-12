@@ -175,7 +175,7 @@ export default function DashboardTemp() {
         </div>
         <div className="flex gap-4">
           <button onClick={() => navigate("/home")} className={buttonStyle}>Main Menu</button>
-          <button onClick={() => navigate("/invest", { state: { forceNew: true } })} className={buttonStyle}>Run Again</button>
+          <button onClick={() => navigate("/SelectStrategy", { state: { forceNew: true } })} className={buttonStyle}>Run Again</button>
         </div>
       </header>
 

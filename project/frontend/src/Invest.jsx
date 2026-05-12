@@ -443,7 +443,7 @@ export default function Invest() {
         const newProgress = prev + (100 / steps);
         
         const rawMonth = (newProgress / 100) * 12;
-        const newMonth = Math.floor(rawMonth) + 1;
+        const newMonth = Math.max(1, Math.round(rawMonth));
         
         setCurrentMonth(Math.min(12, newMonth));
         return newProgress;
@@ -468,7 +468,7 @@ export default function Invest() {
       if (processingRef.current === updateKey) return;
       processingRef.current = updateKey;
 
-      if (Math.random() < 0.05) {
+      if (gameState.currentYear > 2 && Math.random() < 0.05) {
         const event = getRandomEvent();
         if (event) {
           setEventData(event);

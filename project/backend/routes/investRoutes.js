@@ -1101,14 +1101,11 @@ router.post("/end-game", authenticateToken, async (req, res) => {
     console.log("---------------------------------------------------");
 
     try {
-      const scoreSql = `INSERT INTO score_history (user_id, score, star, played_at) VALUES ($1, $2, $3, NOW())`;
+      const scoreSql = `INSERT INTO score_history (user_id, score, star, played_at) VALUES ($1, $2, $3, NOW()) RETURNING id`;
       const scoreResult = await db.query(scoreSql, [userId, roundedScore, assessment.stars]);
-      
-      // Get the ID of the inserted score (this varies depending on your implementation)
-      // For now, we'll use the current timestamp as a unique identifier
-      const scoreId = Date.now();
+      const scoreId = scoreResult.rows[0]?.id;
 
-      if (unlockedCodes.length > 0) {
+      if (scoreId && unlockedCodes.length > 0) {
         const codesPlaceholders = unlockedCodes.map((_, i) => `$${i + 1}`).join(",");
         const findSql = `SELECT id, code FROM achievements WHERE code IN (${codesPlaceholders})`;
 
