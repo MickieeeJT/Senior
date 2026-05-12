@@ -1105,27 +1105,35 @@ router.post("/end-game", authenticateToken, async (req, res) => {
       const scoreId = scoreResult.rows[0]?.id;
 
       if (scoreId && unlockedCodes.length > 0) {
-        const codesPlaceholders = unlockedCodes.map((_, i) => `$${i + 1}`).join(",");
-        const findSql = `SELECT id, code FROM achievements WHERE code IN (${codesPlaceholders})`;
+        try {
+          const codesPlaceholders = unlockedCodes.map((_, i) => `$${i + 1}`).join(",");
+          const findSql = `SELECT id, code FROM achievements WHERE code IN (${codesPlaceholders})`;
 
-        const achievementsResult = await db.query(findSql, unlockedCodes);
-        
-        if (achievementsResult.rows.length > 0) {
-          for (const row of achievementsResult.rows) {
-            const insertSql = `INSERT INTO user_achievements (user_id, achievement_id, score_id) 
-                               VALUES ($1, $2, $3) 
-                               ON CONFLICT DO NOTHING`;
-            await db.query(insertSql, [userId, row.id, scoreId]);
+          const achievementsResult = await db.query(findSql, unlockedCodes);
+          
+          if (achievementsResult.rows.length > 0) {
+            for (const row of achievementsResult.rows) {
+              const insertSql = `INSERT INTO user_achievements (user_id, achievement_id, score_id) 
+                                 VALUES ($1, $2, $3) 
+                                 ON CONFLICT DO NOTHING`;
+              await db.query(insertSql, [userId, row.id, scoreId]);
+            }
           }
+        } catch (achievementError) {
+          console.warn("Achievement save skipped:", achievementError);
         }
       }
 
       gameSessions.delete(sessionId);
       botSessions.delete(sessionId);
-      await deleteGameFromDB(userId);
-      
-      // CLEANUP: Delete associated scenario data to keep the database clean
-      await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [sessionId]);
+      try {
+        await deleteGameFromDB(userId);
+        
+        // CLEANUP: Delete associated scenario data to keep the database clean
+        await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [sessionId]);
+      } catch (cleanupError) {
+        console.warn("End-game cleanup skipped:", cleanupError);
+      }
 
       res.json({
         success: true,
