@@ -67,6 +67,7 @@ export default function Invest() {
   const currentMonthRef = useRef(currentMonth);
   const selectedIndexRef = useRef(selectedIndex);
   const selectedGoldRef = useRef(selectedGold);
+  const progressRef = useRef(progress);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -75,13 +76,15 @@ export default function Invest() {
     currentMonthRef.current = currentMonth;
     selectedIndexRef.current = selectedIndex;
     selectedGoldRef.current = selectedGold;
+    progressRef.current = progress;
   }, [
     gameState,
     selectedStocks,
     selectedCurrency,
     currentMonth,
     selectedIndex,
-    selectedGold
+    selectedGold,
+    progress
   ]);
 
   // Load tutorial progress from database on mount
@@ -223,9 +226,10 @@ export default function Invest() {
     if (!gs) return null;
 
     const finalStockPrices = {};
+    const currentProgress = progressRef.current || 0;    
     const totalDataPassed = Math.max(
       0,
-      (gs.currentYear - 1) * 52 + 51
+      (gs.currentYear - 1) * 52 + Math.min(51, Math.floor((currentProgress / 100) * 52))
     );
 
     stocksRef.current.forEach((stock) => {

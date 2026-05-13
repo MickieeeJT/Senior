@@ -105,8 +105,7 @@ export default function DashboardTemp() {
   // --- CALCULATE FINANCIALS ---
   const totalMoney = scoreData?.score || 0;
   const playedYears = finalGameState.currentYear || finalGameState.maxYears || 20;
-  const totalInvested = playedYears * 8000;
-  // const totalInvested = finalGameState.totalInvested || (playedYears * 8000);
+  const totalInvested = finalGameState.totalInvested || (playedYears * 8000);
   const totalGain = totalMoney - totalInvested;
   const percentGain = totalInvested > 0 ? ((totalGain / totalInvested) * 100).toFixed(1) : 0;
   
@@ -175,7 +174,7 @@ export default function DashboardTemp() {
         </div>
         <div className="flex gap-4">
           <button onClick={() => navigate("/home")} className={buttonStyle}>Main Menu</button>
-          <button onClick={() => navigate("/SelectStrategy", { state: { forceNew: true } })} className={buttonStyle}>Run Again</button>
+          <button onClick={() => navigate("/select-strategy", { state: { forceNew: true } })} className={buttonStyle}>Run Again</button>
         </div>
       </header>
 
