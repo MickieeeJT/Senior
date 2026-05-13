@@ -257,7 +257,7 @@ export default function Dashboard() {
 
         {/* BUTTONS */}
         <div className="flex gap-4 pb-10">
-          <button onClick={() => navigate("/invest", { state: { forceNew: true } })} className="bg-[#00ff99] text-black px-6 py-2 rounded-lg font-bold hover:bg-[#00dd88] transition">Play Again</button>
+          <button onClick={() => navigate("/select-strategy", { state: { forceNew: true } })} className="bg-[#00ff99] text-black px-6 py-2 rounded-lg font-bold hover:bg-[#00dd88] transition">Play Again</button>
           <button onClick={() => navigate("/")} className="bg-[#003322] text-[#00ffcc] px-6 py-2 rounded-lg font-bold hover:bg-[#004433] transition">Return to Menu</button>
         </div>
 

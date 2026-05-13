@@ -395,7 +395,7 @@ export default function Tutorial() {
   };
 
   const handleStartGame = () => {
-    navigate("/SelectStrategy");
+    navigate("/select-strategy");
   };
 
   const handleCompleteTutorial = async () => {
