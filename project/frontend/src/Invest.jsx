@@ -221,7 +221,7 @@ export default function Invest() {
   };
 
   // --- SAVE SCORE & GET METRICS ---
-  const saveScore = async () => {
+  const saveScore = async (currentTotalAssets) => {
     const gs = gameStateRef.current;
     if (!gs) return null;
 
