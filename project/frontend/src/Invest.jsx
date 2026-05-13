@@ -256,6 +256,7 @@ export default function Invest() {
           finalGameState: gs,
           finalStockPrices,
           finalCurrencyPrices,
+          playerTotalAssets: currentTotalAssets
         }),
       });
       const data = await response.json();
@@ -1242,7 +1243,7 @@ export default function Invest() {
             <p className="text-sm font-poiret mb-6 text-gray-300">Game completed in Year {gameState.currentYear}</p>
             <button
               onClick={async () => {
-                const saved = await saveScore();
+                const saved = await saveScore(totalAssets);
                 navigate("/dashboard", {
                   state: {
                     finalGameState: gameState,

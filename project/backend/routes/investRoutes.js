@@ -947,7 +947,7 @@ router.post("/apply-event", async (req, res) => {
 // --- END-GAME: Summarize and Send Bot Data for Pie Chart ---
 router.post("/end-game", authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const { sessionId, finalStockPrices, finalCurrencyPrices, finalBotState } = req.body;
+  const { sessionId, finalStockPrices, finalCurrencyPrices, finalBotState, playerTotalAssets } = req.body;
 
   const gameState = gameSessions.get(sessionId);
   let botState = finalBotState || botSessions.get(sessionId);
@@ -977,15 +977,17 @@ router.post("/end-game", authenticateToken, async (req, res) => {
       }
     }
 
-    const finalValue = roundToTwo(
-      gameState.pocket +
-      gameState.savingsBalance +
-      gameState.fundBalance +
-      gameState.goldBalance +
-      (gameState.holdings?.bonds || 0) +
-      stockValue +
-      currencyValue
-    );
+    const finalValue = playerTotalAssets 
+      ? roundToTwo(playerTotalAssets) 
+      : roundToTwo(
+          gameState.pocket +
+          gameState.savingsBalance +
+          gameState.fundBalance +
+          gameState.goldBalance +
+          (gameState.holdings?.bonds || 0) +
+          stockValue +
+          currencyValue
+        );
 
     if (!gameState.portfolioHistory) gameState.portfolioHistory = [];
     gameState.portfolioHistory.push(finalValue);
