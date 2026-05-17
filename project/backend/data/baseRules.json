@@ -118,5 +118,137 @@
     "baseReturn": -0.0003165918588283679,
     "baseVolatility": 0.021254839968770832,
     "startPrice": 34.26
+  },
+  "AMATA": {
+    "asset": "AMATA",
+    "baseReturn": 0.003800166777090136,
+    "baseVolatility": 0.053002721989959964,
+    "startPrice": 27.75
+  },
+  "CK": {
+    "asset": "CK",
+    "baseReturn": 0.002985697577470838,
+    "baseVolatility": 0.048419217991230855,
+    "startPrice": 18.3
+  },
+  "DIFu": {
+    "asset": "DIFu",
+    "baseReturn": 0.000061005863482073986,
+    "baseVolatility": 0.022299719973492064,
+    "startPrice": 8.5
+  },
+  "FORTH": {
+    "asset": "FORTH",
+    "baseReturn": 0.003082177608964873,
+    "baseVolatility": 0.054489013492612544,
+    "startPrice": 10.2
+  },
+  "GC": {
+    "asset": "GC",
+    "baseReturn": 0.0018357247881668002,
+    "baseVolatility": 0.03961978247124361,
+    "startPrice": 4.98
+  },
+  "LHFG": {
+    "asset": "LHFG",
+    "baseReturn": -0.0008743977942364078,
+    "baseVolatility": 0.07649582066809532,
+    "startPrice": 0.78
+  },
+  "NEP": {
+    "asset": "NEP",
+    "baseReturn": 0.006412879963024224,
+    "baseVolatility": 0.14071347899168551,
+    "startPrice": 0.23
+  },
+  "PAP": {
+    "asset": "PAP",
+    "baseReturn": 0.0017701447643385117,
+    "baseVolatility": 0.04671068851350105,
+    "startPrice": 1.67
+  },
+  "PTTGC": {
+    "asset": "PTTGC",
+    "baseReturn": -0.0004270337367696441,
+    "baseVolatility": 0.04345445053279938,
+    "startPrice": 25.5
+  },
+  "SEAFCO": {
+    "asset": "SEAFCO",
+    "baseReturn": 0.0045455600572531975,
+    "baseVolatility": 0.12698265395779332,
+    "startPrice": 2
+  },
+  "SETMAI": {
+    "asset": "SETMAI",
+    "baseReturn": 0.003812841351745766,
+    "baseVolatility": 0.06307664728788094,
+    "startPrice": 311.82
+  },
+  "SETMSCI": {
+    "asset": "SETMSCI",
+    "baseReturn": 0.0038318037311372275,
+    "baseVolatility": 0.05576703188138575,
+    "startPrice": 465.45
+  },
+  "SIS": {
+    "asset": "SIS",
+    "baseReturn": 0.015344251828959965,
+    "baseVolatility": 0.10217372323238726,
+    "startPrice": 28.5
+  },
+  "SMPC": {
+    "asset": "SMPC",
+    "baseReturn": 0.0935882813509548,
+    "baseVolatility": 1.0236201700397658,
+    "startPrice": 9.4
+  },
+  "SNC": {
+    "asset": "SNC",
+    "baseReturn": 0.007527762156166484,
+    "baseVolatility": 0.10243060549423753,
+    "startPrice": 5.7
+  },
+  "SRICHA": {
+    "asset": "SRICHA",
+    "baseReturn": 0.0002060121887177033,
+    "baseVolatility": 0.0682808223647509,
+    "startPrice": 5.5
+  },
+  "TAE": {
+    "asset": "TAE",
+    "baseReturn": -0.002535526179131551,
+    "baseVolatility": 0.04200695510896342,
+    "startPrice": 0.76
+  },
+  "TNITY": {
+    "asset": "TNITY",
+    "baseReturn": 0.0017530077868756185,
+    "baseVolatility": 0.13056473164218177,
+    "startPrice": 4.32
+  },
+  "TRUE": {
+    "asset": "TRUE",
+    "baseReturn": 0.0028924462631746348,
+    "baseVolatility": 0.06662647219526116,
+    "startPrice": 11.6
+  },
+  "TTB": {
+    "asset": "TTB",
+    "baseReturn": 0.0021599815866334224,
+    "baseVolatility": 0.043662405502139644,
+    "startPrice": 1.85
+  },
+  "UAC": {
+    "asset": "UAC",
+    "baseReturn": 0.007304510915038974,
+    "baseVolatility": 0.10922644331474389,
+    "startPrice": 3.08
+  },
+  "UMI": {
+    "asset": "UMI",
+    "baseReturn": 0.008911240852576026,
+    "baseVolatility": 0.20180454967127417,
+    "startPrice": 0.72
   }
 }

@@ -16,7 +16,8 @@
       "title": "2019 tough for Thailand ; 2020 may not be much better",
       "source": "News Media",
       "url": "https://www.businesstimes.com.sg/government-economy/2019-tough-for-thailand-2020-may-not-be-much-better"
-    }  ],
+    }
+  ],
   "REAL_NORMAL": [],
   "MACRO_ECONOMY": [
     {
@@ -379,6 +380,241 @@
     {
       "title": "E-commerce Sales Overtake Brick-and-Mortar for the First Time",
       "source": "Retail Analytics",
+      "url": ""
+    }
+  ],
+  "CRYPTOCURRENCY_NEWS": [
+    {
+      "title": "Major Exchange Hacked, Billions in Digital Assets Stolen",
+      "source": "Crypto Watch",
+      "url": ""
+    },
+    {
+      "title": "Central Bank Announces Official Digital Currency Integration",
+      "source": "FinTech Today",
+      "url": ""
+    },
+    {
+      "title": "Regulatory Crackdown Forces Major Mining Pools Offline",
+      "source": "Blockchain News",
+      "url": ""
+    },
+    {
+      "title": "Spot Bitcoin ETF Officially Approved by Regulators",
+      "source": "Market Insider",
+      "url": ""
+    },
+    {
+      "title": "Tech Billionaire's Tweet Sends Meme Coin Soaring 500%",
+      "source": "Social Finance",
+      "url": ""
+    },
+    {
+      "title": "DeFi Protocol Exploited, Millions Drained in Flash Loan Attack",
+      "source": "CyberSec Journal",
+      "url": ""
+    },
+    {
+      "title": "Major Retailer Now Accepts Cryptocurrency for All Purchases",
+      "source": "Retail Tech",
+      "url": ""
+    },
+    {
+      "title": "Energy Consumption Concerns Lead to Proof-of-Work Ban in Europe",
+      "source": "Green Crypto",
+      "url": ""
+    },
+    {
+      "title": "Crypto Winter Ends as Institutional Investors Pour Billions into Web3",
+      "source": "Venture Capital Daily",
+      "url": ""
+    },
+    {
+      "title": "Stablecoin Loses Peg, Triggering Widespread Crypto Market Panic",
+      "source": "Financial Times",
+      "url": ""
+    }
+  ],
+  "COMPANY_SCANDALS": [
+    {
+      "title": "CEO Resigns Amidst Massive Accounting Fraud Allegations",
+      "source": "Corporate Daily",
+      "url": ""
+    },
+    {
+      "title": "Whistleblower Leaks Confidential Documents Exposing Market Manipulation",
+      "source": "Investigative Post",
+      "url": ""
+    },
+    {
+      "title": "Regulators Launch Anti-Trust Lawsuit Against Tech Giant",
+      "source": "Legal Business",
+      "url": ""
+    },
+    {
+      "title": "Massive Bribery Scheme Uncovered in Multinational Corporation",
+      "source": "Global Justice",
+      "url": ""
+    },
+    {
+      "title": "Toxic Workplace Culture Leads to Mass Employee Walkout",
+      "source": "HR Weekly",
+      "url": ""
+    },
+    {
+      "title": "Flagship Product Recalled After Critical Safety Failures",
+      "source": "Consumer Watchdog",
+      "url": ""
+    },
+    {
+      "title": "Board of Directors Fired Over Insider Trading Accusations",
+      "source": "Wall Street Journal",
+      "url": ""
+    },
+    {
+      "title": "Company Found Guilty of Illegally Dumping Toxic Waste",
+      "source": "Eco News",
+      "url": ""
+    },
+    {
+      "title": "Data Privacy Scandal: Millions of User Records Sold to Third Parties",
+      "source": "Cyber Alert",
+      "url": ""
+    },
+    {
+      "title": "Major Corporate Sponsor Drops Endorsement Over Executive's Remarks",
+      "source": "PR Disaster",
+      "url": ""
+    }
+  ],
+  "SOCIAL_TRENDS": [
+    {
+      "title": "Plant-Based Meat Alternatives Overtake Traditional Sales",
+      "source": "Food & Market",
+      "url": ""
+    },
+    {
+      "title": "Gen Z Investment Trends Shift Massively Towards Sustainable Funds",
+      "source": "Market Demographics",
+      "url": ""
+    },
+    {
+      "title": "Remote Work Becomes Permanent Standard for 60% of Global Corporations",
+      "source": "Future of Work",
+      "url": ""
+    },
+    {
+      "title": "Anti-Consumerism Movement Causes Retail Sales to Plummet",
+      "source": "Retail Analytics",
+      "url": ""
+    },
+    {
+      "title": "Rise of AI-Companions Disrupts Traditional Entertainment Industry",
+      "source": "Tech Lifestyle",
+      "url": ""
+    },
+    {
+      "title": "Mass Migration from Mega-Cities to Rural 'Smart Villages'",
+      "source": "Urban Planning",
+      "url": ""
+    },
+    {
+      "title": "Subscription Fatigue: Consumers Mass-Cancel Streaming Services",
+      "source": "Media Trends",
+      "url": ""
+    },
+    {
+      "title": "Four-Day Work Week Shows 40% Increase in Productivity",
+      "source": "Business Insider",
+      "url": ""
+    },
+    {
+      "title": "Localism Boom: Neighborhood Businesses Crush Global Chains",
+      "source": "Main Street News",
+      "url": ""
+    },
+    {
+      "title": "Digital Detox: Smartphone Sales Drop as Users Seek Offline Experiences",
+      "source": "Tech Tracker",
+      "url": ""
+    }
+  ],
+  "MEDICAL_AND_BIOTECH": [
+    {
+      "title": "Revolutionary Universal Cancer Vaccine Enters Final Human Trials",
+      "source": "BioTech Today",
+      "url": ""
+    },
+    {
+      "title": "New Superbug Discovered, WHO Issues High-Level Global Alert",
+      "source": "World Health Report",
+      "url": ""
+    },
+    {
+      "title": "CRISPR Gene Editing Successfully Reverses Inherited Blindness",
+      "source": "Genetic Science",
+      "url": ""
+    },
+    {
+      "title": "Major Pharmaceutical Firm Sued Over Highly Addictive Painkillers",
+      "source": "Legal Medical",
+      "url": ""
+    },
+    {
+      "title": "Breakthrough Anti-Aging Compound Increases Lifespan in Mammals by 30%",
+      "source": "Longevity Journal",
+      "url": ""
+    },
+    {
+      "title": "Recall of Defective Pacemakers Shocks Medical Device Industry",
+      "source": "MedTech Alert",
+      "url": ""
+    },
+    {
+      "title": "AI Drug Discovery Model Creates Viable Alzheimer's Treatment in Weeks",
+      "source": "AI & Health",
+      "url": ""
+    },
+    {
+      "title": "National Healthcare System Paralyzed by Coordinated Ransomware Attack",
+      "source": "Cyber Health",
+      "url": ""
+    },
+    {
+      "title": "FDA Fast-Tracks Approval for Groundbreaking Obesity Medication",
+      "source": "Pharma News",
+      "url": ""
+    },
+    {
+      "title": "Global Shortage of Crucial Antibiotics Leads to Spiking Prices",
+      "source": "Supply Chain Medical",
+      "url": ""
+    }
+  ],
+  "FINANCIAL_MARKET_SHOCKS": [
+    {
+      "title": "Flash Crash Wipes Out $1 Trillion in Market Value in Minutes",
+      "source": "Trading Desk",
+      "url": ""
+    },
+    {
+      "title": "Major Hedge Fund Collapses Following Massive Margin Calls",
+      "source": "Wall Street Journal",
+      "url": ""
+    },
+    {
+      "title": "Central Bank Unexpectedly Imposes Negative Interest Rates",
+      "source": "Macro Economics Daily",
+      "url": ""
+    },
+    {
+      "title": "Retail Brokerages Halt Trading on Volatile 'Meme Stocks'",
+      "source": "Market Watch",
+      "url": ""
+    },
+    {
+      "title": "Sovereign Debt Default Looms for Major Developing Nation",
+      "source": "Global Finance",
       "url": ""
     }
   ]
