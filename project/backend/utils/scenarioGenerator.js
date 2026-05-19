@@ -19,11 +19,68 @@ const FAKE_CURRENCIES = ["Neo-Dollar (ND)", "Euro-Coin (EC)", "Yen-Prime (YP)", 
 const FAKE_INDEX = ["Global Top 50", "Market Vanguard", "Apex Index"];
 const FAKE_GOLD = ["Gold"];
 
+// --- Helper Math Functions for Simulation ---
+
+// Original Function (Box-Muller transform)
 function randomNormal(mean, stdDev) {
     const u = 1 - Math.random();
     const v = 1 - Math.random();
     const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
     return z * stdDev + mean;
+}
+
+// Poisson Random Function to calculate the number of jumps
+function randomPoisson(lambda) {
+    let L = Math.exp(-lambda);
+    let k = 0;
+    let p = 1;
+    do {
+        k++;
+        p *= Math.random();
+    } while (p > L);
+    return k - 1;
+}
+
+// --- Main Function for simulating returns using the Jump Diffusion Model ----
+function calculateWeeklyReturn(mu, sigma, driftModifier = 0, eventSeverity = 0) {
+    // Base values for normal market conditions
+    let currentSigma = sigma;
+    let jumpProbability = 0.03; // Normal probability: 3% per week
+    let jumpMean = -0.05;       // Average jump effect (usually negative)
+    let jumpVol = 0.08;
+
+    // --- MECHANIC: When an Event Card is active, the market becomes highly volatile ---
+    if (eventSeverity > 0) {
+        // Increase overall market volatility (50% increase per severity level)
+        currentSigma = sigma * (1 + (eventSeverity * 0.5)); 
+        
+        // Significantly increase the probability of a jump (sell-off/surge)
+        jumpProbability = 0.03 + (eventSeverity * 0.04); 
+        
+        // Jump direction based on the Event (Good news = Upward Jump / Bad news = Downward Jump)
+        if (driftModifier < 0) {
+            jumpMean = -0.05 - (eventSeverity * 0.02); // Bad news = Deeper drop than normal
+        } else if (driftModifier > 0) {
+            jumpMean = 0.05 + (eventSeverity * 0.02);  // Good news = Stronger surge than normal
+        }
+        
+        // Amplify the intensity of the swing during the jump
+        jumpVol = 0.08 + (eventSeverity * 0.02);
+    }
+
+    // Normal Market Conditions (Geometric Brownian Motion)
+    const totalMu = mu + driftModifier;
+    const continuousDrift = totalMu - (0.5 * Math.pow(currentSigma, 2));
+    const continuousShock = currentSigma * randomNormal(0, 1);
+    let totalReturnLog = continuousDrift + continuousShock;
+
+    // Extreme Events (Jump Process)
+    const numJumps = randomPoisson(jumpProbability);
+    for (let i = 0; i < numJumps; i++) {
+        totalReturnLog += randomNormal(jumpMean, jumpVol);
+    }
+
+    return Math.exp(totalReturnLog) - 1;
 }
 
 export const generateScenario = (years) => {
@@ -151,10 +208,16 @@ export const generateScenario = (years) => {
 
         for (let w = 0; w < weeks; w++) {
             let eventDrift = 0;
+            let currentEventSeverity = 0; // Track the highest event severity active during this week
+
             generatedEvents.forEach(ev => {
                 // Apply price impacts based on the REAL asset names
                 if (w >= ev.start_week && w <= ev.end_week && ev.affected_assets_real.includes(assetName)) {
                     const impact = ev.severity * 0.001;
+                    
+                    // Keep the highest severity in case of overlapping events
+                    currentEventSeverity = Math.max(currentEventSeverity, ev.severity); 
+
                     if (['CLIMATE_DISASTER', 'COMMODITY_SHOCK'].includes(ev.type)) eventDrift -= impact;
                     else if (['TECH_INNOVATION'].includes(ev.type)) eventDrift += impact;
                     else {
@@ -164,10 +227,14 @@ export const generateScenario = (years) => {
                 }
             });
 
-            const weeklyReturn = randomNormal(rule.baseReturn + eventDrift, rule.baseVolatility);
+            // ----------------------------------------------------
+            // Use Jump Diffusion Model to calculate weekly returns
+            // ----------------------------------------------------
+            const weeklyReturn = calculateWeeklyReturn(rule.baseReturn, rule.baseVolatility, eventDrift, currentEventSeverity);
+            
             const oldPrice = currentPrice;
             currentPrice *= (1 + weeklyReturn);
-            currentPrice = Math.max(rule.startPrice * 0.05, currentPrice);
+            currentPrice = Math.max(rule.startPrice * 0.05, currentPrice); // Floor price at 5% of starting value
 
             const date = new Date(startDate);
             date.setDate(date.getDate() + (w * 7));
