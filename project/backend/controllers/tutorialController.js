@@ -16,7 +16,7 @@ export const getTutorialProgress = async (req, res) => {
 
     try {
         // Get the HIGHEST level this user has achieved
-        const sql = "SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = $1";
+        const sql = "SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = ?";
         
         const result = await db.query(sql, [userId]);
         
@@ -46,10 +46,8 @@ export const completeTutorial = async (req, res) => {
     }
 
     try {
-        // PostgreSQL: Use ON CONFLICT DO NOTHING to handle duplicates
-        const sql = `INSERT INTO tutorial_progress (user_id, tutorial_level) 
-                     VALUES ($1, $2) 
-                     ON CONFLICT (user_id, tutorial_level) DO NOTHING`;
+        const sql = `INSERT IGNORE INTO tutorial_progress (user_id, tutorial_level) 
+                 VALUES (?, ?)`;
         
         await db.query(sql, [userId, level]);
         res.json({ success: true, message: "Tutorial completed" });
@@ -64,7 +62,7 @@ export const resetTutorialProgress = async (req, res) => {
     const userId = req.user.id;
     
     try {
-        const sql = "DELETE FROM tutorial_progress WHERE user_id = $1";
+        const sql = "DELETE FROM tutorial_progress WHERE user_id = ?";
         
         await db.query(sql, [userId]);
         res.json({ success: true, message: "Progress reset successfully" });

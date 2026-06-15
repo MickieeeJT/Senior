@@ -9,7 +9,7 @@ router.get("/", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const sql = "SELECT * FROM score_history WHERE user_id = $1 ORDER BY played_at DESC, id DESC";
+    const sql = "SELECT * FROM score_history WHERE user_id = ? ORDER BY played_at DESC, id DESC";
     const result = await db.query(sql, [userId]);
     
     res.json({ success: true, scores: result.rows });

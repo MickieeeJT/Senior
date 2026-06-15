@@ -9,7 +9,7 @@ router.get("/", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const sql = "SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = $1";
+    const sql = "SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id = ?";
     const result = await db.query(sql, [userId]);
     
     res.json({ success: true, data: result.rows });

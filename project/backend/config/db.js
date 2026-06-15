@@ -21,19 +21,43 @@
 
 // export default db;
 
-import pkg from 'pg';
-const { Pool } = pkg;
+import mysql from "mysql2/promise";
 import { env } from "./env.js";
 
-const pool = new Pool({
-  connectionString: env.databaseUrl,
-  ssl: {
-    rejectUnauthorized: false // Required for Render's external connections
-  }
+const pool = mysql.createPool({
+  host: env.dbHost,
+  port: env.dbPort,
+  user: env.dbUser,
+  password: env.dbPassword,
+  database: env.dbName,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
-pool.connect()
-  .then(() => console.log("📦 Connected to PostgreSQL Database successfully!"))
-  .catch((err) => console.error("❌ Database connection error:", err.stack));
+const db = {
+  query: async (sql, values = []) => {
+    const translatedSql = sql.replace(/\$(\d+)/g, "?");
+    const [result] = await pool.query(translatedSql, values);
 
-export default pool;
+    if (Array.isArray(result)) {
+      return { rows: result, rowCount: result.length };
+    }
+
+    return {
+      rows: [],
+      rowCount: result.affectedRows ?? 0,
+      insertId: result.insertId,
+    };
+  },
+};
+
+pool
+  .getConnection()
+  .then((connection) => {
+    connection.release();
+    console.log("📦 Connected to MySQL Database successfully!");
+  })
+  .catch((err) => console.error("❌ Database connection error:", err.message));
+
+export default db;

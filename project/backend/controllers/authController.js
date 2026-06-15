@@ -102,11 +102,9 @@ export const signup = async (req, res) => {
     }
 
     try {
-        // Check if email already exists (PostgreSQL uses $1 instead of ?)
-        const checkSql = "SELECT * FROM users WHERE email = $1";
+        const checkSql = "SELECT * FROM users WHERE email = ?";
         const checkResult = await db.query(checkSql, [email]);
 
-        // PostgreSQL puts the data inside the .rows property
         if (checkResult.rows.length > 0) {
             return res.status(400).json({ success: false, message: "Email already registered" });
         }
@@ -114,8 +112,7 @@ export const signup = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Insert new user
-        const insertSql = "INSERT INTO users (email, password) VALUES ($1, $2) RETURNING *";
+        const insertSql = "INSERT INTO users (email, password) VALUES (?, ?)";
         await db.query(insertSql, [email, hashedPassword]);
 
         res.json({ success: true, message: "User registered successfully" });
@@ -135,7 +132,7 @@ export const login = async (req, res) => {
     }
 
     try {
-        const sql = "SELECT * FROM users WHERE email = $1";
+        const sql = "SELECT * FROM users WHERE email = ?";
         const result = await db.query(sql, [email]);
 
         if (result.rows.length === 0) {

@@ -16,11 +16,11 @@ const saveGameToDB = async (userId, sessionId, gameState, botState = null) => {
     
     const sql = `
         INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) 
-        VALUES ($1, $2, $3, $4) 
-        ON CONFLICT (user_id) DO UPDATE SET
-        session_id = EXCLUDED.session_id, 
-        game_state = EXCLUDED.game_state,
-        bot_state = EXCLUDED.bot_state
+    VALUES (?, ?, ?, ?) 
+    ON DUPLICATE KEY UPDATE
+    session_id = VALUES(session_id), 
+    game_state = VALUES(game_state),
+    bot_state = VALUES(bot_state)
     `;
     try {
         await db.query(sql, [userId, sessionId, jsonState, jsonBotState]);
@@ -32,7 +32,7 @@ const saveGameToDB = async (userId, sessionId, gameState, botState = null) => {
 // --- HELPER: Delete State from DB ---
 const deleteGameFromDB = async (userId) => {
     try {
-        await db.query("DELETE FROM active_sessions WHERE user_id = $1", [userId]);
+      await db.query("DELETE FROM active_sessions WHERE user_id = ?", [userId]);
     } catch (err) {
         console.error(err);
     }
@@ -298,7 +298,7 @@ const checkAchievements = (gameState, finalValue, totalReturn, maxDD, stockValue
 router.get("/check-session", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
-    const sql = "SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = $1";
+    const sql = "SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = ?";
     const result = await db.query(sql, [userId]);
 
     if (result.rows.length > 0) {
@@ -345,7 +345,7 @@ router.post("/init", authenticateToken, async (req, res) => {
   const finalTargetAmount = targetAmount ? parseFloat(targetAmount) : 1000000;
 
   try {
-      const checkResult = await db.query("SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = $1", [userId]);
+      const checkResult = await db.query("SELECT session_id, game_state, bot_state FROM active_sessions WHERE user_id = ?", [userId]);
 
       // --- RESUME EXISTING GAME ---
       if (checkResult.rows.length > 0 && !forceNew) {
@@ -354,7 +354,7 @@ router.post("/init", authenticateToken, async (req, res) => {
         const parsedBotState = savedSession.bot_state ? (typeof savedSession.bot_state === 'string' ? JSON.parse(savedSession.bot_state) : savedSession.bot_state) : {};
 
         // Fetch the single row of categorized scenario data
-        const scenarioResult = await db.query("SELECT * FROM session_scenarios WHERE session_id = $1", [savedSession.session_id]);
+        const scenarioResult = await db.query("SELECT * FROM session_scenarios WHERE session_id = ?", [savedSession.session_id]);
         
         let parsedScenario = { events: [], assets: {}, totalWeeks: parsedState.maxYears * 52 };
         
@@ -394,8 +394,8 @@ router.post("/init", authenticateToken, async (req, res) => {
       if (checkResult.rows.length > 0 && forceNew) {
            gameSessions.delete(checkResult.rows[0].session_id);
            botSessions.delete(checkResult.rows[0].session_id);
-           await db.query("DELETE FROM active_sessions WHERE user_id = $1", [userId]);
-           await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [checkResult.rows[0].session_id]);
+           await db.query("DELETE FROM active_sessions WHERE user_id = ?", [userId]);
+           await db.query("DELETE FROM session_scenarios WHERE session_id = ?", [checkResult.rows[0].session_id]);
       }
 
       const sessionId = Date.now().toString();
@@ -457,7 +457,7 @@ router.post("/init", authenticateToken, async (req, res) => {
 
       // Save Primary Game State
       await db.query(
-          "INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) VALUES ($1, $2, $3, $4)",
+          "INSERT INTO active_sessions (user_id, session_id, game_state, bot_state) VALUES (?, ?, ?, ?)",
           [userId, sessionId, jsonState, jsonBotState]
       );
 
@@ -480,7 +480,7 @@ router.post("/init", authenticateToken, async (req, res) => {
       
       // Create an empty row first
       await db.query(
-          "INSERT INTO session_scenarios (session_id) VALUES ($1)",
+          "INSERT INTO session_scenarios (session_id) VALUES (?)",
           [sessionId]
       );
 
@@ -490,7 +490,7 @@ router.post("/init", authenticateToken, async (req, res) => {
       const scenarioEventsJSON = JSON.stringify(newScenario.events);
       if (scenarioEventsJSON.length > 2) {
           updateQueries.push(db.query(
-              "UPDATE session_scenarios SET events_data = $1 WHERE session_id = $2",
+              "UPDATE session_scenarios SET events_data = ? WHERE session_id = ?",
               [scenarioEventsJSON, sessionId]
           ));
       }
@@ -498,7 +498,7 @@ router.post("/init", authenticateToken, async (req, res) => {
       const stocksJSON = JSON.stringify(categorizedData.stocks);
       if (stocksJSON.length > 2) {
           updateQueries.push(db.query(
-              "UPDATE session_scenarios SET stocks_data = $1 WHERE session_id = $2",
+              "UPDATE session_scenarios SET stocks_data = ? WHERE session_id = ?",
               [stocksJSON, sessionId]
           ));
       }
@@ -506,7 +506,7 @@ router.post("/init", authenticateToken, async (req, res) => {
       const currenciesJSON = JSON.stringify(categorizedData.currencies);
       if (currenciesJSON.length > 2) {
           updateQueries.push(db.query(
-              "UPDATE session_scenarios SET currencies_data = $1 WHERE session_id = $2",
+              "UPDATE session_scenarios SET currencies_data = ? WHERE session_id = ?",
               [currenciesJSON, sessionId]
           ));
       }
@@ -514,7 +514,7 @@ router.post("/init", authenticateToken, async (req, res) => {
       const indexJSON = JSON.stringify(categorizedData.index);
       if (indexJSON.length > 2) {
           updateQueries.push(db.query(
-              "UPDATE session_scenarios SET index_data = $1 WHERE session_id = $2",
+              "UPDATE session_scenarios SET index_data = ? WHERE session_id = ?",
               [indexJSON, sessionId]
           ));
       }
@@ -522,7 +522,7 @@ router.post("/init", authenticateToken, async (req, res) => {
       const goldJSON = JSON.stringify(categorizedData.gold);
       if (goldJSON.length > 2) {
           updateQueries.push(db.query(
-              "UPDATE session_scenarios SET gold_data = $1 WHERE session_id = $2",
+              "UPDATE session_scenarios SET gold_data = ? WHERE session_id = ?",
               [goldJSON, sessionId]
           ));
       }
@@ -530,7 +530,7 @@ router.post("/init", authenticateToken, async (req, res) => {
       const bondsJSON = JSON.stringify(categorizedData.bonds);
       if (bondsJSON.length > 2) {
           updateQueries.push(db.query(
-              "UPDATE session_scenarios SET bonds_data = $1 WHERE session_id = $2",
+              "UPDATE session_scenarios SET bonds_data = ? WHERE session_id = ?",
               [bondsJSON, sessionId]
           ));
       }
@@ -1102,22 +1102,21 @@ router.post("/end-game", authenticateToken, async (req, res) => {
     console.log("---------------------------------------------------");
 
     try {
-      const scoreSql = `INSERT INTO score_history (user_id, score, star, played_at) VALUES ($1, $2, $3, NOW()) RETURNING id`;
+      const scoreSql = `INSERT INTO score_history (user_id, score, star, played_at) VALUES (?, ?, ?, NOW())`;
       const scoreResult = await db.query(scoreSql, [userId, roundedScore, assessment.stars]);
-      const scoreId = scoreResult.rows[0]?.id;
+      const scoreId = scoreResult.insertId;
 
       if (scoreId && unlockedCodes.length > 0) {
         try {
-          const codesPlaceholders = unlockedCodes.map((_, i) => `$${i + 1}`).join(",");
+          const codesPlaceholders = unlockedCodes.map(() => "?").join(",");
           const findSql = `SELECT id, code FROM achievements WHERE code IN (${codesPlaceholders})`;
 
           const achievementsResult = await db.query(findSql, unlockedCodes);
           
           if (achievementsResult.rows.length > 0) {
             for (const row of achievementsResult.rows) {
-              const insertSql = `INSERT INTO user_achievements (user_id, achievement_id, score_id) 
-                                 VALUES ($1, $2, $3) 
-                                 ON CONFLICT DO NOTHING`;
+              const insertSql = `INSERT IGNORE INTO user_achievements (user_id, achievement_id, score_id) 
+                                 VALUES (?, ?, ?)`;
               await db.query(insertSql, [userId, row.id, scoreId]);
             }
           }
@@ -1132,7 +1131,7 @@ router.post("/end-game", authenticateToken, async (req, res) => {
         await deleteGameFromDB(userId);
         
         // CLEANUP: Delete associated scenario data to keep the database clean
-        await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [sessionId]);
+        await db.query("DELETE FROM session_scenarios WHERE session_id = ?", [sessionId]);
       } catch (cleanupError) {
         console.warn("End-game cleanup skipped:", cleanupError);
       }
@@ -1164,7 +1163,7 @@ router.post("/end-game", authenticateToken, async (req, res) => {
 router.get("/tutorial-progress", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
-    const sql = `SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = $1`;
+    const sql = `SELECT MAX(tutorial_level) as max_level FROM tutorial_progress WHERE user_id = ?`;
     const result = await db.query(sql, [userId]);
 
     let tutorialLevel = result.rows.length > 0 && result.rows[0].max_level !== null ? result.rows[0].max_level : 0;
@@ -1189,7 +1188,7 @@ router.delete("/session/:sessionId", async (req, res) => {
   
   try {
     // CLEANUP: Delete associated scenario data when a session is manually deleted
-    await db.query("DELETE FROM session_scenarios WHERE session_id = $1", [sessionId]);
+    await db.query("DELETE FROM session_scenarios WHERE session_id = ?", [sessionId]);
     res.json({ success: true, message: "Session deleted" });
   } catch (err) {
     console.error("Error deleting session:", err);
